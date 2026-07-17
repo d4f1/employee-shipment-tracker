@@ -39,23 +39,52 @@ Open:
 - Dashboard: http://127.0.0.1:8000/
 - Swagger: http://127.0.0.1:8000/docs
 
-## Deploy for client demo
+## Free deployment for client demo
 
-Heroku no longer provides a true free dyno/database plan, so this project is configured for Render's free web service tier.
+Heroku no longer provides a true free dyno/database plan. Use Render's free Web Service instead. Do not use Blueprint for this demo.
 
 1. Push this folder to a GitHub, GitLab, or Bitbucket repository.
-2. In Render, create a new Blueprint from the repository. Render will read `render.yaml`.
-3. Keep the generated `JWT_SECRET_KEY`.
-4. Leave `RAJAONGKIR_MOCK=true` for the demo flow unless you already have a live RajaOngkir API key.
-5. After deploy finishes, share the generated `https://<service-name>.onrender.com/login` URL with the client.
+2. In Render, click **New > Web Service**.
+3. Connect the repository.
+4. Select the **Free** instance type.
+5. Use these settings:
 
-Render uses:
+| Field | Value |
+|---|---|
+| Runtime | Python |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
+| Health check path | `/healthz` |
 
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
-- Health check: `/healthz`
+Add these environment variables:
 
-The free service is enough for a behavior-flow demo, but it can sleep after inactivity and the local SQLite file is not production-grade persistent storage. Use Postgres or a paid persistent disk before treating this as a durable production deployment.
+| Key | Value |
+|---|---|
+| `APP_NAME` | `Employee Shipment Tracker` |
+| `DATABASE_URL` | `sqlite:///./employee_shipments.db` |
+| `JWT_SECRET_KEY` | Generate a long random value |
+| `JWT_ALGORITHM` | `HS256` |
+| `JWT_ACCESS_TOKEN_MINUTES` | `60` |
+| `JWT_COOKIE_SECURE` | `true` |
+| `RAJAONGKIR_MOCK` | `true` |
+| `RAJAONGKIR_API_KEY` | Leave empty for mock demo |
+| `RAJAONGKIR_BASE_URL` | `https://rajaongkir.komerce.id/api/v1` |
+
+After deploy finishes, share:
+
+```text
+https://<service-name>.onrender.com/login
+```
+
+Demo accounts:
+
+| Username | Password |
+|---|---|
+| `admin` | `Admin123!` |
+| `operator` | `Operator123!` |
+| `andriana` | `Employee123!` |
+
+The free service is enough for a behavior-flow demo, but it can sleep after inactivity and local SQLite data can reset after redeploy/restart. Use Postgres or a paid persistent disk before treating this as production.
 
 ## API login
 
