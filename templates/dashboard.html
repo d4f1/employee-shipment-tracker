@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ app_name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --app-primary: #4f46e5;
+      --app-primary-dark: #3730a3;
+      --app-bg: #f4f6fb;
+      --app-text: #172033;
+      --app-muted: #75809a;
+      --app-border: #e8ebf2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      background: var(--app-bg);
+      color: var(--app-text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .app-navbar {
+      background: linear-gradient(120deg, #111827, #252f48);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, .16);
+    }
+    .brand-mark {
+      width: 38px; height: 38px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #8179ff, #4f46e5);
+      box-shadow: 0 8px 20px rgba(79,70,229,.35);
+    }
+    .page-shell { max-width: 1600px; margin: 0 auto; }
+    .hero-panel {
+      border: 0;
+      border-radius: 24px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 88% 22%, rgba(255,255,255,.22), transparent 24%),
+        linear-gradient(120deg, #4f46e5, #6d5dfc 52%, #8b5cf6);
+      color: white;
+      box-shadow: 0 18px 48px rgba(79,70,229,.20);
+    }
+    .surface-card {
+      border: 1px solid rgba(232,235,242,.9);
+      border-radius: 18px;
+      box-shadow: 0 8px 28px rgba(30,41,59,.055);
+      transition: transform .22s ease, box-shadow .22s ease;
+    }
+    .surface-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 34px rgba(30,41,59,.09);
+    }
+    .metric-icon {
+      width: 46px; height: 46px; border-radius: 14px;
+      display: grid; place-items: center; font-size: 1.25rem;
+    }
+    .metric-value { font-size: clamp(1.45rem, 2.3vw, 2rem); font-weight: 750; }
+    .muted { color: var(--app-muted); }
+    .btn-primary {
+      --bs-btn-bg: var(--app-primary);
+      --bs-btn-border-color: var(--app-primary);
+      --bs-btn-hover-bg: var(--app-primary-dark);
+      --bs-btn-hover-border-color: var(--app-primary-dark);
+      border-radius: 12px;
+    }
+    .btn-soft {
+      background: #eef0ff; color: var(--app-primary);
+      border: 1px solid #e1e4ff; border-radius: 12px;
+    }
+    .btn-soft:hover { background: #e4e7ff; color: var(--app-primary-dark); }
+    .table-card { overflow: hidden; }
+    .table thead th {
+      padding: 1rem;
+      border-bottom: 1px solid var(--app-border);
+      color: #69738b;
+      background: #fafbfe;
+      font-size: .77rem;
+      text-transform: uppercase;
+      letter-spacing: .055em;
+      white-space: nowrap;
+    }
+    .table tbody td { padding: 1rem; border-color: #f0f2f7; vertical-align: middle; }
+    .table tbody tr { transition: background-color .18s ease; }
+    .table tbody tr:hover { background: #fafbff; }
+    .avatar {
+      width: 38px; height: 38px; border-radius: 12px;
+      display:grid; place-items:center; font-weight:700;
+      background:#eef0ff; color:var(--app-primary);
+    }
+    .status-badge { border-radius: 999px; padding: .48rem .72rem; font-weight: 650; }
+    .status-delivered { background:#e9fbf2; color:#087443; }
+    .status-progress { background:#fff7df; color:#9a6400; }
+    .status-created { background:#edf4ff; color:#285ba7; }
+    .search-box { max-width: 360px; }
+    .search-box .input-group-text, .search-box .form-control {
+      background: #f8f9fc; border-color: var(--app-border);
+    }
+    .modal-content {
+      border: 0; border-radius: 22px;
+      box-shadow: 0 28px 80px rgba(15,23,42,.20);
+      overflow: hidden;
+    }
+    .modal.fade .modal-dialog {
+      transform: translateY(18px) scale(.985);
+      transition: transform .24s cubic-bezier(.2,.8,.2,1);
+    }
+    .modal.show .modal-dialog { transform: translateY(0) scale(1); }
+    .form-control, .form-select {
+      border-radius: 11px; border-color: #dfe3ec;
+      padding: .72rem .85rem;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #918bff;
+      box-shadow: 0 0 0 .22rem rgba(79,70,229,.12);
+    }
+    .toast {
+      border: 0; border-radius: 15px;
+      box-shadow: 0 16px 48px rgba(15,23,42,.18);
+    }
+    .empty-state { padding: 4rem 1rem !important; }
+    @media (max-width: 768px) {
+      main { padding-left: 1rem !important; padding-right: 1rem !important; }
+      .hero-panel { border-radius: 18px; }
+      .navbar-user { display:none; }
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar app-navbar navbar-dark sticky-top">
+  <div class="container-fluid page-shell px-3 px-lg-4 py-2">
+    <a class="navbar-brand d-flex align-items-center gap-3 m-0" href="/">
+      <span class="brand-mark"><i class="bi bi-box-seam"></i></span>
+      <span>
+        <span class="d-block fw-bold lh-sm">{{ app_name }}</span>
+        <small class="text-white-50 fw-normal">Employee delivery operations</small>
+      </span>
+    </a>
+
+    <div class="d-flex align-items-center gap-2 gap-lg-3">
+      <span class="badge rounded-pill {{ 'text-bg-warning' if mock_mode else 'text-bg-success' }}">
+        <i class="bi bi-plug-fill me-1"></i>{{ 'Mock API' if mock_mode else 'Live API' }}
+      </span>
+      <div class="navbar-user text-end">
+        <div class="text-white small fw-semibold">{{ current_user.full_name }}</div>
+        <div class="text-white-50" style="font-size:.75rem">{{ current_user.role|title }}</div>
+      </div>
+      <div class="dropdown">
+        <button class="btn btn-outline-light border-0 rounded-circle" data-bs-toggle="dropdown" aria-label="User menu">
+          <i class="bi bi-person-circle fs-5"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 mt-2">
+          <li><span class="dropdown-item-text"><strong>{{ current_user.full_name }}</strong><br><small class="text-secondary">{{ current_user.role|title }}</small></span></li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <form method="post" action="/logout">
+              <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main class="container-fluid page-shell p-3 p-lg-4">
+  <section class="hero-panel p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <span class="badge rounded-pill bg-white bg-opacity-25 mb-3">
+          <i class="bi bi-shield-check me-1"></i>{{ current_user.role|title }} access
+        </span>
+        <h1 class="display-6 fw-bold mb-2">Shipment Dashboard</h1>
+        <p class="mb-0 text-white-50 fs-5">Monitor company documents and packages from dispatch until employee receipt.</p>
+      </div>
+      {% if current_user.role in ['admin','operator'] %}
+      <div class="col-lg-4 text-lg-end">
+        <button class="btn btn-light btn-lg rounded-4 px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#createShipmentModal">
+          <i class="bi bi-plus-circle me-2"></i>Create shipment
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card surface-card h-100 p-3">
+        <div class="card-body d-flex align-items-center gap-3">
+          <span class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-boxes"></i></span>
+          <div><div class="muted small">Total shipments</div><div class="metric-value">{{ counts.total }}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card surface-card h-100 p-3">
+        <div class="card-body d-flex align-items-center gap-3">
+          <span class="metric-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-truck"></i></span>
+          <div><div class="muted small">In progress</div><div class="metric-value">{{ counts.in_progress }}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card surface-card h-100 p-3">
+        <div class="card-body d-flex align-items-center gap-3">
+          <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-check2-circle"></i></span>
+          <div><div class="muted small">Delivered</div><div class="metric-value">{{ counts.delivered }}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="card surface-card h-100 p-3">
+        <div class="card-body d-flex align-items-center gap-3">
+          <span class="metric-icon bg-info-subtle text-info-emphasis"><i class="bi bi-cash-stack"></i></span>
+          <div><div class="muted small">Shipping cost</div><div class="metric-value fs-4">Rp {{ "{:,.0f}".format(counts.cost) }}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card surface-card table-card">
+    <div class="card-header bg-white border-0 p-3 p-lg-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <h5 class="mb-1 fw-bold">Recent shipments</h5>
+        <div class="muted small">Click a reference number to view its complete delivery timeline.</div>
+      </div>
+      <div class="input-group search-box">
+        <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
+        <input id="shipmentSearch" class="form-control border-start-0" placeholder="Search reference, employee, AWB, or external waybill">
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="shipmentTable">
+        <thead>
+          <tr><th>Reference</th><th>Document</th><th>Employee</th><th>Courier</th><th>External waybill</th><th>Route</th><th>Cost</th><th>Status</th><th>Last location</th></tr>
+        </thead>
+        <tbody>
+        {% for s in shipments %}
+          <tr>
+            <td>
+              <a class="fw-semibold text-decoration-none" href="/shipments/{{ s.id }}">{{ s.reference_no }}</a>
+              <div class="small muted">{{ s.created_at.strftime('%d %b %Y') }}</div>
+            </td>
+            <td><div class="fw-semibold">{{ s.title }}</div><div class="small muted">{{ s.document_type }}</div></td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar">{{ s.employee.name[:1]|upper }}</span>
+                <div><div class="fw-medium">{{ s.employee.name }}</div><div class="small muted">{{ s.employee.department }}</div></div>
+              </div>
+            </td>
+            <td><span class="fw-semibold">{{ s.courier|upper }}</span><div class="small muted">{{ s.awb }}</div></td>
+            <td><span class="small {{ 'muted' if not s.external_awb else 'fw-semibold' }}">{{ s.external_awb or '-' }}</span></td>
+            <td><div>{{ s.origin }} <i class="bi bi-arrow-right text-secondary mx-1"></i> {{ s.destination }}</div><div class="small muted">ETA {{ s.eta_days }} day(s)</div></td>
+            <td class="fw-semibold">Rp {{ "{:,.0f}".format(s.shipping_cost) }}</td>
+            <td>
+              {% set normalized = s.status|upper %}
+              <span class="status-badge {{ 'status-delivered' if normalized in ['DELIVERED','RECEIVED'] else ('status-created' if normalized == 'CREATED' else 'status-progress') }}">
+                <i class="bi {{ 'bi-check-circle' if normalized in ['DELIVERED','RECEIVED'] else ('bi-circle' if normalized == 'CREATED' else 'bi-arrow-repeat') }} me-1"></i>{{ s.status }}
+              </span>
+            </td>
+            <td><i class="bi bi-geo-alt text-secondary me-1"></i>{{ s.last_location }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="text-center empty-state">
+            <i class="bi bi-inbox display-5 text-secondary"></i>
+            <h5 class="mt-3">No shipments found</h5>
+            <p class="muted mb-0">New shipments will appear here.</p>
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div id="searchEmpty" class="text-center p-5 d-none">
+      <i class="bi bi-search display-6 text-secondary"></i>
+      <h6 class="mt-3">No matching shipments</h6>
+            <p class="muted mb-0">Try another reference, employee name, courier, AWB, or external waybill.</p>
+    </div>
+  </section>
+</main>
+
+{% if current_user.role in ['admin','operator'] %}
+<div class="modal fade" id="createShipmentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/shipments/create" id="createShipmentForm">
+        <div class="modal-header border-0 px-4 pt-4 pb-2">
+          <div>
+            <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">New delivery</span>
+            <h4 class="modal-title fw-bold">Create a shipment</h4>
+            <p class="muted mb-0">Register the document, recipient, courier, cost, and expected delivery time.</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body px-4 py-4">
+          <div class="row g-3">
+            <div class="col-md-4"><label class="form-label fw-semibold">Reference number</label><input class="form-control" name="reference_no" required placeholder="DOC-2026-0002"></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">Document title</label><input class="form-control" name="title" required placeholder="Employment certificate"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">Document type</label><input class="form-control" name="document_type" value="Document"></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">Employee recipient</label><select class="form-select" name="employee_id" required>{% for e in employees %}<option value="{{ e.id }}">{{ e.name }} — {{ e.department }}</option>{% endfor %}</select></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">Courier</label><select class="form-select" name="courier" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option></select></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">AWB / waybill</label><input class="form-control" name="awb" required placeholder="Internal courier tracking number"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">External AWB / waybill</label><input class="form-control" name="external_awb" placeholder="Marketplace or external partner waybill"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">Origin</label><div class="input-group"><span class="input-group-text"><i class="bi bi-geo-alt"></i></span><input class="form-control" name="origin" required value="Jakarta"></div></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">Destination</label><div class="input-group"><span class="input-group-text"><i class="bi bi-pin-map"></i></span><input class="form-control" name="destination" required placeholder="Yogyakarta"></div></div>
+            <div class="col-md-2"><label class="form-label fw-semibold">ETA days</label><input class="form-control" name="eta_days" type="number" min="0" value="2"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">Shipping cost</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="shipping_cost" type="number" min="0" value="0"></div></div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0">
+          <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary px-4" id="createSubmitButton">
+            <span class="button-label"><i class="bi bi-check2-circle me-2"></i>Create shipment</span>
+            <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>Creating...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5">
+  <div id="successToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-check-circle-fill me-2"></i>Shipment created successfully.</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const searchInput = document.getElementById('shipmentSearch');
+  const table = document.getElementById('shipmentTable');
+  const searchEmpty = document.getElementById('searchEmpty');
+
+  searchInput?.addEventListener('input', function () {
+    const query = this.value.toLowerCase().trim();
+    const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => !row.querySelector('.empty-state'));
+    let visible = 0;
+    rows.forEach(row => {
+      const match = row.innerText.toLowerCase().includes(query);
+      row.classList.toggle('d-none', !match);
+      if (match) visible++;
+    });
+    searchEmpty.classList.toggle('d-none', visible !== 0 || rows.length === 0);
+    table.classList.toggle('d-none', visible === 0 && rows.length > 0);
+  });
+
+  const createForm = document.getElementById('createShipmentForm');
+  createForm?.addEventListener('submit', function () {
+    const button = document.getElementById('createSubmitButton');
+    button.disabled = true;
+    button.querySelector('.button-label').classList.add('d-none');
+    button.querySelector('.button-loading').classList.remove('d-none');
+  });
+
+  {% if created %}
+  window.addEventListener('DOMContentLoaded', () => {
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('successToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/');
+  });
+  {% endif %}
+</script>
+</body>
+</html>

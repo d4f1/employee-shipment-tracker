@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+employee_shipments.db
+.DS_Store

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ shipment.reference_no }} · {{ app_name }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    :root{--primary:#4f46e5;--bg:#f4f6fb;--border:#e7eaf1;--muted:#748099}
+    body{background:var(--bg);color:#172033;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    .app-navbar{background:linear-gradient(120deg,#111827,#252f48);box-shadow:0 10px 30px rgba(15,23,42,.16)}
+    .page-shell{max-width:1300px;margin:0 auto}
+    .card{border:1px solid var(--border);border-radius:20px;box-shadow:0 10px 32px rgba(30,41,59,.06)}
+    .muted{color:var(--muted)}
+    .summary-hero{background:linear-gradient(125deg,#4f46e5,#7759f8);color:white;border:0;overflow:hidden;position:relative}
+    .summary-hero:after{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.09);right:-60px;top:-110px}
+    .detail-row{padding:.85rem 0;border-bottom:1px dashed #e8ebf2}.detail-row:last-child{border:0}
+    .timeline{position:relative;margin-left:8px;padding-left:34px}
+    .timeline:before{content:"";position:absolute;left:7px;top:10px;bottom:10px;width:2px;background:#e1e5ee}
+    .event{position:relative;padding-bottom:1.8rem}
+    .event:last-child{padding-bottom:0}
+    .event-dot{position:absolute;left:-34px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;border:4px solid var(--primary);box-shadow:0 0 0 5px #eeedff}
+    .btn-primary{--bs-btn-bg:var(--primary);--bs-btn-border-color:var(--primary);border-radius:12px}
+    .modal-content{border:0;border-radius:20px;box-shadow:0 28px 80px rgba(15,23,42,.2)}
+    .modal.fade .modal-dialog{transform:translateY(14px) scale(.985);transition:transform .23s cubic-bezier(.2,.8,.2,1)}
+    .modal.show .modal-dialog{transform:none}
+    .toast{border:0;border-radius:15px;box-shadow:0 16px 48px rgba(15,23,42,.18)}
+  </style>
+</head>
+<body>
+<nav class="navbar app-navbar navbar-dark sticky-top">
+  <div class="container-fluid page-shell px-3 px-lg-4 py-2">
+    <a class="navbar-brand fw-bold" href="/"><i class="bi bi-box-seam me-2"></i>{{ app_name }}</a>
+    <div class="d-flex align-items-center gap-3">
+      <span class="text-white-50 small d-none d-sm-inline">{{ current_user.full_name }} · {{ current_user.role|title }}</span>
+      <form method="post" action="/logout"><button class="btn btn-sm btn-outline-light rounded-3"><i class="bi bi-box-arrow-right me-1"></i>Logout</button></form>
+    </div>
+  </div>
+</nav>
+
+<main class="container-fluid page-shell p-3 p-lg-4">
+  <a class="btn btn-light border rounded-3 mb-3" href="/"><i class="bi bi-arrow-left me-2"></i>Dashboard</a>
+
+  <div class="card summary-hero p-4 p-lg-5 mb-4">
+    <div class="position-relative" style="z-index:1">
+      <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
+        <div>
+          <div class="text-white-50 small mb-1">Shipment reference</div>
+          <h1 class="display-6 fw-bold mb-2">{{ shipment.reference_no }}</h1>
+          <div class="fs-5">{{ shipment.title }}</div>
+        </div>
+        <span class="badge rounded-pill bg-white text-primary px-3 py-2 fs-6">{{ shipment.status }}</span>
+      </div>
+      <div class="row g-3 mt-3">
+        <div class="col-md-4"><div class="text-white-50 small">Employee</div><strong>{{ shipment.employee.name }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">Courier / AWB</div><strong>{{ shipment.courier|upper }} · {{ shipment.awb }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">External AWB / waybill</div><strong>{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">Current location</div><strong>{{ shipment.last_location }}</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card p-4 h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h4 class="fw-bold mb-0">Shipment information</h4>
+          <i class="bi bi-info-circle text-secondary fs-5"></i>
+        </div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Document type</span><strong class="text-end">{{ shipment.document_type }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">External AWB / waybill</span><strong class="text-end">{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Route</span><strong class="text-end">{{ shipment.origin }} → {{ shipment.destination }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Shipping cost</span><strong class="text-end">Rp {{ "{:,.0f}".format(shipment.shipping_cost) }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Estimated duration</span><strong class="text-end">{{ shipment.eta_days }} day(s)</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Expected arrival</span><strong class="text-end">{{ shipment.expected_arrival.strftime('%d %b %Y') if shipment.expected_arrival else '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Delivered at</span><strong class="text-end">{{ shipment.delivered_at.strftime('%d %b %Y %H:%M') if shipment.delivered_at else '-' }}</strong></div>
+
+        {% if current_user.role in ['admin','operator'] %}
+        <button class="btn btn-primary w-100 mt-4 py-2" data-bs-toggle="modal" data-bs-target="#refreshModal">
+          <i class="bi bi-arrow-clockwise me-2"></i>Refresh tracking
+        </button>
+        <div class="text-center muted small mt-2">Provider mode: {{ 'Mock' if mock_mode else 'Live' }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div><h4 class="fw-bold mb-1">Tracking timeline</h4><div class="muted small">{{ events|length }} recorded event(s)</div></div>
+          <span class="badge rounded-pill text-bg-light border"><i class="bi bi-clock-history me-1"></i>Latest first</span>
+        </div>
+        <div class="timeline">
+          {% for e in events %}
+          <div class="event">
+            <span class="event-dot"></span>
+            <div class="d-flex flex-wrap justify-content-between gap-2">
+              <strong>{{ e.status }}</strong>
+              <small class="muted">{{ e.event_time.strftime('%d %b %Y, %H:%M') }}</small>
+            </div>
+            <div class="mt-1">{{ e.description }}</div>
+            <div class="small muted mt-1"><i class="bi bi-geo-alt me-1"></i>{{ e.location }}</div>
+          </div>
+          {% else %}
+          <div class="text-center py-5"><i class="bi bi-clock-history display-5 text-secondary"></i><h6 class="mt-3">No tracking events</h6></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{% if current_user.role in ['admin','operator'] %}
+<div class="modal fade" id="refreshModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-2">
+      <form method="post" action="/shipments/{{ shipment.id }}/refresh" id="refreshForm">
+        <div class="modal-body p-4 text-center">
+          <div class="mx-auto mb-3 rounded-circle bg-primary-subtle text-primary d-grid" style="width:64px;height:64px;place-items:center">
+            <i class="bi bi-arrow-clockwise fs-3"></i>
+          </div>
+          <h4 class="fw-bold">Refresh tracking status?</h4>
+          <p class="muted">The system will request the latest timeline from {{ shipment.courier|upper }} through the configured RajaOngkir provider.</p>
+          <div class="d-flex gap-2 justify-content-center mt-4">
+            <button type="button" class="btn btn-light border rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn btn-primary px-4" id="refreshButton">
+              <span class="button-label">Refresh now</span>
+              <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>Refreshing...</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="toast-container position-fixed top-0 end-0 p-3 mt-5">
+  <div id="refreshToast" class="toast text-bg-success">
+    <div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle-fill me-2"></i>Tracking refreshed successfully.</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.getElementById('refreshForm')?.addEventListener('submit', () => {
+    const button = document.getElementById('refreshButton');
+    button.disabled = true;
+    button.querySelector('.button-label').classList.add('d-none');
+    button.querySelector('.button-loading').classList.remove('d-none');
+  });
+  {% if refreshed %}
+  window.addEventListener('DOMContentLoaded', () => {
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('refreshToast'), {delay:3500}).show();
+    window.history.replaceState({}, document.title, '/shipments/{{ shipment.id }}');
+  });
+  {% endif %}
+</script>
+</body>
+</html>

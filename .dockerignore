@@ -1,0 +1,8 @@
+.env
+.git
+.venv
+env
+__pycache__
+*.pyc
+employee_shipments.db
+.DS_Store
