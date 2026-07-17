@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ shipment.reference_no }} · {{ app_name }}</title>
@@ -24,6 +24,10 @@
     .modal-content{border:0;border-radius:20px;box-shadow:0 28px 80px rgba(15,23,42,.2)}
     .modal.fade .modal-dialog{transform:translateY(14px) scale(.985);transition:transform .23s cubic-bezier(.2,.8,.2,1)}
     .modal.show .modal-dialog{transform:none}
+    .location-button{border:0;background:transparent;color:white;padding:0;font-weight:700;text-align:left}
+    .location-button:hover{text-decoration:underline}
+    .map-frame{width:100%;min-height:380px;border:0;border-radius:16px;background:#eef0f6}
+    .map-detail{border:1px solid var(--border);border-radius:14px;background:#fbfcff}
     .toast{border:0;border-radius:15px;box-shadow:0 16px 48px rgba(15,23,42,.18)}
   </style>
 </head>
@@ -33,29 +37,55 @@
     <a class="navbar-brand fw-bold" href="/"><i class="bi bi-box-seam me-2"></i>{{ app_name }}</a>
     <div class="d-flex align-items-center gap-3">
       <span class="text-white-50 small d-none d-sm-inline">{{ current_user.full_name }} · {{ current_user.role|title }}</span>
-      <form method="post" action="/logout"><button class="btn btn-sm btn-outline-light rounded-3"><i class="bi bi-box-arrow-right me-1"></i>Logout</button></form>
+      <div class="btn-group btn-group-sm" role="group" aria-label="Language">
+        {% for code, label in languages.items() %}
+        <a class="btn {{ 'btn-light' if code == lang else 'btn-outline-light' }}" href="/language?lang={{ code }}&next=/shipments/{{ shipment.id }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+      <form method="post" action="/logout"><button class="btn btn-sm btn-outline-light rounded-3"><i class="bi bi-box-arrow-right me-1"></i>{{ 'Logout'|tr }}</button></form>
     </div>
   </div>
 </nav>
 
 <main class="container-fluid page-shell p-3 p-lg-4">
-  <a class="btn btn-light border rounded-3 mb-3" href="/"><i class="bi bi-arrow-left me-2"></i>Dashboard</a>
+  <a class="btn btn-light border rounded-3 mb-3" href="/"><i class="bi bi-arrow-left me-2"></i>{{ 'Dashboard'|tr }}</a>
 
   <div class="card summary-hero p-4 p-lg-5 mb-4">
     <div class="position-relative" style="z-index:1">
       <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
         <div>
-          <div class="text-white-50 small mb-1">Shipment reference</div>
+          <div class="text-white-50 small mb-1">{{ 'Shipment reference'|tr }}</div>
           <h1 class="display-6 fw-bold mb-2">{{ shipment.reference_no }}</h1>
           <div class="fs-5">{{ shipment.title }}</div>
         </div>
         <span class="badge rounded-pill bg-white text-primary px-3 py-2 fs-6">{{ shipment.status }}</span>
       </div>
       <div class="row g-3 mt-3">
-        <div class="col-md-4"><div class="text-white-50 small">Employee</div><strong>{{ shipment.employee.name }}</strong></div>
-        <div class="col-md-4"><div class="text-white-50 small">Courier / AWB</div><strong>{{ shipment.courier|upper }} · {{ shipment.awb }}</strong></div>
-        <div class="col-md-4"><div class="text-white-50 small">External AWB / waybill</div><strong>{{ shipment.external_awb or '-' }}</strong></div>
-        <div class="col-md-4"><div class="text-white-50 small">Current location</div><strong>{{ shipment.last_location }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">{{ 'Employee'|tr }}</div><strong>{{ shipment.employee.name }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">{{ 'Courier'|tr }} / AWB</div><strong>{{ shipment.courier|upper }} · {{ shipment.awb }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">{{ 'External AWB / waybill'|tr }}</div><strong>{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="col-md-4">
+          <div class="text-white-50 small">{{ 'Current location'|tr }}</div>
+          <button
+            type="button"
+            class="location-button"
+            data-bs-toggle="modal"
+            data-bs-target="#packageMapModal"
+            data-reference="{{ shipment.reference_no }}"
+            data-title="{{ shipment.title }}"
+            data-employee="{{ shipment.employee.name }}"
+            data-courier="{{ shipment.courier|upper }}"
+            data-awb="{{ shipment.awb }}"
+            data-external-awb="{{ shipment.external_awb or '-' }}"
+            data-origin="{{ shipment.origin }}"
+            data-destination="{{ shipment.destination }}"
+            data-status="{{ shipment.status }}"
+            data-location="{{ shipment.last_location }}"
+            data-updated="{{ shipment.updated_at.strftime('%d %b %Y, %H:%M') }}"
+          >
+            <i class="bi bi-geo-alt me-1"></i>{{ shipment.last_location }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -64,22 +94,22 @@
     <div class="col-lg-5">
       <div class="card p-4 h-100">
         <div class="d-flex align-items-center justify-content-between mb-3">
-          <h4 class="fw-bold mb-0">Shipment information</h4>
+          <h4 class="fw-bold mb-0">{{ 'Shipment information'|tr }}</h4>
           <i class="bi bi-info-circle text-secondary fs-5"></i>
         </div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Document type</span><strong class="text-end">{{ shipment.document_type }}</strong></div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">External AWB / waybill</span><strong class="text-end">{{ shipment.external_awb or '-' }}</strong></div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Route</span><strong class="text-end">{{ shipment.origin }} → {{ shipment.destination }}</strong></div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Shipping cost</span><strong class="text-end">Rp {{ "{:,.0f}".format(shipment.shipping_cost) }}</strong></div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Estimated duration</span><strong class="text-end">{{ shipment.eta_days }} day(s)</strong></div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Expected arrival</span><strong class="text-end">{{ shipment.expected_arrival.strftime('%d %b %Y') if shipment.expected_arrival else '-' }}</strong></div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">Delivered at</span><strong class="text-end">{{ shipment.delivered_at.strftime('%d %b %Y %H:%M') if shipment.delivered_at else '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Document type'|tr }}</span><strong class="text-end">{{ shipment.document_type }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'External AWB / waybill'|tr }}</span><strong class="text-end">{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Route'|tr }}</span><strong class="text-end">{{ shipment.origin }} → {{ shipment.destination }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Shipping cost'|tr }}</span><strong class="text-end">Rp {{ "{:,.0f}".format(shipment.shipping_cost) }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Estimated duration'|tr }}</span><strong class="text-end">{{ shipment.eta_days }} day(s)</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Expected arrival'|tr }}</span><strong class="text-end">{{ shipment.expected_arrival.strftime('%d %b %Y') if shipment.expected_arrival else '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Delivered at'|tr }}</span><strong class="text-end">{{ shipment.delivered_at.strftime('%d %b %Y %H:%M') if shipment.delivered_at else '-' }}</strong></div>
 
         {% if current_user.role in ['admin','operator'] %}
         <button class="btn btn-primary w-100 mt-4 py-2" data-bs-toggle="modal" data-bs-target="#refreshModal">
-          <i class="bi bi-arrow-clockwise me-2"></i>Refresh tracking
+          <i class="bi bi-arrow-clockwise me-2"></i>{{ 'Refresh tracking'|tr }}
         </button>
-        <div class="text-center muted small mt-2">Provider mode: {{ 'Mock' if mock_mode else 'Live' }}</div>
+        <div class="text-center muted small mt-2">{{ 'Provider mode'|tr }}: {{ ('Mock API' if mock_mode else 'Live API')|tr }}</div>
         {% endif %}
       </div>
     </div>
@@ -87,8 +117,8 @@
     <div class="col-lg-7">
       <div class="card p-4 h-100">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <div><h4 class="fw-bold mb-1">Tracking timeline</h4><div class="muted small">{{ events|length }} recorded event(s)</div></div>
-          <span class="badge rounded-pill text-bg-light border"><i class="bi bi-clock-history me-1"></i>Latest first</span>
+          <div><h4 class="fw-bold mb-1">{{ 'Tracking timeline'|tr }}</h4><div class="muted small">{{ events|length }} {{ 'recorded event(s)'|tr }}</div></div>
+          <span class="badge rounded-pill text-bg-light border"><i class="bi bi-clock-history me-1"></i>{{ 'Latest first'|tr }}</span>
         </div>
         <div class="timeline">
           {% for e in events %}
@@ -119,13 +149,13 @@
           <div class="mx-auto mb-3 rounded-circle bg-primary-subtle text-primary d-grid" style="width:64px;height:64px;place-items:center">
             <i class="bi bi-arrow-clockwise fs-3"></i>
           </div>
-          <h4 class="fw-bold">Refresh tracking status?</h4>
+          <h4 class="fw-bold">{{ 'Refresh tracking status?'|tr }}</h4>
           <p class="muted">The system will request the latest timeline from {{ shipment.courier|upper }} through the configured RajaOngkir provider.</p>
           <div class="d-flex gap-2 justify-content-center mt-4">
-            <button type="button" class="btn btn-light border rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-light border rounded-3 px-4" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button>
             <button class="btn btn-primary px-4" id="refreshButton">
-              <span class="button-label">Refresh now</span>
-              <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>Refreshing...</span>
+              <span class="button-label">{{ 'Refresh now'|tr }}</span>
+              <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Refreshing...'|tr }}</span>
             </button>
           </div>
         </div>
@@ -135,14 +165,83 @@
 </div>
 {% endif %}
 
+<div class="modal fade" id="packageMapModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header border-0 px-4 pt-4 pb-2">
+        <div>
+          <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'Package map'|tr }}</span>
+          <h4 class="modal-title fw-bold" id="mapReference">{{ 'Shipment location'|tr }}</h4>
+          <p class="muted mb-0" id="mapSubtitle">{{ 'Current package location details.'|tr }}</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-4">
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <iframe id="packageMapFrame" class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
+          <div class="col-lg-4">
+            <div class="map-detail p-3 h-100">
+              <div class="small muted mb-1">{{ 'Last location'|tr }}</div>
+              <h5 class="fw-bold mb-3" id="mapLocation">-</h5>
+              <div class="vstack gap-3 small">
+                <div><span class="muted d-block">{{ 'Document'|tr }}</span><strong id="mapTitle">-</strong></div>
+                <div><span class="muted d-block">{{ 'Employee'|tr }}</span><strong id="mapEmployee">-</strong></div>
+                <div><span class="muted d-block">{{ 'Courier'|tr }} / AWB</span><strong id="mapCourier">-</strong></div>
+                <div><span class="muted d-block">{{ 'External AWB'|tr }}</span><strong id="mapExternalAwb">-</strong></div>
+                <div><span class="muted d-block">{{ 'Route'|tr }}</span><strong id="mapRoute">-</strong></div>
+                <div><span class="muted d-block">{{ 'Status'|tr }}</span><strong id="mapStatus">-</strong></div>
+                <div><span class="muted d-block">{{ 'Last updated'|tr }}</span><strong id="mapUpdated">-</strong></div>
+              </div>
+              <a class="btn btn-primary w-100 mt-4" id="openMapLink" target="_blank" rel="noopener">
+                <i class="bi bi-map me-2"></i>{{ 'Open in Google Maps'|tr }}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container position-fixed top-0 end-0 p-3 mt-5">
   <div id="refreshToast" class="toast text-bg-success">
-    <div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle-fill me-2"></i>Tracking refreshed successfully.</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    <div class="d-flex"><div class="toast-body"><i class="bi bi-check-circle-fill me-2"></i>{{ 'Tracking refreshed successfully.'|tr }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  const packageMapModal = document.getElementById('packageMapModal');
+
+  packageMapModal?.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (!button) return;
+    const location = button.dataset.location || '-';
+    const reference = button.dataset.reference || '-';
+    const courierAwb = `${button.dataset.courier || '-'} · ${button.dataset.awb || '-'}`;
+    const route = `${button.dataset.origin || '-'} → ${button.dataset.destination || '-'}`;
+    const query = encodeURIComponent(`${location}, Indonesia`);
+
+    document.getElementById('mapReference').textContent = reference;
+    document.getElementById('mapSubtitle').textContent = `${button.dataset.employee || '-'} · ${button.dataset.status || '-'}`;
+    document.getElementById('mapLocation').textContent = location;
+    document.getElementById('mapTitle').textContent = button.dataset.title || '-';
+    document.getElementById('mapEmployee').textContent = button.dataset.employee || '-';
+    document.getElementById('mapCourier').textContent = courierAwb;
+    document.getElementById('mapExternalAwb').textContent = button.dataset.externalAwb || '-';
+    document.getElementById('mapRoute').textContent = route;
+    document.getElementById('mapStatus').textContent = button.dataset.status || '-';
+    document.getElementById('mapUpdated').textContent = button.dataset.updated || '-';
+    document.getElementById('packageMapFrame').src = `https://maps.google.com/maps?q=${query}&output=embed`;
+    document.getElementById('openMapLink').href = `https://www.google.com/maps/search/?api=1&query=${query}`;
+  });
+
+  packageMapModal?.addEventListener('hidden.bs.modal', function () {
+    document.getElementById('packageMapFrame').src = '';
+  });
+
   document.getElementById('refreshForm')?.addEventListener('submit', () => {
     const button = document.getElementById('refreshButton');
     button.disabled = true;

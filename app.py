@@ -2,9 +2,11 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from urllib.parse import urlencode
 
 import httpx
 import jwt
+from jinja2 import pass_context
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -18,6 +20,9 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, rela
 load_dotenv()
 
 APP_NAME = os.getenv("APP_NAME", "Employee Shipment Tracker")
+USER_ROLES = ("admin", "operator", "employee")
+DEFAULT_LANGUAGE = "id"
+SUPPORTED_LANGUAGES = {"id": "Bahasa", "en": "English"}
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./employee_shipments.db")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-development-secret")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
@@ -28,6 +33,12 @@ RAJAONGKIR_API_KEY = os.getenv("RAJAONGKIR_API_KEY", "")
 RAJAONGKIR_BASE_URL = os.getenv(
     "RAJAONGKIR_BASE_URL", "https://rajaongkir.komerce.id/api/v1"
 ).rstrip("/")
+NOMINATIM_REVERSE_URL = os.getenv(
+    "NOMINATIM_REVERSE_URL", "https://nominatim.openstreetmap.org/reverse"
+)
+GEOCODER_USER_AGENT = os.getenv(
+    "GEOCODER_USER_AGENT", "employee-shipment-tracker-demo/1.0"
+)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
@@ -64,6 +75,17 @@ class User(Base):
     employee_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("employees.id"), unique=True, nullable=True
     )
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_login_latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    last_login_longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    last_login_accuracy: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    last_login_address: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    last_login_road: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    last_login_neighbourhood: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    last_login_city: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    last_login_state: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    last_login_country: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    last_login_postcode: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     employee: Mapped[Optional[Employee]] = relationship(back_populates="user")
 
@@ -80,8 +102,8 @@ class Shipment(Base):
     awb: Mapped[str] = mapped_column(String(100), index=True)
     external_awb: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="CREATED")
-    origin: Mapped[str] = mapped_column(String(150))
-    destination: Mapped[str] = mapped_column(String(150))
+    origin: Mapped[str] = mapped_column(String(500))
+    destination: Mapped[str] = mapped_column(String(500))
     shipping_cost: Mapped[float] = mapped_column(Float, default=0)
     eta_days: Mapped[int] = mapped_column(Integer, default=0)
     expected_arrival: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -119,12 +141,178 @@ def ensure_optional_columns():
     if "external_awb" not in shipment_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE shipments ADD COLUMN external_awb VARCHAR(100)"))
+    user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
+    missing_user_columns = {
+        "last_login_at": "DATETIME",
+        "last_login_latitude": "FLOAT",
+        "last_login_longitude": "FLOAT",
+        "last_login_accuracy": "FLOAT",
+        "last_login_address": "VARCHAR(500)",
+        "last_login_road": "VARCHAR(200)",
+        "last_login_neighbourhood": "VARCHAR(200)",
+        "last_login_city": "VARCHAR(200)",
+        "last_login_state": "VARCHAR(200)",
+        "last_login_country": "VARCHAR(120)",
+        "last_login_postcode": "VARCHAR(40)",
+    }
+    with engine.begin() as connection:
+        for column_name, column_type in missing_user_columns.items():
+            if column_name not in user_columns:
+                connection.execute(text(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"))
 
 
 ensure_optional_columns()
 
 app = FastAPI(title=APP_NAME, version="0.2.0")
 templates = Jinja2Templates(directory="templates")
+
+TRANSLATIONS = {
+    "id": {
+        "Welcome back": "Selamat datang kembali",
+        "Sign in to {app_name} using your assigned account.": "Masuk ke {app_name} menggunakan akun yang diberikan.",
+        "Username": "Nama pengguna",
+        "Password": "Kata sandi",
+        "Current location detection": "Deteksi lokasi saat ini",
+        "Location will be detected automatically when you sign in.": "Lokasi akan dideteksi otomatis saat Anda masuk.",
+        "Sign in": "Masuk",
+        "Signing in...": "Sedang masuk...",
+        "Detecting location...": "Mendeteksi lokasi...",
+        "Demo accounts": "Akun demo",
+        "Location is not supported by this browser. Signing in without location.": "Lokasi tidak didukung browser ini. Masuk tanpa lokasi.",
+        "Location detected. Signing in...": "Lokasi terdeteksi. Sedang masuk...",
+        "Location permission was skipped. Signing in without location.": "Izin lokasi dilewati. Masuk tanpa lokasi.",
+        "Employee delivery operations": "Operasional pengiriman karyawan",
+        "Mock API": "API Mock",
+        "Live API": "API Live",
+        "Logout": "Keluar",
+        "access": "akses",
+        "Shipment Dashboard": "Dasbor Pengiriman",
+        "Monitor company documents and packages from dispatch until employee receipt.": "Pantau dokumen dan paket perusahaan dari pengiriman sampai diterima karyawan.",
+        "Create shipment": "Buat pengiriman",
+        "Total shipments": "Total pengiriman",
+        "In progress": "Dalam proses",
+        "Delivered": "Terkirim",
+        "Shipping cost": "Biaya kirim",
+        "Recent shipments": "Pengiriman terbaru",
+        "Click a reference number to view its complete delivery timeline.": "Klik nomor referensi untuk melihat linimasa pengiriman lengkap.",
+        "Search reference, employee, AWB, or external waybill": "Cari referensi, karyawan, AWB, atau waybill eksternal",
+        "Reference": "Referensi",
+        "Document": "Dokumen",
+        "Employee": "Karyawan",
+        "Courier": "Kurir",
+        "External waybill": "Waybill eksternal",
+        "Route": "Rute",
+        "Cost": "Biaya",
+        "Status": "Status",
+        "Last location": "Lokasi terakhir",
+        "No shipments found": "Tidak ada pengiriman",
+        "New shipments will appear here.": "Pengiriman baru akan muncul di sini.",
+        "No matching shipments": "Tidak ada pengiriman yang cocok",
+        "Try another reference, employee name, courier, AWB, or external waybill.": "Coba referensi, nama karyawan, kurir, AWB, atau waybill eksternal lain.",
+        "Users": "Pengguna",
+        "Create accounts with existing roles.": "Buat akun dengan role yang tersedia.",
+        "Full name": "Nama lengkap",
+        "Role": "Role",
+        "Linked employee": "Karyawan terkait",
+        "Choose employee": "Pilih karyawan",
+        "Temporary password": "Kata sandi sementara",
+        "Active account": "Akun aktif",
+        "Add account": "Tambah akun",
+        "Adding...": "Menambahkan...",
+        "Active": "Aktif",
+        "Inactive": "Tidak aktif",
+        "No users yet.": "Belum ada pengguna.",
+        "New delivery": "Pengiriman baru",
+        "Create a shipment": "Buat pengiriman",
+        "Register the document, recipient, courier, cost, and expected delivery time.": "Daftarkan dokumen, penerima, kurir, biaya, dan estimasi waktu pengiriman.",
+        "Reference number": "Nomor referensi",
+        "Document title": "Judul dokumen",
+        "Document type": "Jenis dokumen",
+        "Employee recipient": "Penerima karyawan",
+        "AWB / waybill": "AWB / waybill",
+        "Lookup": "Cari",
+        "Lookup AWB to fill origin and destination.": "Cari AWB untuk mengisi origin dan destination.",
+        "External AWB / waybill": "AWB / waybill eksternal",
+        "Origin": "Origin",
+        "Uses your detected current location when available.": "Menggunakan lokasi Anda saat ini jika tersedia.",
+        "Destination": "Destination",
+        "ETA days": "Estimasi hari",
+        "Cancel": "Batal",
+        "Creating...": "Membuat...",
+        "Package map": "Peta paket",
+        "Shipment location": "Lokasi pengiriman",
+        "Current package location details.": "Detail lokasi paket saat ini.",
+        "External AWB": "AWB eksternal",
+        "Last updated": "Terakhir diperbarui",
+        "Open in Google Maps": "Buka di Google Maps",
+        "Invalid AWB code": "Kode AWB tidak valid",
+        "AWB lookup failed": "Pencarian AWB gagal",
+        "The courier provider could not find this AWB.": "Penyedia kurir tidak menemukan AWB ini.",
+        "The courier provider could not process this AWB.": "Penyedia kurir tidak dapat memproses AWB ini.",
+        "The courier provider reported this AWB as invalid.": "Penyedia kurir melaporkan AWB ini tidak valid.",
+        "Provider detail": "Detail provider",
+        "Review AWB": "Periksa AWB",
+        "Unknown lookup error.": "Kesalahan pencarian tidak diketahui.",
+        "Shipment created successfully.": "Pengiriman berhasil dibuat.",
+        "User account created successfully.": "Akun pengguna berhasil dibuat.",
+        "Choose courier and enter AWB first.": "Pilih kurir dan isi AWB terlebih dahulu.",
+        "Looking up route from courier tracking...": "Mencari rute dari pelacakan kurir...",
+        "Route filled from {source}. Last status: {status}.": "Rute diisi dari {source}. Status terakhir: {status}.",
+        "courier data": "data kurir",
+        "tracking timeline": "linimasa pelacakan",
+        "Could not lookup this AWB. Fill origin and destination manually.": "Tidak dapat mencari AWB ini. Isi origin dan destination secara manual.",
+        "Browser location is unavailable. Origin uses your last detected address.": "Lokasi browser tidak tersedia. Origin memakai alamat terakhir yang terdeteksi.",
+        "Detecting current origin location...": "Mendeteksi lokasi origin saat ini...",
+        "Origin filled from your current detected location.": "Origin diisi dari lokasi Anda saat ini.",
+        "Could not read address details. Origin uses your last detected address.": "Tidak dapat membaca detail alamat. Origin memakai alamat terakhir yang terdeteksi.",
+        "Location permission was skipped. Origin uses your last detected address.": "Izin lokasi dilewati. Origin memakai alamat terakhir yang terdeteksi.",
+        "Dashboard": "Dasbor",
+        "Shipment reference": "Referensi pengiriman",
+        "Current location": "Lokasi saat ini",
+        "Shipment information": "Informasi pengiriman",
+        "Estimated duration": "Estimasi durasi",
+        "Expected arrival": "Estimasi tiba",
+        "Delivered at": "Diterima pada",
+        "Refresh tracking": "Refresh pelacakan",
+        "Provider mode": "Mode provider",
+        "Tracking timeline": "Linimasa pelacakan",
+        "recorded event(s)": "event tercatat",
+        "Latest first": "Terbaru dulu",
+        "Refresh tracking status?": "Refresh status pelacakan?",
+        "Refresh now": "Refresh sekarang",
+        "Refreshing...": "Sedang refresh...",
+        "Tracking refreshed successfully.": "Pelacakan berhasil diperbarui.",
+    },
+    "en": {},
+}
+
+
+def get_locale(request: Request) -> str:
+    lang = request.query_params.get("lang") or request.cookies.get("lang") or DEFAULT_LANGUAGE
+    return lang if lang in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+
+
+def translate_text(lang: str, text: str, **kwargs) -> str:
+    translated = TRANSLATIONS.get(lang, {}).get(text, text)
+    return translated.format(**kwargs) if kwargs else translated
+
+
+@pass_context
+def tr_filter(context, value: str) -> str:
+    return translate_text(context.get("lang", DEFAULT_LANGUAGE), str(value))
+
+
+templates.env.filters["tr"] = tr_filter
+
+
+def localized_context(request: Request, **context):
+    lang = get_locale(request)
+    return {
+        "lang": lang,
+        "languages": SUPPORTED_LANGUAGES,
+        "app_name": APP_NAME,
+        **context,
+    }
 
 
 def get_db():
@@ -200,6 +388,147 @@ def require_roles(user: User, *allowed_roles: str) -> None:
             status_code=403,
             detail=f"Required role: {', '.join(allowed_roles)}",
         )
+
+
+def dashboard_redirect(**params):
+    clean_params = {key: value for key, value in params.items() if value}
+    query = f"?{urlencode(clean_params)}" if clean_params else ""
+    return RedirectResponse(url=f"/{query}", status_code=303)
+
+
+def parse_optional_float(value: Optional[str]) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def reverse_geocode(latitude: Optional[float], longitude: Optional[float]) -> dict:
+    if latitude is None or longitude is None:
+        return {}
+    try:
+        response = httpx.get(
+            NOMINATIM_REVERSE_URL,
+            params={
+                "format": "jsonv2",
+                "lat": latitude,
+                "lon": longitude,
+                "addressdetails": 1,
+                "zoom": 18,
+            },
+            headers={"User-Agent": GEOCODER_USER_AGENT},
+            timeout=3,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError):
+        return {}
+
+    address = payload.get("address") or {}
+    return {
+        "display_name": payload.get("display_name"),
+        "road": address.get("road") or address.get("pedestrian") or address.get("footway"),
+        "neighbourhood": address.get("neighbourhood") or address.get("suburb") or address.get("village"),
+        "city": address.get("city") or address.get("town") or address.get("municipality") or address.get("county"),
+        "state": address.get("state"),
+        "country": address.get("country"),
+        "postcode": address.get("postcode"),
+    }
+
+
+def format_location_address(details: dict) -> Optional[str]:
+    if details.get("display_name"):
+        return details["display_name"]
+    parts = [
+        details.get("road"),
+        details.get("neighbourhood"),
+        details.get("city"),
+        details.get("state"),
+        details.get("postcode"),
+        details.get("country"),
+    ]
+    return ", ".join(part for part in parts if part) or None
+
+
+def find_first_value(payload, keys: tuple[str, ...]) -> Optional[str]:
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            normalized_key = key.lower()
+            if normalized_key in keys and value not in (None, ""):
+                return str(value)
+        for value in payload.values():
+            match = find_first_value(value, keys)
+            if match:
+                return match
+    if isinstance(payload, list):
+        for item in payload:
+            match = find_first_value(item, keys)
+            if match:
+                return match
+    return None
+
+
+def extract_awb_route(result: dict) -> dict:
+    raw = result.get("raw") or {}
+    events = result.get("events") or []
+    explicit_origin = find_first_value(raw, (
+        "origin",
+        "origin_city",
+        "shipper_city",
+        "sender_city",
+        "city_origin",
+        "origin_name",
+    ))
+    explicit_destination = find_first_value(raw, (
+        "destination",
+        "destination_city",
+        "receiver_city",
+        "recipient_city",
+        "consignee_city",
+        "city_destination",
+        "destination_name",
+    ))
+    timeline_locations = [
+        event.get("location")
+        for event in events
+        if event.get("location") and event.get("location") != "-"
+    ]
+    origin = explicit_origin or (timeline_locations[0] if timeline_locations else None)
+    destination = explicit_destination or (timeline_locations[-1] if timeline_locations else None)
+    return {
+        "origin": origin,
+        "destination": destination,
+        "last_location": result.get("last_location") or destination or "-",
+        "status": result.get("status") or "UNKNOWN",
+        "events": events,
+        "source": "courier_payload" if explicit_origin or explicit_destination else "tracking_timeline",
+    }
+
+
+def record_login_location(
+    user: User,
+    db: Session,
+    latitude: Optional[str] = None,
+    longitude: Optional[str] = None,
+    accuracy: Optional[str] = None,
+) -> None:
+    parsed_latitude = parse_optional_float(latitude)
+    parsed_longitude = parse_optional_float(longitude)
+    address_details = reverse_geocode(parsed_latitude, parsed_longitude)
+    user.last_login_at = datetime.utcnow()
+    user.last_login_latitude = parsed_latitude
+    user.last_login_longitude = parsed_longitude
+    user.last_login_accuracy = parse_optional_float(accuracy)
+    user.last_login_address = address_details.get("display_name")
+    user.last_login_road = address_details.get("road")
+    user.last_login_neighbourhood = address_details.get("neighbourhood")
+    user.last_login_city = address_details.get("city")
+    user.last_login_state = address_details.get("state")
+    user.last_login_country = address_details.get("country")
+    user.last_login_postcode = address_details.get("postcode")
+    db.commit()
 
 
 def can_view_shipment(user: User, shipment: Shipment) -> bool:
@@ -345,11 +674,15 @@ def health():
 def api_login(
     username: str = Form(...),
     password: str = Form(...),
+    latitude: Optional[str] = Form(None),
+    longitude: Optional[str] = Form(None),
+    accuracy: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     user = db.scalar(select(User).where(User.username == username))
     if not user or not user.is_active or not password_hash.verify(password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
+    record_login_location(user, db, latitude, longitude, accuracy)
     token, expires_at = create_access_token(user)
     return {
         "access_token": token,
@@ -383,6 +716,58 @@ def list_employees(
 ):
     require_roles(current_user, "admin", "operator")
     return db.scalars(select(Employee).order_by(Employee.name)).all()
+
+
+@app.get("/api/location/reverse")
+def reverse_location_for_form(
+    request: Request,
+    latitude: str = Query(...),
+    longitude: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Login is required")
+    require_roles(user, "admin", "operator")
+    parsed_latitude = parse_optional_float(latitude)
+    parsed_longitude = parse_optional_float(longitude)
+    if parsed_latitude is None or parsed_longitude is None:
+        raise HTTPException(status_code=422, detail="Valid latitude and longitude are required")
+
+    details = reverse_geocode(parsed_latitude, parsed_longitude)
+    origin = format_location_address(details) or f"{parsed_latitude:.6f}, {parsed_longitude:.6f}"
+    return {
+        "origin": origin,
+        "latitude": parsed_latitude,
+        "longitude": parsed_longitude,
+        "address": details,
+    }
+
+
+@app.get("/api/awb/lookup")
+async def lookup_awb_route(
+    request: Request,
+    courier: str = Query(...),
+    awb: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Login is required")
+    require_roles(user, "admin", "operator")
+
+    courier = courier.strip().lower()
+    awb = awb.strip()
+    if not courier or not awb:
+        raise HTTPException(status_code=422, detail="Courier and AWB are required")
+
+    result = await provider.track(awb, courier)
+    route = extract_awb_route(result)
+    return {
+        "courier": courier,
+        "awb": awb,
+        **route,
+    }
 
 
 @app.get("/healthz")
@@ -535,19 +920,34 @@ def login_page(request: Request, error: Optional[str] = None):
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"app_name": APP_NAME, "error": error},
+        context=localized_context(request, error=error),
     )
+
+
+@app.get("/language")
+def set_language(request: Request, lang: str = Query(DEFAULT_LANGUAGE), next: str = Query("/")):
+    if lang not in SUPPORTED_LANGUAGES:
+        lang = DEFAULT_LANGUAGE
+    if not next.startswith("/"):
+        next = "/"
+    response = RedirectResponse(url=next, status_code=303)
+    response.set_cookie("lang", lang, httponly=False, samesite="lax", max_age=60 * 60 * 24 * 365)
+    return response
 
 
 @app.post("/login")
 def login_form(
     username: str = Form(...),
     password: str = Form(...),
+    latitude: Optional[str] = Form(None),
+    longitude: Optional[str] = Form(None),
+    accuracy: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     user = db.scalar(select(User).where(User.username == username))
     if not user or not user.is_active or not password_hash.verify(password, user.password_hash):
         return RedirectResponse(url="/login?error=Incorrect+username+or+password", status_code=303)
+    record_login_location(user, db, latitude, longitude, accuracy)
     token, _ = create_access_token(user)
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(
@@ -572,12 +972,16 @@ def logout():
 def dashboard(
     request: Request,
     created: Optional[int] = None,
+    user_created: Optional[int] = None,
+    user_error: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     user = get_current_web_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     employees = db.scalars(select(Employee).order_by(Employee.name)).all() if user.role in {"admin", "operator"} else []
+    users = db.scalars(select(User).order_by(User.created_at.desc())).all() if user.role == "admin" else []
+    assigned_employee_ids = {account.employee_id for account in users if account.employee_id}
     stmt = select(Shipment).order_by(Shipment.created_at.desc())
     if user.role == "employee":
         stmt = stmt.where(Shipment.employee_id == user.employee_id)
@@ -591,16 +995,72 @@ def dashboard(
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context={
-            "app_name": APP_NAME,
-            "current_user": user,
-            "employees": employees,
-            "shipments": shipments,
-            "counts": counts,
-            "mock_mode": RAJAONGKIR_MOCK,
-            "created": bool(created),
-        },
+        context=localized_context(
+            request,
+            current_user=user,
+            employees=employees,
+            users=users,
+            assigned_employee_ids=assigned_employee_ids,
+            user_roles=USER_ROLES,
+            shipments=shipments,
+            counts=counts,
+            mock_mode=RAJAONGKIR_MOCK,
+            created=bool(created),
+            user_created=bool(user_created),
+            user_error=user_error,
+        ),
     )
+
+
+@app.post("/users/create")
+def create_user_form(
+    request: Request,
+    username: str = Form(...),
+    full_name: str = Form(...),
+    role: str = Form(...),
+    password: str = Form(...),
+    employee_id: Optional[str] = Form(None),
+    is_active: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    username = username.strip()
+    full_name = full_name.strip()
+    role = role.strip().lower()
+    password = password.strip()
+
+    if role not in USER_ROLES:
+        return dashboard_redirect(user_error="Choose an existing role.")
+    if len(password) < 8:
+        return dashboard_redirect(user_error="Password must be at least 8 characters.")
+    if db.scalar(select(User.id).where(User.username == username)):
+        return dashboard_redirect(user_error="Username already exists.")
+
+    selected_employee_id = int(employee_id) if employee_id and employee_id.isdigit() else None
+    if role == "employee":
+        if not selected_employee_id:
+            return dashboard_redirect(user_error="Employee accounts must be linked to an employee.")
+        if not db.get(Employee, selected_employee_id):
+            return dashboard_redirect(user_error="Selected employee was not found.")
+        if db.scalar(select(User.id).where(User.employee_id == selected_employee_id)):
+            return dashboard_redirect(user_error="Selected employee already has an account.")
+    else:
+        selected_employee_id = None
+
+    db.add(User(
+        username=username,
+        full_name=full_name,
+        role=role,
+        password_hash=password_hash.hash(password),
+        employee_id=selected_employee_id,
+        is_active=is_active == "on",
+    ))
+    db.commit()
+    return dashboard_redirect(user_created=1)
 
 
 @app.get("/shipments/{shipment_id}", response_class=HTMLResponse)
@@ -621,14 +1081,14 @@ def shipment_page(
     return templates.TemplateResponse(
         request=request,
         name="shipment.html",
-        context={
-            "app_name": APP_NAME,
-            "shipment": shipment,
-            "events": sorted(shipment.events, key=lambda item: item.event_time, reverse=True),
-            "current_user": user,
-            "mock_mode": RAJAONGKIR_MOCK,
-            "refreshed": bool(refreshed),
-        },
+        context=localized_context(
+            request,
+            shipment=shipment,
+            events=sorted(shipment.events, key=lambda item: item.event_time, reverse=True),
+            current_user=user,
+            mock_mode=RAJAONGKIR_MOCK,
+            refreshed=bool(refreshed),
+        ),
     )
 
 

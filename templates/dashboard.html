@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -120,11 +120,52 @@
       border: 0; border-radius: 15px;
       box-shadow: 0 16px 48px rgba(15,23,42,.18);
     }
+    .sidebar-card {
+      position: sticky;
+      top: 94px;
+    }
+    .user-row {
+      padding: .8rem 0;
+      border-bottom: 1px solid var(--app-border);
+    }
+    .user-row:last-child { border-bottom: 0; }
+    .role-chip {
+      border-radius: 999px;
+      padding: .28rem .55rem;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+    .role-admin { background: #fee2e2; color: #991b1b; }
+    .role-operator { background: #e0f2fe; color: #075985; }
+    .role-employee { background: #dcfce7; color: #166534; }
+    .location-button {
+      border: 0;
+      background: transparent;
+      color: var(--app-primary);
+      padding: 0;
+      font-weight: 650;
+      text-align: left;
+    }
+    .location-button:hover { color: var(--app-primary-dark); text-decoration: underline; }
+    .map-frame {
+      width: 100%;
+      min-height: 380px;
+      border: 0;
+      border-radius: 16px;
+      background: #eef0f6;
+    }
+    .map-detail {
+      border: 1px solid var(--app-border);
+      border-radius: 14px;
+      background: #fbfcff;
+    }
     .empty-state { padding: 4rem 1rem !important; }
     @media (max-width: 768px) {
       main { padding-left: 1rem !important; padding-right: 1rem !important; }
       .hero-panel { border-radius: 18px; }
       .navbar-user { display:none; }
+      .sidebar-card { position: static; }
     }
   </style>
 </head>
@@ -135,18 +176,28 @@
       <span class="brand-mark"><i class="bi bi-box-seam"></i></span>
       <span>
         <span class="d-block fw-bold lh-sm">{{ app_name }}</span>
-        <small class="text-white-50 fw-normal">Employee delivery operations</small>
+        <small class="text-white-50 fw-normal">{{ 'Employee delivery operations'|tr }}</small>
       </span>
     </a>
 
     <div class="d-flex align-items-center gap-2 gap-lg-3">
       <span class="badge rounded-pill {{ 'text-bg-warning' if mock_mode else 'text-bg-success' }}">
-        <i class="bi bi-plug-fill me-1"></i>{{ 'Mock API' if mock_mode else 'Live API' }}
+        <i class="bi bi-plug-fill me-1"></i>{{ ('Mock API' if mock_mode else 'Live API')|tr }}
       </span>
+      <div class="btn-group btn-group-sm" role="group" aria-label="Language">
+        {% for code, label in languages.items() %}
+        <a class="btn {{ 'btn-light' if code == lang else 'btn-outline-light' }}" href="/language?lang={{ code }}&next=/">{{ label }}</a>
+        {% endfor %}
+      </div>
       <div class="navbar-user text-end">
         <div class="text-white small fw-semibold">{{ current_user.full_name }}</div>
         <div class="text-white-50" style="font-size:.75rem">{{ current_user.role|title }}</div>
       </div>
+      {% if current_user.last_login_latitude is not none and current_user.last_login_longitude is not none %}
+      <a class="btn btn-sm btn-outline-light rounded-3 d-none d-lg-inline-flex align-items-center gap-1" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ current_user.last_login_latitude }},{{ current_user.last_login_longitude }}">
+        <i class="bi bi-geo-alt"></i>{{ current_user.last_login_road or current_user.last_login_city or 'Location' }}
+      </a>
+      {% endif %}
       <div class="dropdown">
         <button class="btn btn-outline-light border-0 rounded-circle" data-bs-toggle="dropdown" aria-label="User menu">
           <i class="bi bi-person-circle fs-5"></i>
@@ -156,7 +207,7 @@
           <li><hr class="dropdown-divider"></li>
           <li>
             <form method="post" action="/logout">
-              <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
+              <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>{{ 'Logout'|tr }}</button>
             </form>
           </li>
         </ul>
@@ -170,15 +221,15 @@
     <div class="row align-items-center g-4">
       <div class="col-lg-8">
         <span class="badge rounded-pill bg-white bg-opacity-25 mb-3">
-          <i class="bi bi-shield-check me-1"></i>{{ current_user.role|title }} access
+          <i class="bi bi-shield-check me-1"></i>{{ current_user.role|title }} {{ 'access'|tr }}
         </span>
-        <h1 class="display-6 fw-bold mb-2">Shipment Dashboard</h1>
-        <p class="mb-0 text-white-50 fs-5">Monitor company documents and packages from dispatch until employee receipt.</p>
+        <h1 class="display-6 fw-bold mb-2">{{ 'Shipment Dashboard'|tr }}</h1>
+        <p class="mb-0 text-white-50 fs-5">{{ 'Monitor company documents and packages from dispatch until employee receipt.'|tr }}</p>
       </div>
       {% if current_user.role in ['admin','operator'] %}
       <div class="col-lg-4 text-lg-end">
         <button class="btn btn-light btn-lg rounded-4 px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#createShipmentModal">
-          <i class="bi bi-plus-circle me-2"></i>Create shipment
+          <i class="bi bi-plus-circle me-2"></i>{{ 'Create shipment'|tr }}
         </button>
       </div>
       {% endif %}
@@ -190,7 +241,7 @@
       <div class="card surface-card h-100 p-3">
         <div class="card-body d-flex align-items-center gap-3">
           <span class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-boxes"></i></span>
-          <div><div class="muted small">Total shipments</div><div class="metric-value">{{ counts.total }}</div></div>
+          <div><div class="muted small">{{ 'Total shipments'|tr }}</div><div class="metric-value">{{ counts.total }}</div></div>
         </div>
       </div>
     </div>
@@ -198,7 +249,7 @@
       <div class="card surface-card h-100 p-3">
         <div class="card-body d-flex align-items-center gap-3">
           <span class="metric-icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-truck"></i></span>
-          <div><div class="muted small">In progress</div><div class="metric-value">{{ counts.in_progress }}</div></div>
+          <div><div class="muted small">{{ 'In progress'|tr }}</div><div class="metric-value">{{ counts.in_progress }}</div></div>
         </div>
       </div>
     </div>
@@ -206,7 +257,7 @@
       <div class="card surface-card h-100 p-3">
         <div class="card-body d-flex align-items-center gap-3">
           <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-check2-circle"></i></span>
-          <div><div class="muted small">Delivered</div><div class="metric-value">{{ counts.delivered }}</div></div>
+          <div><div class="muted small">{{ 'Delivered'|tr }}</div><div class="metric-value">{{ counts.delivered }}</div></div>
         </div>
       </div>
     </div>
@@ -214,69 +265,188 @@
       <div class="card surface-card h-100 p-3">
         <div class="card-body d-flex align-items-center gap-3">
           <span class="metric-icon bg-info-subtle text-info-emphasis"><i class="bi bi-cash-stack"></i></span>
-          <div><div class="muted small">Shipping cost</div><div class="metric-value fs-4">Rp {{ "{:,.0f}".format(counts.cost) }}</div></div>
+          <div><div class="muted small">{{ 'Shipping cost'|tr }}</div><div class="metric-value fs-4">Rp {{ "{:,.0f}".format(counts.cost) }}</div></div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="card surface-card table-card">
-    <div class="card-header bg-white border-0 p-3 p-lg-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
-      <div>
-        <h5 class="mb-1 fw-bold">Recent shipments</h5>
-        <div class="muted small">Click a reference number to view its complete delivery timeline.</div>
-      </div>
-      <div class="input-group search-box">
-        <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
-        <input id="shipmentSearch" class="form-control border-start-0" placeholder="Search reference, employee, AWB, or external waybill">
+  <section class="row g-4 align-items-start">
+    <div class="{{ 'col-xl-9' if current_user.role == 'admin' else 'col-12' }}">
+      <div class="card surface-card table-card">
+        <div class="card-header bg-white border-0 p-3 p-lg-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div>
+            <h5 class="mb-1 fw-bold">{{ 'Recent shipments'|tr }}</h5>
+            <div class="muted small">{{ 'Click a reference number to view its complete delivery timeline.'|tr }}</div>
+          </div>
+          <div class="input-group search-box">
+            <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
+            <input id="shipmentSearch" class="form-control border-start-0" placeholder="{{ 'Search reference, employee, AWB, or external waybill'|tr }}">
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0" id="shipmentTable">
+            <thead>
+              <tr><th>{{ 'Reference'|tr }}</th><th>{{ 'Document'|tr }}</th><th>{{ 'Employee'|tr }}</th><th>{{ 'Courier'|tr }}</th><th>{{ 'External waybill'|tr }}</th><th>{{ 'Route'|tr }}</th><th>{{ 'Cost'|tr }}</th><th>{{ 'Status'|tr }}</th><th>{{ 'Last location'|tr }}</th></tr>
+            </thead>
+            <tbody>
+            {% for s in shipments %}
+              <tr>
+                <td>
+                  <a class="fw-semibold text-decoration-none" href="/shipments/{{ s.id }}">{{ s.reference_no }}</a>
+                  <div class="small muted">{{ s.created_at.strftime('%d %b %Y') }}</div>
+                </td>
+                <td><div class="fw-semibold">{{ s.title }}</div><div class="small muted">{{ s.document_type }}</div></td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="avatar">{{ s.employee.name[:1]|upper }}</span>
+                    <div><div class="fw-medium">{{ s.employee.name }}</div><div class="small muted">{{ s.employee.department }}</div></div>
+                  </div>
+                </td>
+                <td><span class="fw-semibold">{{ s.courier|upper }}</span><div class="small muted">{{ s.awb }}</div></td>
+                <td><span class="small {{ 'muted' if not s.external_awb else 'fw-semibold' }}">{{ s.external_awb or '-' }}</span></td>
+                <td><div>{{ s.origin }} <i class="bi bi-arrow-right text-secondary mx-1"></i> {{ s.destination }}</div><div class="small muted">ETA {{ s.eta_days }} day(s)</div></td>
+                <td class="fw-semibold">Rp {{ "{:,.0f}".format(s.shipping_cost) }}</td>
+                <td>
+                  {% set normalized = s.status|upper %}
+                  <span class="status-badge {{ 'status-delivered' if normalized in ['DELIVERED','RECEIVED'] else ('status-created' if normalized == 'CREATED' else 'status-progress') }}">
+                    <i class="bi {{ 'bi-check-circle' if normalized in ['DELIVERED','RECEIVED'] else ('bi-circle' if normalized == 'CREATED' else 'bi-arrow-repeat') }} me-1"></i>{{ s.status }}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="location-button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#packageMapModal"
+                    data-reference="{{ s.reference_no }}"
+                    data-title="{{ s.title }}"
+                    data-employee="{{ s.employee.name }}"
+                    data-courier="{{ s.courier|upper }}"
+                    data-awb="{{ s.awb }}"
+                    data-external-awb="{{ s.external_awb or '-' }}"
+                    data-origin="{{ s.origin }}"
+                    data-destination="{{ s.destination }}"
+                    data-status="{{ s.status }}"
+                    data-location="{{ s.last_location }}"
+                    data-updated="{{ s.updated_at.strftime('%d %b %Y, %H:%M') }}"
+                  >
+                    <i class="bi bi-geo-alt me-1"></i>{{ s.last_location }}
+                  </button>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="9" class="text-center empty-state">
+                <i class="bi bi-inbox display-5 text-secondary"></i>
+                <h5 class="mt-3">{{ 'No shipments found'|tr }}</h5>
+                <p class="muted mb-0">{{ 'New shipments will appear here.'|tr }}</p>
+              </td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div id="searchEmpty" class="text-center p-5 d-none">
+          <i class="bi bi-search display-6 text-secondary"></i>
+          <h6 class="mt-3">{{ 'No matching shipments'|tr }}</h6>
+          <p class="muted mb-0">{{ 'Try another reference, employee name, courier, AWB, or external waybill.'|tr }}</p>
+        </div>
       </div>
     </div>
-    <div class="table-responsive">
-      <table class="table align-middle mb-0" id="shipmentTable">
-        <thead>
-          <tr><th>Reference</th><th>Document</th><th>Employee</th><th>Courier</th><th>External waybill</th><th>Route</th><th>Cost</th><th>Status</th><th>Last location</th></tr>
-        </thead>
-        <tbody>
-        {% for s in shipments %}
-          <tr>
-            <td>
-              <a class="fw-semibold text-decoration-none" href="/shipments/{{ s.id }}">{{ s.reference_no }}</a>
-              <div class="small muted">{{ s.created_at.strftime('%d %b %Y') }}</div>
-            </td>
-            <td><div class="fw-semibold">{{ s.title }}</div><div class="small muted">{{ s.document_type }}</div></td>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <span class="avatar">{{ s.employee.name[:1]|upper }}</span>
-                <div><div class="fw-medium">{{ s.employee.name }}</div><div class="small muted">{{ s.employee.department }}</div></div>
+
+    {% if current_user.role == 'admin' %}
+    <aside class="col-xl-3">
+      <div class="card surface-card sidebar-card">
+        <div class="card-header bg-white border-0 p-3 p-lg-4">
+          <div class="d-flex align-items-center justify-content-between gap-3">
+            <div>
+              <h5 class="fw-bold mb-1">{{ 'Users'|tr }}</h5>
+              <div class="muted small">{{ 'Create accounts with existing roles.'|tr }}</div>
+            </div>
+            <span class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-people"></i></span>
+          </div>
+        </div>
+        <div class="card-body pt-0">
+          <form method="post" action="/users/create" id="createUserForm" class="vstack gap-3">
+            <div>
+              <label class="form-label fw-semibold">{{ 'Username'|tr }}</label>
+              <input class="form-control" name="username" required placeholder="new.operator">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Full name'|tr }}</label>
+              <input class="form-control" name="full_name" required placeholder="New Operator">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Role'|tr }}</label>
+              <select class="form-select" name="role" id="newUserRole" required>
+                {% for role in user_roles %}
+                <option value="{{ role }}">{{ role|title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div id="employeeLinkGroup" class="d-none">
+              <label class="form-label fw-semibold">{{ 'Linked employee'|tr }}</label>
+              <select class="form-select" name="employee_id">
+                <option value="">{{ 'Choose employee'|tr }}</option>
+                {% for e in employees %}
+                <option value="{{ e.id }}" {{ 'disabled' if e.id in assigned_employee_ids else '' }}>{{ e.name }} — {{ e.department }}{{ ' (has account)' if e.id in assigned_employee_ids else '' }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Temporary password'|tr }}</label>
+              <input class="form-control" name="password" type="password" required minlength="8" placeholder="At least 8 characters">
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="newUserActive" checked>
+              <label class="form-check-label" for="newUserActive">{{ 'Active account'|tr }}</label>
+            </div>
+            <button class="btn btn-primary w-100" id="createUserButton">
+              <span class="button-label"><i class="bi bi-person-plus me-2"></i>{{ 'Add account'|tr }}</span>
+              <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Adding...'|tr }}</span>
+            </button>
+          </form>
+
+          <hr class="my-4">
+
+          <div class="vstack">
+            {% for account in users %}
+            <div class="user-row">
+              <div class="d-flex align-items-start gap-2">
+                <span class="avatar">{{ account.full_name[:1]|upper }}</span>
+                <div class="min-w-0 flex-grow-1">
+                  <div class="fw-semibold text-truncate">{{ account.full_name }}</div>
+                  <div class="small muted text-truncate">@{{ account.username }}</div>
+                  <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                    <span class="role-chip role-{{ account.role }}">{{ account.role }}</span>
+                    <span class="small {{ 'text-success' if account.is_active else 'text-secondary' }}">{{ ('Active' if account.is_active else 'Inactive')|tr }}</span>
+                  </div>
+                  {% if account.last_login_latitude is not none and account.last_login_longitude is not none %}
+                  <div class="small mt-2">
+                    <a class="fw-semibold text-decoration-none d-inline-flex align-items-center gap-1" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ account.last_login_latitude }},{{ account.last_login_longitude }}">
+                      <i class="bi bi-geo-alt"></i>{{ account.last_login_road or account.last_login_neighbourhood or account.last_login_city or 'View map' }}
+                    </a>
+                    <div class="muted mt-1">{{ account.last_login_address or ('%.5f, %.5f'|format(account.last_login_latitude, account.last_login_longitude)) }}</div>
+                    {% if account.last_login_city or account.last_login_state or account.last_login_postcode %}
+                    <div class="muted">{{ account.last_login_city or '-' }}{% if account.last_login_state %}, {{ account.last_login_state }}{% endif %}{% if account.last_login_postcode %} {{ account.last_login_postcode }}{% endif %}</div>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <div class="small muted mt-2"><i class="bi bi-geo-alt me-1"></i>No login location</div>
+                  {% endif %}
+                </div>
               </div>
-            </td>
-            <td><span class="fw-semibold">{{ s.courier|upper }}</span><div class="small muted">{{ s.awb }}</div></td>
-            <td><span class="small {{ 'muted' if not s.external_awb else 'fw-semibold' }}">{{ s.external_awb or '-' }}</span></td>
-            <td><div>{{ s.origin }} <i class="bi bi-arrow-right text-secondary mx-1"></i> {{ s.destination }}</div><div class="small muted">ETA {{ s.eta_days }} day(s)</div></td>
-            <td class="fw-semibold">Rp {{ "{:,.0f}".format(s.shipping_cost) }}</td>
-            <td>
-              {% set normalized = s.status|upper %}
-              <span class="status-badge {{ 'status-delivered' if normalized in ['DELIVERED','RECEIVED'] else ('status-created' if normalized == 'CREATED' else 'status-progress') }}">
-                <i class="bi {{ 'bi-check-circle' if normalized in ['DELIVERED','RECEIVED'] else ('bi-circle' if normalized == 'CREATED' else 'bi-arrow-repeat') }} me-1"></i>{{ s.status }}
-              </span>
-            </td>
-            <td><i class="bi bi-geo-alt text-secondary me-1"></i>{{ s.last_location }}</td>
-          </tr>
-        {% else %}
-          <tr><td colspan="9" class="text-center empty-state">
-            <i class="bi bi-inbox display-5 text-secondary"></i>
-            <h5 class="mt-3">No shipments found</h5>
-            <p class="muted mb-0">New shipments will appear here.</p>
-          </td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div id="searchEmpty" class="text-center p-5 d-none">
-      <i class="bi bi-search display-6 text-secondary"></i>
-      <h6 class="mt-3">No matching shipments</h6>
-            <p class="muted mb-0">Try another reference, employee name, courier, AWB, or external waybill.</p>
-    </div>
+            </div>
+            {% else %}
+            <div class="text-center py-4 muted">
+              <i class="bi bi-person display-6"></i>
+              <div class="small mt-2">{{ 'No users yet.'|tr }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </aside>
+    {% endif %}
   </section>
 </main>
 
@@ -287,32 +457,46 @@
       <form method="post" action="/shipments/create" id="createShipmentForm">
         <div class="modal-header border-0 px-4 pt-4 pb-2">
           <div>
-            <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">New delivery</span>
-            <h4 class="modal-title fw-bold">Create a shipment</h4>
-            <p class="muted mb-0">Register the document, recipient, courier, cost, and expected delivery time.</p>
+            <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'New delivery'|tr }}</span>
+            <h4 class="modal-title fw-bold">{{ 'Create a shipment'|tr }}</h4>
+            <p class="muted mb-0">{{ 'Register the document, recipient, courier, cost, and expected delivery time.'|tr }}</p>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body px-4 py-4">
           <div class="row g-3">
-            <div class="col-md-4"><label class="form-label fw-semibold">Reference number</label><input class="form-control" name="reference_no" required placeholder="DOC-2026-0002"></div>
-            <div class="col-md-5"><label class="form-label fw-semibold">Document title</label><input class="form-control" name="title" required placeholder="Employment certificate"></div>
-            <div class="col-md-3"><label class="form-label fw-semibold">Document type</label><input class="form-control" name="document_type" value="Document"></div>
-            <div class="col-md-5"><label class="form-label fw-semibold">Employee recipient</label><select class="form-select" name="employee_id" required>{% for e in employees %}<option value="{{ e.id }}">{{ e.name }} — {{ e.department }}</option>{% endfor %}</select></div>
-            <div class="col-md-3"><label class="form-label fw-semibold">Courier</label><select class="form-select" name="courier" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option></select></div>
-            <div class="col-md-4"><label class="form-label fw-semibold">AWB / waybill</label><input class="form-control" name="awb" required placeholder="Internal courier tracking number"></div>
-            <div class="col-md-4"><label class="form-label fw-semibold">External AWB / waybill</label><input class="form-control" name="external_awb" placeholder="Marketplace or external partner waybill"></div>
-            <div class="col-md-4"><label class="form-label fw-semibold">Origin</label><div class="input-group"><span class="input-group-text"><i class="bi bi-geo-alt"></i></span><input class="form-control" name="origin" required value="Jakarta"></div></div>
-            <div class="col-md-4"><label class="form-label fw-semibold">Destination</label><div class="input-group"><span class="input-group-text"><i class="bi bi-pin-map"></i></span><input class="form-control" name="destination" required placeholder="Yogyakarta"></div></div>
-            <div class="col-md-2"><label class="form-label fw-semibold">ETA days</label><input class="form-control" name="eta_days" type="number" min="0" value="2"></div>
-            <div class="col-md-4"><label class="form-label fw-semibold">Shipping cost</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="shipping_cost" type="number" min="0" value="0"></div></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Reference number'|tr }}</label><input class="form-control" name="reference_no" required placeholder="DOC-2026-0002"></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Document title'|tr }}</label><input class="form-control" name="title" required placeholder="Employment certificate"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Document type'|tr }}</label><input class="form-control" name="document_type" value="Document"></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label><select class="form-select" name="employee_id" required>{% for e in employees %}<option value="{{ e.id }}">{{ e.name }} — {{ e.department }}</option>{% endfor %}</select></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Courier'|tr }}</label><select class="form-select" name="courier" id="courierSelect" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option></select></div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{{ 'AWB / waybill'|tr }}</label>
+              <div class="input-group">
+                <input class="form-control" name="awb" id="awbInput" required placeholder="Internal courier tracking number">
+                <button class="btn btn-soft" type="button" id="lookupAwbButton"><i class="bi bi-search me-1"></i>{{ 'Lookup'|tr }}</button>
+              </div>
+              <div class="small muted mt-1" id="awbLookupStatus">{{ 'Lookup AWB to fill origin and destination.'|tr }}</div>
+            </div>
+            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'External AWB / waybill'|tr }}</label><input class="form-control" name="external_awb" placeholder="Marketplace or external partner waybill"></div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{{ 'Origin'|tr }}</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                <input class="form-control" name="origin" id="originInput" required value="{{ current_user.last_login_address or current_user.last_login_road or current_user.last_login_city or 'Jakarta' }}">
+              </div>
+              <div class="small muted mt-1" id="originLocationStatus">{{ 'Uses your detected current location when available.'|tr }}</div>
+            </div>
+            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Destination'|tr }}</label><div class="input-group"><span class="input-group-text"><i class="bi bi-pin-map"></i></span><input class="form-control" name="destination" id="destinationInput" required placeholder="Yogyakarta"></div></div>
+            <div class="col-md-2"><label class="form-label fw-semibold">{{ 'ETA days'|tr }}</label><input class="form-control" name="eta_days" type="number" min="0" value="2"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Shipping cost'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="shipping_cost" type="number" min="0" value="0"></div></div>
           </div>
         </div>
         <div class="modal-footer border-0 px-4 pb-4 pt-0">
-          <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button>
           <button type="submit" class="btn btn-primary px-4" id="createSubmitButton">
-            <span class="button-label"><i class="bi bi-check2-circle me-2"></i>Create shipment</span>
-            <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>Creating...</span>
+            <span class="button-label"><i class="bi bi-check2-circle me-2"></i>{{ 'Create shipment'|tr }}</span>
+            <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Creating...'|tr }}</span>
           </button>
         </div>
       </form>
@@ -321,10 +505,88 @@
 </div>
 {% endif %}
 
+<div class="modal fade" id="packageMapModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header border-0 px-4 pt-4 pb-2">
+        <div>
+          <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'Package map'|tr }}</span>
+          <h4 class="modal-title fw-bold" id="mapReference">{{ 'Shipment location'|tr }}</h4>
+          <p class="muted mb-0" id="mapSubtitle">{{ 'Current package location details.'|tr }}</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-4">
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <iframe id="packageMapFrame" class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
+          <div class="col-lg-4">
+            <div class="map-detail p-3 h-100">
+              <div class="small muted mb-1">{{ 'Last location'|tr }}</div>
+              <h5 class="fw-bold mb-3" id="mapLocation">-</h5>
+              <div class="vstack gap-3 small">
+                <div><span class="muted d-block">{{ 'Document'|tr }}</span><strong id="mapTitle">-</strong></div>
+                <div><span class="muted d-block">{{ 'Employee'|tr }}</span><strong id="mapEmployee">-</strong></div>
+                <div><span class="muted d-block">{{ 'Courier'|tr }} / AWB</span><strong id="mapCourier">-</strong></div>
+                <div><span class="muted d-block">{{ 'External AWB'|tr }}</span><strong id="mapExternalAwb">-</strong></div>
+                <div><span class="muted d-block">{{ 'Route'|tr }}</span><strong id="mapRoute">-</strong></div>
+                <div><span class="muted d-block">{{ 'Status'|tr }}</span><strong id="mapStatus">-</strong></div>
+                <div><span class="muted d-block">{{ 'Last updated'|tr }}</span><strong id="mapUpdated">-</strong></div>
+              </div>
+              <a class="btn btn-soft w-100 mt-4" id="openMapLink" target="_blank" rel="noopener">
+                <i class="bi bi-map me-2"></i>{{ 'Open in Google Maps'|tr }}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="awbErrorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body p-4">
+        <div class="d-flex align-items-start gap-3">
+          <div class="rounded-circle bg-danger-subtle text-danger d-grid flex-shrink-0" style="width:52px;height:52px;place-items:center">
+            <i class="bi bi-exclamation-triangle fs-4"></i>
+          </div>
+          <div>
+            <h4 class="fw-bold mb-2" id="awbErrorTitle">{{ 'Invalid AWB code'|tr }}</h4>
+            <p class="muted mb-3" id="awbErrorMessage">{{ 'The courier provider could not find this AWB.'|tr }}</p>
+            <div class="map-detail p-3 small">
+              <div><span class="muted d-block">{{ 'Courier'|tr }}</span><strong id="awbErrorCourier">-</strong></div>
+              <div class="mt-2"><span class="muted d-block">{{ 'AWB / waybill'|tr }}</span><strong id="awbErrorCode">-</strong></div>
+              <div class="mt-2"><span class="muted d-block">{{ 'Provider detail'|tr }}</span><span id="awbErrorDetail">-</span></div>
+            </div>
+            <div class="d-flex justify-content-end mt-4">
+              <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">{{ 'Review AWB'|tr }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-container position-fixed top-0 end-0 p-3 mt-5">
   <div id="successToast" class="toast text-bg-success" role="alert">
     <div class="d-flex">
-      <div class="toast-body"><i class="bi bi-check-circle-fill me-2"></i>Shipment created successfully.</div>
+      <div class="toast-body"><i class="bi bi-check-circle-fill me-2"></i>{{ 'Shipment created successfully.'|tr }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+  <div id="userSuccessToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-person-check-fill me-2"></i>{{ 'User account created successfully.'|tr }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+  <div id="userErrorToast" class="toast text-bg-danger" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ user_error }}</div>
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
@@ -332,9 +594,83 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  const i18n = {
+    chooseCourierAwb: {{ ('Choose courier and enter AWB first.'|tr)|tojson }},
+    lookupLoading: {{ ('Looking up route from courier tracking...'|tr)|tojson }},
+    lookupButton: {{ ('Lookup'|tr)|tojson }},
+    routeFilledTemplate: {{ ('Route filled from {source}. Last status: {status}.'|tr)|tojson }},
+    courierData: {{ ('courier data'|tr)|tojson }},
+    trackingTimeline: {{ ('tracking timeline'|tr)|tojson }},
+    awbLookupFailed: {{ ('AWB lookup failed'|tr)|tojson }},
+    invalidAwbCode: {{ ('Invalid AWB code'|tr)|tojson }},
+    providerCannotProcess: {{ ('The courier provider could not process this AWB.'|tr)|tojson }},
+    providerInvalidAwb: {{ ('The courier provider reported this AWB as invalid.'|tr)|tojson }},
+    cannotLookupAwb: {{ ('Could not lookup this AWB. Fill origin and destination manually.'|tr)|tojson }},
+    locationUnavailable: {{ ('Browser location is unavailable. Origin uses your last detected address.'|tr)|tojson }},
+    detectingOrigin: {{ ('Detecting current origin location...'|tr)|tojson }},
+    originFilled: {{ ('Origin filled from your current detected location.'|tr)|tojson }},
+    addressReadFailed: {{ ('Could not read address details. Origin uses your last detected address.'|tr)|tojson }},
+    locationSkippedOrigin: {{ ('Location permission was skipped. Origin uses your last detected address.'|tr)|tojson }},
+    unknownLookupError: {{ ('Unknown lookup error.'|tr)|tojson }},
+  };
   const searchInput = document.getElementById('shipmentSearch');
   const table = document.getElementById('shipmentTable');
   const searchEmpty = document.getElementById('searchEmpty');
+  const packageMapModal = document.getElementById('packageMapModal');
+  const awbErrorModal = document.getElementById('awbErrorModal');
+  const createShipmentModal = document.getElementById('createShipmentModal');
+  const originInput = document.getElementById('originInput');
+  const destinationInput = document.getElementById('destinationInput');
+  const courierSelect = document.getElementById('courierSelect');
+  const awbInput = document.getElementById('awbInput');
+  const lookupAwbButton = document.getElementById('lookupAwbButton');
+  const awbLookupStatus = document.getElementById('awbLookupStatus');
+  const originLocationStatus = document.getElementById('originLocationStatus');
+  let originTouched = false;
+  let destinationTouched = false;
+  let originDetected = false;
+
+  const parseAwbError = (payload) => {
+    const detail = payload?.detail || i18n.cannotLookupAwb;
+    if (typeof detail !== 'string') return { title: i18n.awbLookupFailed, message: i18n.providerCannotProcess, detail: JSON.stringify(detail) };
+
+    const jsonStart = detail.indexOf('{');
+    if (jsonStart !== -1) {
+      try {
+        const providerPayload = JSON.parse(detail.slice(jsonStart));
+        const providerMessage = providerPayload?.meta?.message;
+        if (providerMessage) {
+          return {
+            title: providerMessage.toLowerCase().includes('invalid') ? i18n.invalidAwbCode : i18n.awbLookupFailed,
+            message: providerMessage,
+            detail,
+          };
+        }
+      } catch (error) {
+        // Fall through to the raw detail.
+      }
+    }
+
+    return {
+      title: detail.toLowerCase().includes('invalid awb') ? i18n.invalidAwbCode : i18n.awbLookupFailed,
+      message: detail.includes('Invalid Awb') ? i18n.providerInvalidAwb : i18n.providerCannotProcess,
+      detail,
+    };
+  };
+
+  const showAwbErrorModal = (courier, awb, errorInfo) => {
+    const normalizedError = errorInfo?.title ? errorInfo : {
+      title: i18n.awbLookupFailed,
+      message: i18n.providerCannotProcess,
+      detail: errorInfo?.message || i18n.unknownLookupError,
+    };
+    document.getElementById('awbErrorTitle').textContent = normalizedError.title;
+    document.getElementById('awbErrorMessage').textContent = normalizedError.message;
+    document.getElementById('awbErrorCourier').textContent = courier ? courier.toUpperCase() : '-';
+    document.getElementById('awbErrorCode').textContent = awb || '-';
+    document.getElementById('awbErrorDetail').textContent = normalizedError.detail || '-';
+    bootstrap.Modal.getOrCreateInstance(awbErrorModal).show();
+  };
 
   searchInput?.addEventListener('input', function () {
     const query = this.value.toLowerCase().trim();
@@ -357,9 +693,166 @@
     button.querySelector('.button-loading').classList.remove('d-none');
   });
 
+  originInput?.addEventListener('input', () => {
+    originTouched = true;
+  });
+
+  destinationInput?.addEventListener('input', () => {
+    destinationTouched = true;
+  });
+
+  const lookupAwbRoute = async () => {
+    const courier = courierSelect?.value;
+    const awb = awbInput?.value.trim();
+    if (!courier || !awb) {
+      if (awbLookupStatus) awbLookupStatus.textContent = i18n.chooseCourierAwb;
+      return;
+    }
+
+    lookupAwbButton.disabled = true;
+    lookupAwbButton.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${i18n.lookupButton}`;
+    if (awbLookupStatus) awbLookupStatus.textContent = i18n.lookupLoading;
+
+    try {
+      const params = new URLSearchParams({ courier, awb });
+      const response = await fetch(`/api/awb/lookup?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) {
+        let payload = {};
+        try {
+          payload = await response.json();
+        } catch (error) {
+          payload = { detail: i18n.awbLookupFailed };
+        }
+        throw parseAwbError(payload);
+      }
+      const payload = await response.json();
+      if (payload.origin && !originTouched) {
+        originInput.value = payload.origin;
+        originTouched = true;
+        originDetected = true;
+      }
+      if (payload.destination && !destinationTouched) {
+        destinationInput.value = payload.destination;
+        destinationTouched = true;
+      }
+      const sourceLabel = payload.source === 'courier_payload' ? i18n.courierData : i18n.trackingTimeline;
+      if (awbLookupStatus) awbLookupStatus.textContent = i18n.routeFilledTemplate.replace('{source}', sourceLabel).replace('{status}', payload.status || '-');
+    } catch (error) {
+      showAwbErrorModal(courier, awb, error);
+      if (awbLookupStatus) awbLookupStatus.textContent = i18n.cannotLookupAwb;
+    } finally {
+      lookupAwbButton.disabled = false;
+      lookupAwbButton.innerHTML = `<i class="bi bi-search me-1"></i>${i18n.lookupButton}`;
+    }
+  };
+
+  lookupAwbButton?.addEventListener('click', lookupAwbRoute);
+  awbInput?.addEventListener('blur', () => {
+    if (awbInput.value.trim() && !destinationInput?.value.trim()) lookupAwbRoute();
+  });
+
+  createShipmentModal?.addEventListener('shown.bs.modal', function () {
+    if (originDetected || originTouched) return;
+    if (!navigator.geolocation) {
+      if (originLocationStatus) originLocationStatus.textContent = i18n.locationUnavailable;
+      return;
+    }
+
+    if (originLocationStatus) originLocationStatus.textContent = i18n.detectingOrigin;
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const params = new URLSearchParams({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          const response = await fetch(`/api/location/reverse?${params.toString()}`, {
+            headers: { Accept: 'application/json' },
+          });
+          if (!response.ok) throw new Error('Location lookup failed');
+          const payload = await response.json();
+          if (!originTouched && payload.origin) {
+            originInput.value = payload.origin;
+            originDetected = true;
+            if (originLocationStatus) originLocationStatus.textContent = i18n.originFilled;
+          }
+        } catch (error) {
+          if (originLocationStatus) originLocationStatus.textContent = i18n.addressReadFailed;
+        }
+      },
+      () => {
+        if (originLocationStatus) originLocationStatus.textContent = i18n.locationSkippedOrigin;
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    );
+  });
+
+  const userRole = document.getElementById('newUserRole');
+  const employeeLinkGroup = document.getElementById('employeeLinkGroup');
+  const employeeLinkSelect = employeeLinkGroup?.querySelector('select');
+  const toggleEmployeeLink = () => {
+    const needsEmployee = userRole?.value === 'employee';
+    employeeLinkGroup?.classList.toggle('d-none', !needsEmployee);
+    if (employeeLinkSelect) {
+      employeeLinkSelect.required = needsEmployee;
+      if (!needsEmployee) employeeLinkSelect.value = '';
+    }
+  };
+  userRole?.addEventListener('change', toggleEmployeeLink);
+  toggleEmployeeLink();
+
+  const createUserForm = document.getElementById('createUserForm');
+  createUserForm?.addEventListener('submit', function () {
+    const button = document.getElementById('createUserButton');
+    button.disabled = true;
+    button.querySelector('.button-label').classList.add('d-none');
+    button.querySelector('.button-loading').classList.remove('d-none');
+  });
+
+  packageMapModal?.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    if (!button) return;
+    const location = button.dataset.location || '-';
+    const reference = button.dataset.reference || '-';
+    const courierAwb = `${button.dataset.courier || '-'} · ${button.dataset.awb || '-'}`;
+    const route = `${button.dataset.origin || '-'} → ${button.dataset.destination || '-'}`;
+    const query = encodeURIComponent(`${location}, Indonesia`);
+
+    document.getElementById('mapReference').textContent = reference;
+    document.getElementById('mapSubtitle').textContent = `${button.dataset.employee || '-'} · ${button.dataset.status || '-'}`;
+    document.getElementById('mapLocation').textContent = location;
+    document.getElementById('mapTitle').textContent = button.dataset.title || '-';
+    document.getElementById('mapEmployee').textContent = button.dataset.employee || '-';
+    document.getElementById('mapCourier').textContent = courierAwb;
+    document.getElementById('mapExternalAwb').textContent = button.dataset.externalAwb || '-';
+    document.getElementById('mapRoute').textContent = route;
+    document.getElementById('mapStatus').textContent = button.dataset.status || '-';
+    document.getElementById('mapUpdated').textContent = button.dataset.updated || '-';
+    document.getElementById('packageMapFrame').src = `https://maps.google.com/maps?q=${query}&output=embed`;
+    document.getElementById('openMapLink').href = `https://www.google.com/maps/search/?api=1&query=${query}`;
+  });
+
+  packageMapModal?.addEventListener('hidden.bs.modal', function () {
+    document.getElementById('packageMapFrame').src = '';
+  });
+
   {% if created %}
   window.addEventListener('DOMContentLoaded', () => {
     bootstrap.Toast.getOrCreateInstance(document.getElementById('successToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/');
+  });
+  {% endif %}
+  {% if user_created %}
+  window.addEventListener('DOMContentLoaded', () => {
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('userSuccessToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/');
+  });
+  {% endif %}
+  {% if user_error %}
+  window.addEventListener('DOMContentLoaded', () => {
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('userErrorToast'), {delay: 5000}).show();
     window.history.replaceState({}, document.title, '/');
   });
   {% endif %}

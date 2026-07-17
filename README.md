@@ -69,6 +69,8 @@ Add these environment variables:
 | `RAJAONGKIR_MOCK` | `true` |
 | `RAJAONGKIR_API_KEY` | Leave empty for mock demo |
 | `RAJAONGKIR_BASE_URL` | `https://rajaongkir.komerce.id/api/v1` |
+| `NOMINATIM_REVERSE_URL` | `https://nominatim.openstreetmap.org/reverse` |
+| `GEOCODER_USER_AGENT` | `employee-shipment-tracker-demo/1.0` |
 
 After deploy finishes, share:
 
