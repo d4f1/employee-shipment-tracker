@@ -5,3 +5,4 @@ __pycache__/
 .env
 employee_shipments.db
 .DS_Store
+outputs/

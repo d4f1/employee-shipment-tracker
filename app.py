@@ -1,5 +1,7 @@
 import json
 import os
+import re
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlencode
@@ -15,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 from jwt import InvalidTokenError
 from pwdlib import PasswordHash
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, inspect, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
 load_dotenv()
@@ -39,6 +42,7 @@ NOMINATIM_REVERSE_URL = os.getenv(
 GEOCODER_USER_AGENT = os.getenv(
     "GEOCODER_USER_AGENT", "employee-shipment-tracker-demo/1.0"
 )
+SHIPMENTS_PER_PAGE = 10
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
@@ -101,9 +105,11 @@ class Shipment(Base):
     title: Mapped[str] = mapped_column(String(200))
     document_type: Mapped[str] = mapped_column(String(100), default="Document")
     employee_id: Mapped[int] = mapped_column(ForeignKey("employees.id"))
+    created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     courier: Mapped[str] = mapped_column(String(40))
     awb: Mapped[str] = mapped_column(String(100), index=True)
     external_awb: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    po_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="CREATED")
     origin: Mapped[str] = mapped_column(String(500))
     destination: Mapped[str] = mapped_column(String(500))
@@ -119,6 +125,7 @@ class Shipment(Base):
     )
 
     employee: Mapped[Employee] = relationship(back_populates="shipments")
+    created_by: Mapped[Optional[User]] = relationship()
     events: Mapped[list["TrackingEvent"]] = relationship(
         back_populates="shipment", cascade="all, delete-orphan"
     )
@@ -136,6 +143,32 @@ class TrackingEvent(Base):
     shipment: Mapped[Shipment] = relationship(back_populates="events")
 
 
+class MonthlyBudget(Base):
+    __tablename__ = "monthly_budgets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    month: Mapped[str] = mapped_column(String(7), unique=True, index=True)
+    amount: Mapped[float] = mapped_column(Float, default=0)
+    created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class PurchaseItem(Base):
+    __tablename__ = "purchase_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    month: Mapped[str] = mapped_column(String(7), index=True)
+    item_name: Mapped[str] = mapped_column(String(200))
+    category: Mapped[str] = mapped_column(String(100), index=True)
+    amount: Mapped[float] = mapped_column(Float, default=0)
+    note: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 Base.metadata.create_all(engine)
 
 
@@ -144,6 +177,12 @@ def ensure_optional_columns():
     if "external_awb" not in shipment_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE shipments ADD COLUMN external_awb VARCHAR(100)"))
+    if "po_number" not in shipment_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE shipments ADD COLUMN po_number VARCHAR(100)"))
+    if "created_by_id" not in shipment_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE shipments ADD COLUMN created_by_id INTEGER"))
     user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
     missing_user_columns = {
         "last_login_at": "DATETIME",
@@ -213,6 +252,9 @@ TRANSLATIONS = {
         "Monitor company documents and packages from dispatch until employee receipt.": "Pantau dokumen dan paket perusahaan dari pengiriman sampai diterima karyawan.",
         "Create shipment": "Buat pengiriman",
         "Total shipments": "Total pengiriman",
+        "Dashboard menu": "Menu dashboard",
+        "Shipping": "Pengiriman",
+        "Admin": "Admin",
         "In progress": "Dalam proses",
         "Delivered": "Terkirim",
         "Shipping cost": "Biaya kirim",
@@ -221,12 +263,13 @@ TRANSLATIONS = {
         "Newest first": "Terbaru dulu",
         "Oldest first": "Terlama dulu",
         "Click a reference number to view its complete delivery timeline.": "Klik nomor referensi untuk melihat linimasa pengiriman lengkap.",
-        "Search reference, employee, AWB, or external waybill": "Cari referensi, karyawan, AWB, atau waybill eksternal",
+        "Search reference, employee, AWB, ticket, or PO number": "Cari referensi, karyawan, AWB, tiket, atau nomor PO",
         "Reference": "Referensi",
         "Document": "Dokumen",
         "Employee": "Karyawan",
         "Courier": "Kurir",
-        "External waybill": "Waybill eksternal",
+        "Ticket number": "Nomor tiket",
+        "PO number": "Nomor PO",
         "Route": "Rute",
         "Cost": "Biaya",
         "Status": "Status",
@@ -234,7 +277,13 @@ TRANSLATIONS = {
         "No shipments found": "Tidak ada pengiriman",
         "New shipments will appear here.": "Pengiriman baru akan muncul di sini.",
         "No matching shipments": "Tidak ada pengiriman yang cocok",
-        "Try another reference, employee name, courier, AWB, or external waybill.": "Coba referensi, nama karyawan, kurir, AWB, atau waybill eksternal lain.",
+        "Try another reference, employee name, courier, AWB, ticket, or PO number.": "Coba referensi, nama karyawan, kurir, AWB, tiket, atau nomor PO lain.",
+        "Showing": "Menampilkan",
+        "to": "sampai",
+        "of": "dari",
+        "rows": "baris",
+        "Previous": "Sebelumnya",
+        "Next": "Berikutnya",
         "Users": "Pengguna",
         "Create accounts with existing roles.": "Buat akun dengan role yang tersedia.",
         "Full name": "Nama lengkap",
@@ -246,6 +295,7 @@ TRANSLATIONS = {
         "Company name": "Nama perusahaan",
         "Avatar URL": "URL avatar",
         "Company": "Perusahaan",
+        "Sender": "Pengirim",
         "Active account": "Akun aktif",
         "Add account": "Tambah akun",
         "Adding...": "Menambahkan...",
@@ -258,27 +308,59 @@ TRANSLATIONS = {
         "Inactive": "Tidak aktif",
         "No users yet.": "Belum ada pengguna.",
         "User account updated successfully.": "Akun pengguna berhasil diperbarui.",
+        "Monthly budget": "Budget bulanan",
+        "Track buying needs by category and remaining budget.": "Pantau kebutuhan pembelian per kategori dan sisa budget.",
+        "Budget month": "Bulan budget",
+        "Set budget": "Atur budget",
+        "Admin monthly budget": "Budget bulanan admin",
+        "Spent": "Terpakai",
+        "Remaining": "Sisa",
+        "Add purchase item": "Tambah item pembelian",
+        "Item name": "Nama item",
+        "Category": "Kategori",
+        "Amount": "Jumlah",
+        "Note": "Catatan",
+        "Optional note": "Catatan opsional",
+        "Save item": "Simpan item",
+        "Category breakdown": "Rincian kategori",
+        "Recent items": "Item terbaru",
+        "No purchase items yet.": "Belum ada item pembelian.",
+        "Budget saved successfully.": "Budget berhasil disimpan.",
+        "Purchase item added successfully.": "Item pembelian berhasil ditambahkan.",
+        "Budget analytics": "Analitik budget",
+        "Largest category usage, item count, timeline, and spending curve.": "Penggunaan kategori terbesar, jumlah item, timeline, dan kurva pengeluaran.",
+        "Budget usage": "Penggunaan budget",
+        "Category usage": "Penggunaan kategori",
+        "Items by category": "Item per kategori",
+        "Daily spending timeline": "Timeline pengeluaran harian",
+        "Cumulative spending curve": "Kurva pengeluaran kumulatif",
+        "No chart data yet.": "Belum ada data grafik.",
         "New delivery": "Pengiriman baru",
         "Create a shipment": "Buat pengiriman",
         "Register the document, recipient, courier, cost, and expected delivery time.": "Daftarkan dokumen, penerima, kurir, biaya, dan estimasi waktu pengiriman.",
         "Reference number": "Nomor referensi",
+        "Auto generated after save": "Dibuat otomatis setelah disimpan",
+        "Generated from shipment ID": "Dibuat dari ID pengiriman",
         "Document title": "Judul dokumen",
         "Document type": "Jenis dokumen",
         "Employee recipient": "Penerima karyawan",
         "AWB / waybill": "AWB / waybill",
         "Lookup": "Cari",
         "Lookup AWB to fill origin and destination.": "Cari AWB untuk mengisi origin dan destination.",
-        "External AWB / waybill": "AWB / waybill eksternal",
+        "Lookup AWB to fill origin, destination, ETA, and shipping cost.": "Cari AWB untuk mengisi origin, destination, ETA, dan biaya kirim.",
+        "Ticket number": "Nomor tiket",
         "Origin": "Origin",
         "Uses your detected current location when available.": "Menggunakan lokasi Anda saat ini jika tersedia.",
         "Destination": "Destination",
         "ETA days": "Estimasi hari",
+        "Filled from AWB provider lookup.": "Diisi dari lookup provider AWB.",
         "Cancel": "Batal",
         "Creating...": "Membuat...",
         "Package map": "Peta paket",
         "Shipment location": "Lokasi pengiriman",
         "Current package location details.": "Detail lokasi paket saat ini.",
-        "External AWB": "AWB eksternal",
+        "Ticket number": "Nomor tiket",
+        "PO number": "Nomor PO",
         "Last updated": "Terakhir diperbarui",
         "Open in Google Maps": "Buka di Google Maps",
         "Invalid AWB code": "Kode AWB tidak valid",
@@ -314,6 +396,7 @@ TRANSLATIONS = {
         "Tracking timeline": "Linimasa pelacakan",
         "recorded event(s)": "event tercatat",
         "Latest first": "Terbaru dulu",
+        "Updates first": "Update dulu",
         "Refresh tracking status?": "Refresh status pelacakan?",
         "Refresh tracking failed": "Refresh pelacakan gagal",
         "The courier provider could not refresh this AWB.": "Penyedia kurir tidak dapat memperbarui AWB ini.",
@@ -434,6 +517,15 @@ def dashboard_redirect(**params):
     return RedirectResponse(url=f"/{query}", status_code=303)
 
 
+def normalize_budget_month(value: Optional[str]) -> str:
+    if value:
+        try:
+            return datetime.strptime(value, "%Y-%m").strftime("%Y-%m")
+        except ValueError:
+            pass
+    return datetime.utcnow().strftime("%Y-%m")
+
+
 def parse_optional_float(value: Optional[str]) -> Optional[float]:
     if value in (None, ""):
         return None
@@ -508,6 +600,57 @@ def find_first_value(payload, keys: tuple[str, ...]) -> Optional[str]:
     return None
 
 
+def parse_number_from_value(value: Optional[str]) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    raw_value = str(value).strip()
+    if not raw_value:
+        return None
+    digits_only = re.sub(r"\D", "", raw_value)
+    if not digits_only:
+        return None
+    separator_match = re.search(r"[.,](\d{3})$", raw_value)
+    if (
+        re.search(r"[A-Za-z$Rp]", raw_value)
+        or raw_value.count(".") + raw_value.count(",") > 1
+        or separator_match
+    ):
+        return float(digits_only)
+    cleaned = "".join(char for char in raw_value if char.isdigit() or char in ".-")
+    try:
+        return float(cleaned)
+    except ValueError:
+        return float(digits_only)
+
+
+def parse_integer_from_value(value: Optional[str]) -> Optional[int]:
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value)
+    match = re.search(r"\d+", str(value))
+    return int(match.group(0)) if match else None
+
+
+def format_provider_location(*parts: Optional[str]) -> Optional[str]:
+    seen = set()
+    formatted_parts = []
+    for part in parts:
+        if not part:
+            continue
+        clean_part = str(part).strip()
+        if not clean_part or clean_part == "-":
+            continue
+        key = clean_part.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        formatted_parts.append(clean_part)
+    return ", ".join(formatted_parts) or None
+
+
 def extract_awb_route(result: dict) -> dict:
     raw = result.get("raw") or {}
     events = result.get("events") or []
@@ -519,6 +662,22 @@ def extract_awb_route(result: dict) -> dict:
         "city_origin",
         "origin_name",
     ))
+    explicit_origin_postcode = find_first_value(raw, (
+        "origin_postal_code",
+        "origin_postcode",
+        "origin_zip_code",
+        "shipper_postal_code",
+        "sender_postal_code",
+        "postal_code_origin",
+        "zip_origin",
+    ))
+    explicit_origin_area = find_first_value(raw, (
+        "origin_area",
+        "origin_district",
+        "origin_subdistrict",
+        "shipper_area",
+        "sender_area",
+    ))
     explicit_destination = find_first_value(raw, (
         "destination",
         "destination_city",
@@ -528,20 +687,69 @@ def extract_awb_route(result: dict) -> dict:
         "city_destination",
         "destination_name",
     ))
+    explicit_destination_postcode = find_first_value(raw, (
+        "destination_postal_code",
+        "destination_postcode",
+        "destination_zip_code",
+        "receiver_postal_code",
+        "recipient_postal_code",
+        "consignee_postal_code",
+        "postal_code_destination",
+        "zip_destination",
+    ))
+    explicit_destination_area = find_first_value(raw, (
+        "destination_area",
+        "destination_district",
+        "destination_subdistrict",
+        "receiver_area",
+        "recipient_area",
+        "consignee_area",
+    ))
+    shipping_cost = parse_number_from_value(find_first_value(raw, (
+        "shipping_cost",
+        "shipment_cost",
+        "cost",
+        "ongkir",
+        "price",
+        "tariff",
+        "fee",
+        "total_cost",
+        "shipping_fee",
+    )))
+    eta_days = parse_integer_from_value(find_first_value(raw, (
+        "eta_days",
+        "etd",
+        "estimate_day",
+        "estimated_day",
+        "estimated_days",
+        "duration",
+        "sla",
+        "lead_time",
+    )))
     timeline_locations = [
         event.get("location")
         for event in events
         if event.get("location") and event.get("location") != "-"
     ]
-    origin = explicit_origin or (timeline_locations[0] if timeline_locations else None)
-    destination = explicit_destination or (timeline_locations[-1] if timeline_locations else None)
+    origin = (
+        format_provider_location(explicit_origin, explicit_origin_area, explicit_origin_postcode)
+        or (timeline_locations[0] if timeline_locations else None)
+    )
+    destination = (
+        format_provider_location(explicit_destination, explicit_destination_area, explicit_destination_postcode)
+        or (timeline_locations[-1] if timeline_locations else None)
+    )
     return {
         "origin": origin,
         "destination": destination,
+        "shipping_cost": shipping_cost,
+        "eta_days": eta_days,
+        "origin_postal_code": explicit_origin_postcode,
+        "destination_postal_code": explicit_destination_postcode,
         "last_location": result.get("last_location") or destination or "-",
         "status": result.get("status") or "UNKNOWN",
         "events": events,
-        "source": "courier_payload" if explicit_origin or explicit_destination else "tracking_timeline",
+        "source": "courier_payload" if explicit_origin or explicit_destination or shipping_cost is not None or eta_days is not None else "tracking_timeline",
     }
 
 
@@ -575,6 +783,97 @@ def can_view_shipment(user: User, shipment: Shipment) -> bool:
     )
 
 
+def sort_tracking_events_for_timeline(events: list[TrackingEvent]) -> list[TrackingEvent]:
+    return sorted(
+        events,
+        key=lambda event: (
+            1 if event.status.upper() == "CREATED" else 0,
+            -event.event_time.timestamp(),
+        ),
+    )
+
+
+def build_reference_number(shipment_id: int) -> str:
+    return f"DOC-{datetime.utcnow().year}-{shipment_id:04d}"
+
+
+def assign_unique_reference_number(shipment: Shipment, db: Session) -> None:
+    base_reference = build_reference_number(shipment.id)
+    reference_no = base_reference
+    suffix = 2
+    while db.scalar(
+        select(Shipment.id).where(
+            Shipment.reference_no == reference_no,
+            Shipment.id != shipment.id,
+        )
+    ):
+        reference_no = f"{base_reference}-{suffix}"
+        suffix += 1
+    shipment.reference_no = reference_no
+
+
+def create_shipment_record(
+    db: Session,
+    *,
+    title: str,
+    document_type: str,
+    employee_id: int,
+    created_by_id: int,
+    courier: str,
+    awb: str,
+    external_awb: Optional[str],
+    po_number: Optional[str],
+    origin: str,
+    destination: str,
+    shipping_cost: float,
+    eta_days: int,
+) -> Shipment:
+    if not db.get(Employee, employee_id):
+        raise HTTPException(status_code=404, detail="Employee not found")
+    shipment = Shipment(
+        reference_no=f"PENDING-{uuid.uuid4().hex}",
+        title=title,
+        document_type=document_type,
+        employee_id=employee_id,
+        created_by_id=created_by_id,
+        courier=courier.lower(),
+        awb=awb,
+        external_awb=external_awb or None,
+        po_number=po_number or None,
+        origin=origin,
+        destination=destination,
+        shipping_cost=shipping_cost,
+        eta_days=eta_days,
+        expected_arrival=datetime.utcnow() + timedelta(days=eta_days) if eta_days else None,
+    )
+    db.add(shipment)
+    db.flush()
+    assign_unique_reference_number(shipment, db)
+    db.add(TrackingEvent(shipment_id=shipment.id, status="CREATED", description="Shipment record created", location=origin))
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Reference number already exists. Please try again.") from exc
+    return shipment
+
+
+async def resolve_awb_shipment_fields(
+    courier: str,
+    awb: str,
+    origin: str,
+    destination: str,
+) -> dict:
+    result = await provider.track(awb.strip(), courier.strip().lower())
+    route = extract_awb_route(result)
+    return {
+        "origin": route.get("origin") or origin,
+        "destination": route.get("destination") or destination,
+        "shipping_cost": route.get("shipping_cost") if route.get("shipping_cost") is not None else 0,
+        "eta_days": route.get("eta_days") if route.get("eta_days") is not None else 0,
+    }
+
+
 class RajaOngkirProvider:
     async def track(self, awb: str, courier: str) -> dict:
         if RAJAONGKIR_MOCK:
@@ -597,7 +896,19 @@ class RajaOngkirProvider:
                         "event_time": now,
                     },
                 ],
-                "raw": {"mock": True, "awb": awb, "courier": courier},
+                "raw": {
+                    "mock": True,
+                    "awb": awb,
+                    "courier": courier,
+                    "origin_city": "Jakarta",
+                    "origin_area": "Distribution Center",
+                    "origin_postal_code": "10110",
+                    "destination_city": "Yogyakarta",
+                    "destination_area": "Umbulharjo",
+                    "destination_postal_code": "55161",
+                    "shipping_cost": 28000,
+                    "eta_days": 2,
+                },
             }
 
         if not RAJAONGKIR_API_KEY:
@@ -682,16 +993,20 @@ def seed_data():
                 User(username="andriana", full_name=employees[0].name, company_name="Employee Shipment Tracker", password_hash=password_hash.hash("Employee123!"), role="employee", employee_id=employees[0].id),
                 User(username="siti", full_name=employees[1].name, company_name="Employee Shipment Tracker", password_hash=password_hash.hash("Employee123!"), role="employee", employee_id=employees[1].id),
             ])
+            db.flush()
 
         if not db.scalar(select(Shipment.id).limit(1)):
+            sender = db.scalar(select(User).where(User.username == "operator"))
             shipment = Shipment(
                 reference_no="DOC-2026-0001",
                 title="Employment Contract",
                 document_type="Contract",
                 employee_id=employees[0].id,
+                created_by_id=sender.id if sender else None,
                 courier="jne",
                 awb="MOCK123456789",
-                external_awb="EXT-MOCK-2026-0001",
+                external_awb="TCK-MOCK-2026-0001",
+                po_number="PO-MOCK-2026-0001",
                 status="IN_TRANSIT",
                 origin="Jakarta",
                 destination="Yogyakarta",
@@ -843,9 +1158,13 @@ def list_shipments(
         "title": s.title,
         "employee": s.employee.name,
         "employee_company": s.employee.company_name,
+        "sender": s.created_by.full_name if s.created_by else None,
+        "sender_role": s.created_by.role if s.created_by else None,
+        "sender_company": s.created_by.company_name if s.created_by else None,
         "courier": s.courier,
         "awb": s.awb,
-        "external_awb": s.external_awb,
+        "ticket_number": s.external_awb,
+        "po_number": s.po_number,
         "status": s.status,
         "origin": s.origin,
         "destination": s.destination,
@@ -874,9 +1193,13 @@ def shipment_detail(
         "document_type": shipment.document_type,
         "employee": shipment.employee.name,
         "employee_company": shipment.employee.company_name,
+        "sender": shipment.created_by.full_name if shipment.created_by else None,
+        "sender_role": shipment.created_by.role if shipment.created_by else None,
+        "sender_company": shipment.created_by.company_name if shipment.created_by else None,
         "courier": shipment.courier,
         "awb": shipment.awb,
-        "external_awb": shipment.external_awb,
+        "ticket_number": shipment.external_awb,
+        "po_number": shipment.po_number,
         "status": shipment.status,
         "origin": shipment.origin,
         "destination": shipment.destination,
@@ -890,19 +1213,19 @@ def shipment_detail(
             "description": e.description,
             "location": e.location,
             "event_time": e.event_time,
-        } for e in sorted(shipment.events, key=lambda item: item.event_time, reverse=True)],
+        } for e in sort_tracking_events_for_timeline(shipment.events)],
     }
 
 
 @app.post("/api/shipments")
-def create_shipment(
-    reference_no: str = Form(...),
+async def create_shipment(
     title: str = Form(...),
     document_type: str = Form("Document"),
     employee_id: int = Form(...),
     courier: str = Form(...),
     awb: str = Form(...),
     external_awb: Optional[str] = Form(None),
+    po_number: Optional[str] = Form(None),
     origin: str = Form(...),
     destination: str = Form(...),
     shipping_cost: float = Form(0),
@@ -911,28 +1234,22 @@ def create_shipment(
     db: Session = Depends(get_db),
 ):
     require_roles(current_user, "admin", "operator")
-    if db.scalar(select(Shipment.id).where(Shipment.reference_no == reference_no)):
-        raise HTTPException(status_code=409, detail="Reference number already exists")
-    if not db.get(Employee, employee_id):
-        raise HTTPException(status_code=404, detail="Employee not found")
-    shipment = Shipment(
-        reference_no=reference_no,
+    provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination)
+    shipment = create_shipment_record(
+        db,
         title=title,
         document_type=document_type,
         employee_id=employee_id,
-        courier=courier.lower(),
+        created_by_id=current_user.id,
+        courier=courier,
         awb=awb,
-        external_awb=external_awb or None,
-        origin=origin,
-        destination=destination,
-        shipping_cost=shipping_cost,
-        eta_days=eta_days,
-        expected_arrival=datetime.utcnow() + timedelta(days=eta_days) if eta_days else None,
+        external_awb=external_awb,
+        po_number=po_number,
+        origin=provider_fields["origin"],
+        destination=provider_fields["destination"],
+        shipping_cost=provider_fields["shipping_cost"],
+        eta_days=provider_fields["eta_days"],
     )
-    db.add(shipment)
-    db.flush()
-    db.add(TrackingEvent(shipment_id=shipment.id, status="CREATED", description="Shipment record created", location=origin))
-    db.commit()
     return {"id": shipment.id, "reference_no": shipment.reference_no}
 
 
@@ -1028,7 +1345,12 @@ def dashboard(
     user_created: Optional[int] = None,
     user_updated: Optional[int] = None,
     user_error: Optional[str] = None,
+    budget_updated: Optional[int] = None,
+    budget_item_created: Optional[int] = None,
+    budget_error: Optional[str] = None,
+    budget_month: Optional[str] = None,
     sort: str = Query("date_desc"),
+    shipping_page: int = Query(1),
     db: Session = Depends(get_db),
 ):
     user = get_current_web_user(request, db)
@@ -1042,13 +1364,77 @@ def dashboard(
     stmt = select(Shipment).order_by(sort_expression)
     if user.role == "employee":
         stmt = stmt.where(Shipment.employee_id == user.employee_id)
-    shipments = db.scalars(stmt).all()
+    all_shipments = db.scalars(stmt).all()
+    total_shipments = len(all_shipments)
+    shipping_total_pages = max((total_shipments + SHIPMENTS_PER_PAGE - 1) // SHIPMENTS_PER_PAGE, 1)
+    shipping_page = min(max(shipping_page, 1), shipping_total_pages)
+    shipping_page_start = (shipping_page - 1) * SHIPMENTS_PER_PAGE
+    shipments = all_shipments[shipping_page_start:shipping_page_start + SHIPMENTS_PER_PAGE]
     counts = {
-        "total": len(shipments),
-        "in_progress": sum(s.status not in {"DELIVERED", "RECEIVED"} for s in shipments),
-        "delivered": sum(s.status in {"DELIVERED", "RECEIVED"} for s in shipments),
-        "cost": sum(s.shipping_cost for s in shipments),
+        "total": total_shipments,
+        "in_progress": sum(s.status not in {"DELIVERED", "RECEIVED"} for s in all_shipments),
+        "delivered": sum(s.status in {"DELIVERED", "RECEIVED"} for s in all_shipments),
+        "cost": sum(s.shipping_cost for s in all_shipments),
     }
+    budget_month = normalize_budget_month(budget_month)
+    monthly_budget = None
+    purchase_items = []
+    budget_amount = 0.0
+    budget_spent = 0.0
+    budget_remaining = 0.0
+    budget_category_totals = []
+    budget_chart_data = {
+        "categoryLabels": [],
+        "categoryAmounts": [],
+        "categoryCounts": [],
+        "timelineLabels": [],
+        "timelineAmounts": [],
+        "cumulativeAmounts": [],
+        "usageLabels": ["Spent", "Remaining"],
+        "usageAmounts": [0, 0],
+    }
+    if user.role == "admin":
+        monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == budget_month))
+        purchase_items = db.scalars(
+            select(PurchaseItem)
+            .where(PurchaseItem.month == budget_month)
+            .order_by(PurchaseItem.created_at.desc())
+        ).all()
+        budget_amount = monthly_budget.amount if monthly_budget else 0.0
+        budget_spent = sum(item.amount for item in purchase_items)
+        budget_remaining = budget_amount - budget_spent
+        category_totals: dict[str, float] = {}
+        category_counts: dict[str, int] = {}
+        daily_totals: dict[str, float] = {}
+        for item in purchase_items:
+            category_totals[item.category] = category_totals.get(item.category, 0.0) + item.amount
+            category_counts[item.category] = category_counts.get(item.category, 0) + 1
+            day_key = item.created_at.strftime("%d %b")
+            daily_totals[day_key] = daily_totals.get(day_key, 0.0) + item.amount
+        budget_category_totals = [
+            {"category": category, "amount": amount}
+            for category, amount in sorted(category_totals.items(), key=lambda entry: entry[0].lower())
+        ]
+        category_entries = sorted(category_totals.items(), key=lambda entry: entry[1], reverse=True)
+        timeline_entries = sorted(
+            daily_totals.items(),
+            key=lambda entry: datetime.strptime(entry[0], "%d %b").replace(year=datetime.utcnow().year),
+        )
+        cumulative_amounts = []
+        running_total = 0.0
+        for _, amount in timeline_entries:
+            running_total += amount
+            cumulative_amounts.append(running_total)
+        budget_chart_data = {
+            "categoryLabels": [category for category, _ in category_entries],
+            "categoryAmounts": [amount for _, amount in category_entries],
+            "categoryCounts": [category_counts.get(category, 0) for category, _ in category_entries],
+            "timelineLabels": [label for label, _ in timeline_entries],
+            "timelineAmounts": [amount for _, amount in timeline_entries],
+            "cumulativeAmounts": cumulative_amounts,
+            "usageLabels": ["Spent", "Remaining"],
+            "usageAmounts": [budget_spent, max(budget_remaining, 0)],
+        }
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -1060,12 +1446,35 @@ def dashboard(
             assigned_employee_ids=assigned_employee_ids,
             user_roles=USER_ROLES,
             shipments=shipments,
+            shipment_pagination={
+                "page": shipping_page,
+                "per_page": SHIPMENTS_PER_PAGE,
+                "total": total_shipments,
+                "total_pages": shipping_total_pages,
+                "start": shipping_page_start + 1 if total_shipments else 0,
+                "end": min(shipping_page_start + SHIPMENTS_PER_PAGE, total_shipments),
+                "has_previous": shipping_page > 1,
+                "has_next": shipping_page < shipping_total_pages,
+                "previous_page": shipping_page - 1 if shipping_page > 1 else 1,
+                "next_page": shipping_page + 1 if shipping_page < shipping_total_pages else shipping_total_pages,
+            },
             counts=counts,
             mock_mode=RAJAONGKIR_MOCK,
             created=bool(created),
             user_created=bool(user_created),
             user_updated=bool(user_updated),
             user_error=user_error,
+            budget_month=budget_month,
+            monthly_budget=monthly_budget,
+            purchase_items=purchase_items,
+            budget_amount=budget_amount,
+            budget_spent=budget_spent,
+            budget_remaining=budget_remaining,
+            budget_category_totals=budget_category_totals,
+            budget_chart_data=budget_chart_data,
+            budget_updated=bool(budget_updated),
+            budget_item_created=bool(budget_item_created),
+            budget_error=budget_error,
             sort=sort,
         ),
     )
@@ -1197,6 +1606,71 @@ def update_user_form(
     return dashboard_redirect(user_updated=1)
 
 
+@app.post("/budgets/set")
+def set_monthly_budget_form(
+    request: Request,
+    month: str = Form(...),
+    amount: float = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    month = normalize_budget_month(month)
+    if amount < 0:
+        return dashboard_redirect(budget_error="Budget amount cannot be negative.", budget_month=month)
+
+    monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == month))
+    if not monthly_budget:
+        monthly_budget = MonthlyBudget(month=month, created_by_id=user.id)
+        db.add(monthly_budget)
+    monthly_budget.amount = amount
+    monthly_budget.updated_at = datetime.utcnow()
+    db.commit()
+    return dashboard_redirect(budget_updated=1, budget_month=month)
+
+
+@app.post("/budget-items/create")
+def create_purchase_item_form(
+    request: Request,
+    month: str = Form(...),
+    item_name: str = Form(...),
+    category: str = Form(...),
+    amount: float = Form(...),
+    note: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    month = normalize_budget_month(month)
+    item_name = item_name.strip()
+    category = category.strip()
+    note = note.strip() if note else None
+
+    if not item_name:
+        return dashboard_redirect(budget_error="Item name is required.", budget_month=month)
+    if not category:
+        return dashboard_redirect(budget_error="Category is required.", budget_month=month)
+    if amount <= 0:
+        return dashboard_redirect(budget_error="Item amount must be greater than 0.", budget_month=month)
+
+    db.add(PurchaseItem(
+        month=month,
+        item_name=item_name,
+        category=category,
+        amount=amount,
+        note=note,
+        created_by_id=user.id,
+    ))
+    db.commit()
+    return dashboard_redirect(budget_item_created=1, budget_month=month)
+
+
 @app.get("/shipments/{shipment_id}", response_class=HTMLResponse)
 def shipment_page(
     shipment_id: int,
@@ -1219,7 +1693,7 @@ def shipment_page(
         context=localized_context(
             request,
             shipment=shipment,
-            events=sorted(shipment.events, key=lambda item: item.event_time, reverse=True),
+            events=sort_tracking_events_for_timeline(shipment.events),
             current_user=user,
             mock_mode=RAJAONGKIR_MOCK,
             refreshed=bool(refreshed),
@@ -1229,15 +1703,15 @@ def shipment_page(
 
 
 @app.post("/shipments/create")
-def create_shipment_form(
+async def create_shipment_form(
     request: Request,
-    reference_no: str = Form(...),
     title: str = Form(...),
     document_type: str = Form("Document"),
     employee_id: int = Form(...),
     courier: str = Form(...),
     awb: str = Form(...),
     external_awb: Optional[str] = Form(None),
+    po_number: Optional[str] = Form(None),
     origin: str = Form(...),
     destination: str = Form(...),
     shipping_cost: float = Form(0),
@@ -1248,26 +1722,27 @@ def create_shipment_form(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     require_roles(user, "admin", "operator")
-    if db.scalar(select(Shipment.id).where(Shipment.reference_no == reference_no)):
-        raise HTTPException(status_code=409, detail="Reference number already exists")
-    shipment = Shipment(
-        reference_no=reference_no,
-        title=title,
-        document_type=document_type,
-        employee_id=employee_id,
-        courier=courier.lower(),
-        awb=awb,
-        external_awb=external_awb or None,
-        origin=origin,
-        destination=destination,
-        shipping_cost=shipping_cost,
-        eta_days=eta_days,
-        expected_arrival=datetime.utcnow() + timedelta(days=eta_days) if eta_days else None,
-    )
-    db.add(shipment)
-    db.flush()
-    db.add(TrackingEvent(shipment_id=shipment.id, status="CREATED", description="Shipment record created", location=origin))
-    db.commit()
+    try:
+        provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination)
+        create_shipment_record(
+            db,
+            title=title,
+            document_type=document_type,
+            employee_id=employee_id,
+            created_by_id=user.id,
+            courier=courier,
+            awb=awb,
+            external_awb=external_awb,
+            po_number=po_number,
+            origin=provider_fields["origin"],
+            destination=provider_fields["destination"],
+            shipping_cost=provider_fields["shipping_cost"],
+            eta_days=provider_fields["eta_days"],
+        )
+    except HTTPException as exc:
+        if exc.status_code in {409, 502, 503}:
+            return dashboard_redirect(user_error=str(exc.detail))
+        raise
     return RedirectResponse(url="/?created=1", status_code=303)
 
 

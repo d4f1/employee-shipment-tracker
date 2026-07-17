@@ -80,7 +80,8 @@
           <div class="text-white-50 small"><i class="bi bi-building me-1"></i>{{ shipment.employee.company_name or app_name }}</div>
         </div>
         <div class="col-md-4"><div class="text-white-50 small">{{ 'Courier'|tr }} / AWB</div><strong>{{ shipment.courier|upper }} · {{ shipment.awb }}</strong></div>
-        <div class="col-md-4"><div class="text-white-50 small">{{ 'External AWB / waybill'|tr }}</div><strong>{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">{{ 'Ticket number'|tr }}</div><strong>{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="col-md-4"><div class="text-white-50 small">{{ 'PO number'|tr }}</div><strong>{{ shipment.po_number or '-' }}</strong></div>
         <div class="col-md-4">
           <div class="text-white-50 small">{{ 'Current location'|tr }}</div>
           <button
@@ -94,6 +95,7 @@
             data-courier="{{ shipment.courier|upper }}"
             data-awb="{{ shipment.awb }}"
             data-external-awb="{{ shipment.external_awb or '-' }}"
+            data-po-number="{{ shipment.po_number or '-' }}"
             data-origin="{{ shipment.origin }}"
             data-destination="{{ shipment.destination }}"
             data-status="{{ shipment.status }}"
@@ -115,7 +117,8 @@
           <i class="bi bi-info-circle text-secondary fs-5"></i>
         </div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Document type'|tr }}</span><strong class="text-end">{{ shipment.document_type }}</strong></div>
-        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'External AWB / waybill'|tr }}</span><strong class="text-end">{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Ticket number'|tr }}</span><strong class="text-end">{{ shipment.external_awb or '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'PO number'|tr }}</span><strong class="text-end">{{ shipment.po_number or '-' }}</strong></div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Route'|tr }}</span><strong class="text-end">{{ shipment.origin }} → {{ shipment.destination }}</strong></div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Shipping cost'|tr }}</span><strong class="text-end">Rp {{ "{:,.0f}".format(shipment.shipping_cost) }}</strong></div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Estimated duration'|tr }}</span><strong class="text-end">{{ shipment.eta_days }} day(s)</strong></div>
@@ -135,7 +138,7 @@
       <div class="card p-4 h-100">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div><h4 class="fw-bold mb-1">{{ 'Tracking timeline'|tr }}</h4><div class="muted small">{{ events|length }} {{ 'recorded event(s)'|tr }}</div></div>
-          <span class="badge rounded-pill text-bg-light border"><i class="bi bi-clock-history me-1"></i>{{ 'Latest first'|tr }}</span>
+          <span class="badge rounded-pill text-bg-light border"><i class="bi bi-clock-history me-1"></i>{{ 'Updates first'|tr }}</span>
         </div>
         <div class="timeline">
           {% for e in events %}
@@ -239,7 +242,8 @@
                 <div><span class="muted d-block">{{ 'Document'|tr }}</span><strong id="mapTitle">-</strong></div>
                 <div><span class="muted d-block">{{ 'Employee'|tr }}</span><strong id="mapEmployee">-</strong></div>
                 <div><span class="muted d-block">{{ 'Courier'|tr }} / AWB</span><strong id="mapCourier">-</strong></div>
-                <div><span class="muted d-block">{{ 'External AWB'|tr }}</span><strong id="mapExternalAwb">-</strong></div>
+                <div><span class="muted d-block">{{ 'Ticket number'|tr }}</span><strong id="mapExternalAwb">-</strong></div>
+                <div><span class="muted d-block">{{ 'PO number'|tr }}</span><strong id="mapPoNumber">-</strong></div>
                 <div><span class="muted d-block">{{ 'Route'|tr }}</span><strong id="mapRoute">-</strong></div>
                 <div><span class="muted d-block">{{ 'Status'|tr }}</span><strong id="mapStatus">-</strong></div>
                 <div><span class="muted d-block">{{ 'Last updated'|tr }}</span><strong id="mapUpdated">-</strong></div>
@@ -321,6 +325,7 @@
     document.getElementById('mapEmployee').textContent = button.dataset.employee || '-';
     document.getElementById('mapCourier').textContent = courierAwb;
     document.getElementById('mapExternalAwb').textContent = button.dataset.externalAwb || '-';
+    document.getElementById('mapPoNumber').textContent = button.dataset.poNumber || '-';
     document.getElementById('mapRoute').textContent = route;
     document.getElementById('mapStatus').textContent = button.dataset.status || '-';
     document.getElementById('mapUpdated').textContent = button.dataset.updated || '-';

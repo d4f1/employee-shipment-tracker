@@ -120,6 +120,52 @@
     .search-box .input-group-text, .search-box .form-control {
       background: #f8f9fc; border-color: var(--app-border);
     }
+    .sort-control {
+      display: inline-flex;
+      align-items: center;
+      gap: .65rem;
+      padding: .25rem .35rem .25rem .75rem;
+      border: 1px solid var(--app-border);
+      border-radius: 16px;
+      background: #f8f9fc;
+    }
+    .sort-control label {
+      color: #68758a;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .sort-select-wrap {
+      position: relative;
+      min-width: 152px;
+    }
+    .sort-select-wrap .form-select {
+      width: 100%;
+      min-height: 42px;
+      padding: .55rem 2.55rem .55rem .85rem;
+      border-radius: 12px;
+      border-color: #d8def0;
+      background-color: white;
+      background-image: none;
+      font-weight: 750;
+      color: var(--app-text);
+      box-shadow: 0 6px 18px rgba(79,70,229,.06);
+      appearance: none;
+    }
+    .sort-select-wrap:after {
+      content: "\F282";
+      font-family: "bootstrap-icons";
+      position: absolute;
+      right: .85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--app-primary);
+      font-size: .85rem;
+      pointer-events: none;
+    }
+    .sort-select-wrap .form-select:focus {
+      border-color: #918bff;
+      box-shadow: 0 0 0 .22rem rgba(79,70,229,.12);
+    }
     .modal-content {
       border: 0; border-radius: 22px;
       box-shadow: 0 28px 80px rgba(15,23,42,.20);
@@ -161,6 +207,167 @@
     .role-admin { background: #fee2e2; color: #991b1b; }
     .role-operator { background: #e0f2fe; color: #075985; }
     .role-employee { background: #dcfce7; color: #166534; }
+    .budget-stat {
+      border: 1px solid var(--app-border);
+      border-radius: 14px;
+      background: #fbfcff;
+      padding: .85rem;
+    }
+    .budget-stat strong { display: block; font-size: 1rem; }
+    .budget-meter {
+      height: 10px;
+      border-radius: 999px;
+      background: #eef2f7;
+      overflow: hidden;
+    }
+    .budget-meter span {
+      display: block;
+      height: 100%;
+      width: var(--budget-used, 0%);
+      max-width: 100%;
+      background: linear-gradient(90deg, #22c55e, #4f46e5);
+      border-radius: inherit;
+    }
+    .budget-item-row {
+      padding: .75rem 0;
+      border-bottom: 1px solid var(--app-border);
+    }
+    .budget-item-row:last-child { border-bottom: 0; }
+    .category-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .25rem;
+      border-radius: 999px;
+      padding: .22rem .5rem;
+      background: #ecfeff;
+      color: #0e7490;
+      font-size: .72rem;
+      font-weight: 750;
+    }
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+    }
+    .dashboard-sidebar {
+      position: sticky;
+      top: 96px;
+      border-radius: 22px;
+      overflow: hidden;
+      background: linear-gradient(180deg, #111827, #172554);
+      color: white;
+      box-shadow: 0 18px 48px rgba(15,23,42,.16);
+    }
+    .sidebar-lockup {
+      padding: 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      min-width: 0;
+    }
+    .sidebar-mark {
+      width: 42px; height: 42px; border-radius: 14px;
+      display:grid; place-items:center;
+      background: linear-gradient(135deg, #8179ff, #4f46e5);
+      color: white;
+      flex-shrink: 0;
+    }
+    .sidebar-title {
+      display: block;
+      max-width: 100%;
+      color: white;
+      font-size: 1rem;
+      font-weight: 800;
+      line-height: 1.18;
+      overflow-wrap: anywhere;
+    }
+    .sidebar-subtitle {
+      display: block;
+      margin-top: .18rem;
+      color: rgba(255,255,255,.58);
+      font-size: .82rem;
+      line-height: 1.2;
+    }
+    .admin-tabs {
+      border: 1px solid var(--app-border);
+      border-radius: 16px;
+      background: white;
+      padding: .35rem;
+      box-shadow: 0 8px 24px rgba(30,41,59,.045);
+    }
+    .dashboard-sidebar .admin-tabs {
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      padding: 1rem;
+      gap: .45rem;
+    }
+    .admin-tabs .nav-link {
+      border: 0;
+      border-radius: 12px;
+      color: var(--app-muted);
+      font-weight: 750;
+      padding: .7rem 1rem;
+    }
+    .dashboard-sidebar .admin-tabs .nav-link {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      color: rgba(255,255,255,.72);
+      text-align: left;
+      padding: .9rem 1rem;
+    }
+    .admin-tabs .nav-link.active {
+      background: var(--app-primary);
+      color: white;
+      box-shadow: 0 10px 24px rgba(79,70,229,.24);
+    }
+    .dashboard-sidebar .admin-tabs .nav-link.active {
+      background: rgba(255,255,255,.15);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+      color: white;
+    }
+    .dashboard-sidebar .admin-tabs .nav-link i {
+      font-size: 1.05rem;
+      width: 1.25rem;
+      text-align: center;
+    }
+    .dashboard-sidebar .admin-tabs .nav-link span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .pagination-shell {
+      border-top: 1px solid var(--app-border);
+      background: #fbfcff;
+    }
+    .pagination .page-link {
+      border-radius: 10px;
+      margin: 0 .12rem;
+      color: var(--app-primary);
+      border-color: var(--app-border);
+    }
+    .pagination .page-item.active .page-link {
+      background: var(--app-primary);
+      border-color: var(--app-primary);
+      color: white;
+    }
+    .tab-pane .sidebar-card { position: static; }
+    .chart-card {
+      border: 1px solid var(--app-border);
+      border-radius: 16px;
+      background: #fbfcff;
+      padding: 1rem;
+      min-height: 280px;
+    }
+    .chart-frame {
+      position: relative;
+      height: 220px;
+    }
+    .chart-frame canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
     .location-button {
       border: 0;
       background: transparent;
@@ -233,6 +440,10 @@
       .hero-panel { border-radius: 18px; }
       .navbar-user { display:none; }
       .sidebar-card { position: static; }
+      .dashboard-layout { grid-template-columns: 1fr; }
+      .dashboard-sidebar { position: static; border-radius: 18px; }
+      .sort-control { width: 100%; justify-content: space-between; }
+      .sort-select-wrap { flex: 1; min-width: 0; }
     }
   </style>
 </head>
@@ -307,6 +518,33 @@
     </div>
   </section>
 
+  {% if current_user.role == 'admin' %}
+  <section class="dashboard-layout mb-4">
+    <aside class="dashboard-sidebar">
+      <div class="sidebar-lockup d-flex align-items-center gap-3">
+        <span class="sidebar-mark"><i class="bi bi-box-seam"></i></span>
+        <div class="min-w-0">
+          <span class="sidebar-title">{{ app_name }}</span>
+          <span class="sidebar-subtitle">{{ 'Dashboard menu'|tr }}</span>
+        </div>
+      </div>
+      <div class="nav nav-pills admin-tabs flex-column" id="adminDashboardTabs" role="tablist">
+        <button class="nav-link active" id="shipping-tab" data-bs-toggle="pill" data-bs-target="#shippingPanel" type="button" role="tab" aria-controls="shippingPanel" aria-selected="true">
+          <i class="bi bi-box-seam"></i><span>{{ 'Shipping'|tr }}</span>
+        </button>
+        <button class="nav-link" id="budget-tab" data-bs-toggle="pill" data-bs-target="#budgetPanel" type="button" role="tab" aria-controls="budgetPanel" aria-selected="false">
+          <i class="bi bi-wallet2"></i><span>{{ 'Monthly budget'|tr }}</span>
+        </button>
+        <button class="nav-link" id="admin-tab" data-bs-toggle="pill" data-bs-target="#adminPanel" type="button" role="tab" aria-controls="adminPanel" aria-selected="false">
+          <i class="bi bi-people"></i><span>{{ 'Admin'|tr }}</span>
+        </button>
+      </div>
+    </aside>
+    <div class="dashboard-content min-w-0">
+  <div class="tab-content" id="adminDashboardTabContent">
+    <div class="tab-pane fade show active" id="shippingPanel" role="tabpanel" aria-labelledby="shipping-tab" tabindex="0">
+  {% endif %}
+
   <section class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
       <div class="card surface-card h-100 p-3">
@@ -343,7 +581,7 @@
   </section>
 
   <section class="row g-4 align-items-start">
-    <div class="{{ 'col-xl-9' if current_user.role == 'admin' else 'col-12' }}">
+    <div class="col-12">
       <div class="card surface-card table-card">
         <div class="card-header bg-white border-0 p-3 p-lg-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
           <div>
@@ -351,23 +589,27 @@
             <div class="muted small">{{ 'Click a reference number to view its complete delivery timeline.'|tr }}</div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2">
-            <form method="get" action="/" class="d-flex align-items-center gap-2">
-              <label class="small muted fw-semibold" for="dateSort">{{ 'Sort by date'|tr }}</label>
-              <select class="form-select form-select-sm" id="dateSort" name="sort" style="width:auto">
-                <option value="date_desc" {{ 'selected' if sort == 'date_desc' else '' }}>{{ 'Newest first'|tr }}</option>
-                <option value="date_asc" {{ 'selected' if sort == 'date_asc' else '' }}>{{ 'Oldest first'|tr }}</option>
-              </select>
+            <form method="get" action="/" class="sort-control">
+              {% if current_user.role == 'admin' %}<input type="hidden" name="budget_month" value="{{ budget_month }}">{% endif %}
+              <input type="hidden" name="shipping_page" value="1">
+              <label class="small" for="dateSort">{{ 'Sort by date'|tr }}</label>
+              <div class="sort-select-wrap">
+                <select class="form-select" id="dateSort" name="sort">
+                  <option value="date_desc" {{ 'selected' if sort == 'date_desc' else '' }}>{{ 'Newest first'|tr }}</option>
+                  <option value="date_asc" {{ 'selected' if sort == 'date_asc' else '' }}>{{ 'Oldest first'|tr }}</option>
+                </select>
+              </div>
             </form>
             <div class="input-group search-box">
               <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
-              <input id="shipmentSearch" class="form-control border-start-0" placeholder="{{ 'Search reference, employee, AWB, or external waybill'|tr }}">
+              <input id="shipmentSearch" class="form-control border-start-0" placeholder="{{ 'Search reference, employee, AWB, ticket, or PO number'|tr }}">
             </div>
           </div>
         </div>
         <div class="table-responsive">
           <table class="table align-middle mb-0" id="shipmentTable">
             <thead>
-              <tr><th>{{ 'Reference'|tr }}</th><th>{{ 'Document'|tr }}</th><th>{{ 'Employee'|tr }}</th><th>{{ 'Courier'|tr }}</th><th>{{ 'External waybill'|tr }}</th><th>{{ 'Route'|tr }}</th><th>{{ 'Cost'|tr }}</th><th>{{ 'Status'|tr }}</th><th>{{ 'Last location'|tr }}</th></tr>
+              <tr><th>{{ 'Reference'|tr }}</th><th>{{ 'Document'|tr }}</th><th>{{ 'Employee'|tr }}</th><th>{{ 'Courier'|tr }}</th><th>{{ 'Ticket number'|tr }}</th><th>{{ 'PO number'|tr }}</th><th>{{ 'Route'|tr }}</th><th>{{ 'Cost'|tr }}</th><th>{{ 'Status'|tr }}</th><th>{{ 'Last location'|tr }}</th></tr>
             </thead>
             <tbody>
             {% for s in shipments %}
@@ -384,11 +626,22 @@
                       <div class="fw-medium">{{ s.employee.name }}</div>
                       <div class="small muted">{{ s.employee.department }}</div>
                       <span class="company-chip text-truncate"><i class="bi bi-building"></i>{{ s.employee.company_name or app_name }}</span>
+                      <div class="small muted mt-1">
+                        <i class="bi bi-send me-1"></i>{{ 'Sender'|tr }}:
+                        {% if s.created_by %}
+                          <span class="fw-semibold text-dark">{{ s.created_by.full_name }}</span>
+                          <span class="text-capitalize">({{ s.created_by.role }})</span>
+                          <span>· {{ s.created_by.company_name or app_name }}</span>
+                        {% else %}
+                          <span>-</span>
+                        {% endif %}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td><span class="fw-semibold">{{ s.courier|upper }}</span><div class="small muted">{{ s.awb }}</div></td>
                 <td><span class="small {{ 'muted' if not s.external_awb else 'fw-semibold' }}">{{ s.external_awb or '-' }}</span></td>
+                <td><span class="small {{ 'muted' if not s.po_number else 'fw-semibold' }}">{{ s.po_number or '-' }}</span></td>
                 <td><div>{{ s.origin }} <i class="bi bi-arrow-right text-secondary mx-1"></i> {{ s.destination }}</div><div class="small muted">ETA {{ s.eta_days }} day(s)</div></td>
                 <td class="fw-semibold">Rp {{ "{:,.0f}".format(s.shipping_cost) }}</td>
                 <td>
@@ -409,6 +662,7 @@
                     data-courier="{{ s.courier|upper }}"
                     data-awb="{{ s.awb }}"
                     data-external-awb="{{ s.external_awb or '-' }}"
+                    data-po-number="{{ s.po_number or '-' }}"
                     data-origin="{{ s.origin }}"
                     data-destination="{{ s.destination }}"
                     data-status="{{ s.status }}"
@@ -420,7 +674,7 @@
                 </td>
               </tr>
             {% else %}
-              <tr><td colspan="9" class="text-center empty-state">
+              <tr><td colspan="10" class="text-center empty-state">
                 <i class="bi bi-inbox display-5 text-secondary"></i>
                 <h5 class="mt-3">{{ 'No shipments found'|tr }}</h5>
                 <p class="muted mb-0">{{ 'New shipments will appear here.'|tr }}</p>
@@ -432,13 +686,214 @@
         <div id="searchEmpty" class="text-center p-5 d-none">
           <i class="bi bi-search display-6 text-secondary"></i>
           <h6 class="mt-3">{{ 'No matching shipments'|tr }}</h6>
-          <p class="muted mb-0">{{ 'Try another reference, employee name, courier, AWB, or external waybill.'|tr }}</p>
+          <p class="muted mb-0">{{ 'Try another reference, employee name, courier, AWB, ticket, or PO number.'|tr }}</p>
+        </div>
+        <div class="pagination-shell p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+          <div class="small muted">
+            {{ 'Showing'|tr }} {{ shipment_pagination.start }} {{ 'to'|tr }} {{ shipment_pagination.end }} {{ 'of'|tr }} {{ shipment_pagination.total }} {{ 'rows'|tr }}
+          </div>
+          {% if shipment_pagination.total_pages > 1 %}
+          <nav aria-label="Shipment pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item {{ 'disabled' if not shipment_pagination.has_previous else '' }}">
+                <a class="page-link" href="/?sort={{ sort }}&shipping_page={{ shipment_pagination.previous_page }}{% if current_user.role == 'admin' %}&budget_month={{ budget_month }}{% endif %}#shippingPanel">{{ 'Previous'|tr }}</a>
+              </li>
+              {% for page_num in range(1, shipment_pagination.total_pages + 1) %}
+              <li class="page-item {{ 'active' if page_num == shipment_pagination.page else '' }}">
+                <a class="page-link" href="/?sort={{ sort }}&shipping_page={{ page_num }}{% if current_user.role == 'admin' %}&budget_month={{ budget_month }}{% endif %}#shippingPanel">{{ page_num }}</a>
+              </li>
+              {% endfor %}
+              <li class="page-item {{ 'disabled' if not shipment_pagination.has_next else '' }}">
+                <a class="page-link" href="/?sort={{ sort }}&shipping_page={{ shipment_pagination.next_page }}{% if current_user.role == 'admin' %}&budget_month={{ budget_month }}{% endif %}#shippingPanel">{{ 'Next'|tr }}</a>
+              </li>
+            </ul>
+          </nav>
+          {% endif %}
         </div>
       </div>
     </div>
+  </section>
 
     {% if current_user.role == 'admin' %}
-    <aside class="col-xl-3">
+    </div>
+    <div class="tab-pane fade" id="budgetPanel" role="tabpanel" aria-labelledby="budget-tab" tabindex="0">
+      <section class="row g-4 align-items-start">
+    <aside class="col-12">
+      <div class="card surface-card sidebar-card">
+        <div class="card-header bg-white border-0 p-3 p-lg-4">
+          <div class="d-flex align-items-center justify-content-between gap-3">
+            <div>
+              <h5 class="fw-bold mb-1">{{ 'Monthly budget'|tr }}</h5>
+              <div class="muted small">{{ 'Track buying needs by category and remaining budget.'|tr }}</div>
+            </div>
+            <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></span>
+          </div>
+        </div>
+        <div class="card-body pt-0">
+          <div class="row g-4">
+            <div class="col-lg-4">
+          <form method="get" action="/" class="mb-3">
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <label class="form-label fw-semibold">{{ 'Budget month'|tr }}</label>
+            <div class="input-group">
+              <input class="form-control" name="budget_month" type="month" value="{{ budget_month }}">
+              <button class="btn btn-soft" type="submit"><i class="bi bi-calendar3"></i></button>
+            </div>
+          </form>
+
+          <form method="post" action="/budgets/set" class="vstack gap-2 mb-3">
+            <input type="hidden" name="month" value="{{ budget_month }}">
+            <label class="form-label fw-semibold">{{ 'Admin monthly budget'|tr }}</label>
+            <div class="input-group">
+              <span class="input-group-text">Rp</span>
+              <input class="form-control" name="amount" type="number" min="0" step="1000" value="{{ '{:.0f}'.format(budget_amount) }}">
+            </div>
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-2"></i>{{ 'Set budget'|tr }}</button>
+          </form>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <div class="budget-stat">
+                <span class="small muted">{{ 'Spent'|tr }}</span>
+                <strong>Rp {{ "{:,.0f}".format(budget_spent) }}</strong>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="budget-stat">
+                <span class="small muted">{{ 'Remaining'|tr }}</span>
+                <strong class="{{ 'text-danger' if budget_remaining < 0 else 'text-success' }}">Rp {{ "{:,.0f}".format(budget_remaining) }}</strong>
+              </div>
+            </div>
+          </div>
+          {% set used_percent = (budget_spent / budget_amount * 100) if budget_amount else 0 %}
+          <div class="budget-meter mb-4" style="--budget-used: {{ used_percent if used_percent < 100 else 100 }}%"><span></span></div>
+            </div>
+
+            <div class="col-lg-4">
+          <form method="post" action="/budget-items/create" class="vstack gap-3">
+            <input type="hidden" name="month" value="{{ budget_month }}">
+            <div class="fw-bold"><i class="bi bi-bag-plus me-1"></i>{{ 'Add purchase item'|tr }}</div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Item name'|tr }}</label>
+              <input class="form-control" name="item_name" required placeholder="Laptop charger">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Category'|tr }}</label>
+              <input class="form-control" name="category" required list="budgetCategories" placeholder="Office supplies">
+              <datalist id="budgetCategories">
+                <option value="Office supplies">
+                <option value="IT equipment">
+                <option value="Courier supplies">
+                <option value="Packaging">
+                <option value="Operations">
+              </datalist>
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Amount'|tr }}</label>
+              <div class="input-group">
+                <span class="input-group-text">Rp</span>
+                <input class="form-control" name="amount" type="number" min="1" step="1" required>
+              </div>
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Note'|tr }}</label>
+              <input class="form-control" name="note" placeholder="{{ 'Optional note'|tr }}">
+            </div>
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-plus-circle me-2"></i>{{ 'Save item'|tr }}</button>
+          </form>
+            </div>
+
+            <div class="col-lg-4">
+          <div class="mb-3">
+            <div class="fw-bold mb-2">{{ 'Category breakdown'|tr }}</div>
+            {% for row in budget_category_totals %}
+            <div class="d-flex justify-content-between align-items-center small py-1">
+              <span class="category-pill"><i class="bi bi-tag"></i>{{ row.category }}</span>
+              <strong>Rp {{ "{:,.0f}".format(row.amount) }}</strong>
+            </div>
+            {% else %}
+            <div class="small muted">{{ 'No purchase items yet.'|tr }}</div>
+            {% endfor %}
+          </div>
+
+          <div>
+            <div class="fw-bold mb-2">{{ 'Recent items'|tr }}</div>
+            {% for item in purchase_items[:5] %}
+            <div class="budget-item-row small">
+              <div class="d-flex justify-content-between gap-2">
+                <strong class="text-truncate">{{ item.item_name }}</strong>
+                <span class="fw-semibold">Rp {{ "{:,.0f}".format(item.amount) }}</span>
+              </div>
+              <div class="muted">{{ item.category }} · {{ item.created_at.strftime('%d %b %Y') }}</div>
+              {% if item.note %}<div class="muted">{{ item.note }}</div>{% endif %}
+            </div>
+            {% else %}
+            <div class="text-center py-3 muted">
+              <i class="bi bi-bag display-6"></i>
+              <div class="small mt-2">{{ 'No purchase items yet.'|tr }}</div>
+            </div>
+            {% endfor %}
+          </div>
+            </div>
+          </div>
+          <hr class="my-4">
+          <div>
+            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+              <div>
+                <div class="fw-bold">{{ 'Budget analytics'|tr }}</div>
+                <div class="small muted">{{ 'Largest category usage, item count, timeline, and spending curve.'|tr }}</div>
+              </div>
+              <span class="category-pill"><i class="bi bi-graph-up-arrow"></i>{{ budget_month }}</span>
+            </div>
+            {% if purchase_items %}
+            <div class="row g-3">
+              <div class="col-lg-6 col-xxl-3">
+                <div class="chart-card">
+                  <div class="fw-semibold mb-2">{{ 'Budget usage'|tr }}</div>
+                  <div class="chart-frame"><canvas id="budgetUsageChart"></canvas></div>
+                </div>
+              </div>
+              <div class="col-lg-6 col-xxl-3">
+                <div class="chart-card">
+                  <div class="fw-semibold mb-2">{{ 'Category usage'|tr }}</div>
+                  <div class="chart-frame"><canvas id="categoryPieChart"></canvas></div>
+                </div>
+              </div>
+              <div class="col-lg-6 col-xxl-3">
+                <div class="chart-card">
+                  <div class="fw-semibold mb-2">{{ 'Items by category'|tr }}</div>
+                  <div class="chart-frame"><canvas id="itemCountChart"></canvas></div>
+                </div>
+              </div>
+              <div class="col-lg-6 col-xxl-3">
+                <div class="chart-card">
+                  <div class="fw-semibold mb-2">{{ 'Cumulative spending curve'|tr }}</div>
+                  <div class="chart-frame"><canvas id="cumulativeCurveChart"></canvas></div>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="chart-card">
+                  <div class="fw-semibold mb-2">{{ 'Daily spending timeline'|tr }}</div>
+                  <div class="chart-frame"><canvas id="dailyTimelineChart"></canvas></div>
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <div class="text-center py-4 muted">
+              <i class="bi bi-pie-chart display-6"></i>
+              <div class="small mt-2">{{ 'No chart data yet.'|tr }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </aside>
+
+      </section>
+    </div>
+    <div class="tab-pane fade" id="adminPanel" role="tabpanel" aria-labelledby="admin-tab" tabindex="0">
+      <section class="row g-4 align-items-start">
+    <aside class="col-12">
       <div class="card surface-card sidebar-card">
         <div class="card-header bg-white border-0 p-3 p-lg-4">
           <div class="d-flex align-items-center justify-content-between gap-3">
@@ -450,6 +905,8 @@
           </div>
         </div>
         <div class="card-body pt-0">
+          <div class="row g-4">
+            <div class="col-lg-4">
           <form method="post" action="/users/create" id="createUserForm" class="vstack gap-3">
             <div>
               <label class="form-label fw-semibold">{{ 'Username'|tr }}</label>
@@ -497,9 +954,10 @@
               <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Adding...'|tr }}</span>
             </button>
           </form>
+            </div>
 
-          <hr class="my-4">
-
+            <div class="col-lg-8">
+          <hr class="my-4 d-lg-none">
           <div class="vstack">
             {% for account in users %}
             <div class="user-row">
@@ -543,11 +1001,17 @@
             </div>
             {% endfor %}
           </div>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
-    {% endif %}
+      </section>
+    </div>
+  </div>
+    </div>
   </section>
+    {% endif %}
 </main>
 
 {% if current_user.role == 'admin' %}
@@ -639,7 +1103,11 @@
         </div>
         <div class="modal-body px-4 py-4">
           <div class="row g-3">
-            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Reference number'|tr }}</label><input class="form-control" name="reference_no" required placeholder="DOC-2026-0002"></div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{{ 'Reference number'|tr }}</label>
+              <input class="form-control" value="{{ 'Auto generated after save'|tr }}" disabled>
+              <div class="small muted mt-1">{{ 'Generated from shipment ID'|tr }}</div>
+            </div>
             <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Document title'|tr }}</label><input class="form-control" name="title" required placeholder="Employment certificate"></div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Document type'|tr }}</label><input class="form-control" name="document_type" value="Document"></div>
             <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label><select class="form-select" name="employee_id" required>{% for e in employees %}<option value="{{ e.id }}">{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}</option>{% endfor %}</select></div>
@@ -650,9 +1118,10 @@
                 <input class="form-control" name="awb" id="awbInput" required placeholder="Internal courier tracking number">
                 <button class="btn btn-soft" type="button" id="lookupAwbButton"><i class="bi bi-search me-1"></i>{{ 'Lookup'|tr }}</button>
               </div>
-              <div class="small muted mt-1" id="awbLookupStatus">{{ 'Lookup AWB to fill origin and destination.'|tr }}</div>
+              <div class="small muted mt-1" id="awbLookupStatus">{{ 'Lookup AWB to fill origin, destination, ETA, and shipping cost.'|tr }}</div>
             </div>
-            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'External AWB / waybill'|tr }}</label><input class="form-control" name="external_awb" placeholder="Marketplace or external partner waybill"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Ticket number'|tr }}</label><input class="form-control" name="external_awb" placeholder="Ticket number"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'PO number'|tr }}</label><input class="form-control" name="po_number" placeholder="Purchase order number"></div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'Origin'|tr }}</label>
               <div class="input-group">
@@ -662,8 +1131,15 @@
               <div class="small muted mt-1" id="originLocationStatus">{{ 'Uses your detected current location when available.'|tr }}</div>
             </div>
             <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Destination'|tr }}</label><div class="input-group"><span class="input-group-text"><i class="bi bi-pin-map"></i></span><input class="form-control" name="destination" id="destinationInput" required placeholder="Yogyakarta"></div></div>
-            <div class="col-md-2"><label class="form-label fw-semibold">{{ 'ETA days'|tr }}</label><input class="form-control" name="eta_days" type="number" min="0" value="2"></div>
-            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Shipping cost'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="shipping_cost" type="number" min="0" value="0"></div></div>
+            <div class="col-md-2"><label class="form-label fw-semibold">{{ 'ETA days'|tr }}</label><input class="form-control" name="eta_days" id="etaDaysInput" type="number" min="0" value="0"></div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{{ 'Shipping cost'|tr }}</label>
+              <div class="input-group">
+                <span class="input-group-text">Rp</span>
+                <input class="form-control" name="shipping_cost" id="shippingCostInput" type="number" min="0" value="0" readonly>
+              </div>
+              <div class="small muted mt-1">{{ 'Filled from AWB provider lookup.'|tr }}</div>
+            </div>
           </div>
         </div>
         <div class="modal-footer border-0 px-4 pb-4 pt-0">
@@ -703,7 +1179,8 @@
                 <div><span class="muted d-block">{{ 'Document'|tr }}</span><strong id="mapTitle">-</strong></div>
                 <div><span class="muted d-block">{{ 'Employee'|tr }}</span><strong id="mapEmployee">-</strong></div>
                 <div><span class="muted d-block">{{ 'Courier'|tr }} / AWB</span><strong id="mapCourier">-</strong></div>
-                <div><span class="muted d-block">{{ 'External AWB'|tr }}</span><strong id="mapExternalAwb">-</strong></div>
+                <div><span class="muted d-block">{{ 'Ticket number'|tr }}</span><strong id="mapExternalAwb">-</strong></div>
+                <div><span class="muted d-block">{{ 'PO number'|tr }}</span><strong id="mapPoNumber">-</strong></div>
                 <div><span class="muted d-block">{{ 'Route'|tr }}</span><strong id="mapRoute">-</strong></div>
                 <div><span class="muted d-block">{{ 'Status'|tr }}</span><strong id="mapStatus">-</strong></div>
                 <div><span class="muted d-block">{{ 'Last updated'|tr }}</span><strong id="mapUpdated">-</strong></div>
@@ -771,6 +1248,24 @@
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
+  <div id="budgetSavedToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-wallet2 me-2"></i>{{ 'Budget saved successfully.'|tr }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+  <div id="budgetItemToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-bag-check me-2"></i>{{ 'Purchase item added successfully.'|tr }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+  <div id="budgetErrorToast" class="toast text-bg-danger" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ budget_error }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
   <div id="userErrorToast" class="toast text-bg-danger" role="alert">
     <div class="d-flex">
       <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ user_error }}</div>
@@ -780,6 +1275,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
 <script>
   const i18n = {
     chooseCourierAwb: {{ ('Choose courier and enter AWB first.'|tr)|tojson }},
@@ -800,6 +1296,7 @@
     locationSkippedOrigin: {{ ('Location permission was skipped. Origin uses your last detected address.'|tr)|tojson }},
     unknownLookupError: {{ ('Unknown lookup error.'|tr)|tojson }},
   };
+  const budgetChartData = {{ budget_chart_data|tojson if current_user.role == 'admin' else 'null' }};
   const searchInput = document.getElementById('shipmentSearch');
   const dateSort = document.getElementById('dateSort');
   const table = document.getElementById('shipmentTable');
@@ -809,14 +1306,108 @@
   const createShipmentModal = document.getElementById('createShipmentModal');
   const originInput = document.getElementById('originInput');
   const destinationInput = document.getElementById('destinationInput');
+  const etaDaysInput = document.getElementById('etaDaysInput');
+  const shippingCostInput = document.getElementById('shippingCostInput');
   const courierSelect = document.getElementById('courierSelect');
   const awbInput = document.getElementById('awbInput');
   const lookupAwbButton = document.getElementById('lookupAwbButton');
   const awbLookupStatus = document.getElementById('awbLookupStatus');
   const originLocationStatus = document.getElementById('originLocationStatus');
+  const showDashboardTab = (tabSelector) => {
+    const trigger = document.querySelector(tabSelector);
+    if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+  };
+  window.addEventListener('DOMContentLoaded', () => {
+    if (window.location.hash === '#budgetPanel') showDashboardTab('#budget-tab');
+    if (window.location.hash === '#adminPanel') showDashboardTab('#admin-tab');
+    initBudgetCharts();
+  });
   let originTouched = false;
   let destinationTouched = false;
   let originDetected = false;
+
+  function formatRupiah(value) {
+    return `Rp ${Number(value || 0).toLocaleString('id-ID', {maximumFractionDigits: 0})}`;
+  }
+
+  function makeChart(canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return null;
+    return new Chart(canvas, config);
+  }
+
+  function initBudgetCharts() {
+    if (!budgetChartData || !budgetChartData.categoryLabels?.length) return;
+    const palette = ['#4f46e5', '#22c55e', '#06b6d4', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
+    const commonPlugins = {
+      legend: {position: 'bottom', labels: {boxWidth: 10, usePointStyle: true}},
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.label || context.dataset.label || ''}: ${formatRupiah(context.parsed?.y ?? context.parsed)}`
+        }
+      }
+    };
+
+    makeChart('budgetUsageChart', {
+      type: 'doughnut',
+      data: {
+        labels: [{{ ('Spent'|tr)|tojson }}, {{ ('Remaining'|tr)|tojson }}],
+        datasets: [{data: budgetChartData.usageAmounts, backgroundColor: ['#4f46e5', '#dcfce7'], borderWidth: 0}]
+      },
+      options: {responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: commonPlugins}
+    });
+
+    makeChart('categoryPieChart', {
+      type: 'pie',
+      data: {
+        labels: budgetChartData.categoryLabels,
+        datasets: [{data: budgetChartData.categoryAmounts, backgroundColor: palette, borderWidth: 0}]
+      },
+      options: {responsive: true, maintainAspectRatio: false, plugins: commonPlugins}
+    });
+
+    makeChart('itemCountChart', {
+      type: 'bar',
+      data: {
+        labels: budgetChartData.categoryLabels,
+        datasets: [{label: {{ ('Items by category'|tr)|tojson }}, data: budgetChartData.categoryCounts, backgroundColor: '#06b6d4', borderRadius: 8}]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {legend: {display: false}},
+        scales: {y: {beginAtZero: true, ticks: {precision: 0}}, x: {grid: {display: false}}}
+      }
+    });
+
+    const lineOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {legend: {display: false}, tooltip: commonPlugins.tooltip},
+      scales: {
+        y: {beginAtZero: true, ticks: {callback: (value) => formatRupiah(value)}},
+        x: {grid: {display: false}}
+      }
+    };
+
+    makeChart('dailyTimelineChart', {
+      type: 'line',
+      data: {
+        labels: budgetChartData.timelineLabels,
+        datasets: [{label: {{ ('Daily spending timeline'|tr)|tojson }}, data: budgetChartData.timelineAmounts, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.12)', fill: true, tension: .2, pointRadius: 4}]
+      },
+      options: lineOptions
+    });
+
+    makeChart('cumulativeCurveChart', {
+      type: 'line',
+      data: {
+        labels: budgetChartData.timelineLabels,
+        datasets: [{label: {{ ('Cumulative spending curve'|tr)|tojson }}, data: budgetChartData.cumulativeAmounts, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.12)', fill: true, tension: .45, pointRadius: 4}]
+      },
+      options: lineOptions
+    });
+  }
 
   const parseAwbError = (payload) => {
     const detail = payload?.detail || i18n.cannotLookupAwb;
@@ -928,6 +1519,12 @@
       if (payload.destination && !destinationTouched) {
         destinationInput.value = payload.destination;
         destinationTouched = true;
+      }
+      if (payload.eta_days !== null && payload.eta_days !== undefined && etaDaysInput) {
+        etaDaysInput.value = payload.eta_days;
+      }
+      if (payload.shipping_cost !== null && payload.shipping_cost !== undefined && shippingCostInput) {
+        shippingCostInput.value = Math.round(Number(payload.shipping_cost) || 0);
       }
       const sourceLabel = payload.source === 'courier_payload' ? i18n.courierData : i18n.trackingTimeline;
       if (awbLookupStatus) awbLookupStatus.textContent = i18n.routeFilledTemplate.replace('{source}', sourceLabel).replace('{status}', payload.status || '-');
@@ -1041,6 +1638,7 @@
     document.getElementById('mapEmployee').textContent = button.dataset.employee || '-';
     document.getElementById('mapCourier').textContent = courierAwb;
     document.getElementById('mapExternalAwb').textContent = button.dataset.externalAwb || '-';
+    document.getElementById('mapPoNumber').textContent = button.dataset.poNumber || '-';
     document.getElementById('mapRoute').textContent = route;
     document.getElementById('mapStatus').textContent = button.dataset.status || '-';
     document.getElementById('mapUpdated').textContent = button.dataset.updated || '-';
@@ -1060,20 +1658,44 @@
   {% endif %}
   {% if user_created %}
   window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#admin-tab');
     bootstrap.Toast.getOrCreateInstance(document.getElementById('userSuccessToast'), {delay: 3500}).show();
-    window.history.replaceState({}, document.title, '/');
+    window.history.replaceState({}, document.title, '/#adminPanel');
   });
   {% endif %}
   {% if user_updated %}
   window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#admin-tab');
     bootstrap.Toast.getOrCreateInstance(document.getElementById('userUpdatedToast'), {delay: 3500}).show();
-    window.history.replaceState({}, document.title, '/');
+    window.history.replaceState({}, document.title, '/#adminPanel');
+  });
+  {% endif %}
+  {% if budget_updated %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#budget-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('budgetSavedToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/?budget_month={{ budget_month }}#budgetPanel');
+  });
+  {% endif %}
+  {% if budget_item_created %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#budget-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('budgetItemToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/?budget_month={{ budget_month }}#budgetPanel');
+  });
+  {% endif %}
+  {% if budget_error %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#budget-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('budgetErrorToast'), {delay: 5000}).show();
+    window.history.replaceState({}, document.title, '/?budget_month={{ budget_month }}#budgetPanel');
   });
   {% endif %}
   {% if user_error %}
   window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#admin-tab');
     bootstrap.Toast.getOrCreateInstance(document.getElementById('userErrorToast'), {delay: 5000}).show();
-    window.history.replaceState({}, document.title, '/');
+    window.history.replaceState({}, document.title, '/#adminPanel');
   });
   {% endif %}
 </script>
