@@ -89,6 +89,28 @@
       width: 38px; height: 38px; border-radius: 12px;
       display:grid; place-items:center; font-weight:700;
       background:#eef0ff; color:var(--app-primary);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .company-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: .28rem;
+      max-width: 180px;
+      margin-top: .25rem;
+      padding: .18rem .45rem;
+      border-radius: 999px;
+      background: #f0fdf4;
+      color: #166534;
+      font-size: .72rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .navbar-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display:grid; place-items:center; font-weight:700;
+      object-fit: cover;
+      background:rgba(255,255,255,.18); color:white;
     }
     .status-badge { border-radius: 999px; padding: .48rem .72rem; font-weight: 650; }
     .status-delivered { background:#e9fbf2; color:#087443; }
@@ -160,6 +182,51 @@
       border-radius: 14px;
       background: #fbfcff;
     }
+    .error-modal .modal-content {
+      border-radius: 28px;
+      overflow: hidden;
+    }
+    .error-hero {
+      background: linear-gradient(180deg, #fff7f8, #fff);
+      border-bottom: 1px solid #f3d8df;
+      padding: 1.5rem 1.5rem 1.1rem;
+    }
+    .error-icon {
+      width: 52px; height: 52px; border-radius: 18px;
+      display: grid; place-items: center;
+      background: #ffe4e9; color: #dc2626;
+      box-shadow: inset 0 0 0 1px #fecdd3;
+      flex-shrink: 0;
+    }
+    .error-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: .75rem;
+    }
+    .error-meta-card {
+      border: 1px solid var(--app-border);
+      border-radius: 14px;
+      background: #fafbff;
+      padding: .8rem .9rem;
+      min-width: 0;
+    }
+    .error-detail-box {
+      border: 1px solid #ffe0e6;
+      border-radius: 16px;
+      background: #fff8fa;
+      padding: .95rem;
+      color: #4b1720;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: .82rem;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      max-height: 150px;
+      overflow: auto;
+    }
+    @media (max-width: 576px) {
+      .error-meta-grid { grid-template-columns: 1fr; }
+    }
     .empty-state { padding: 4rem 1rem !important; }
     @media (max-width: 768px) {
       main { padding-left: 1rem !important; padding-right: 1rem !important; }
@@ -191,7 +258,7 @@
       </div>
       <div class="navbar-user text-end">
         <div class="text-white small fw-semibold">{{ current_user.full_name }}</div>
-        <div class="text-white-50" style="font-size:.75rem">{{ current_user.role|title }}</div>
+        <div class="text-white-50" style="font-size:.75rem">{{ current_user.company_name or app_name }} · {{ current_user.role|title }}</div>
       </div>
       {% if current_user.last_login_latitude is not none and current_user.last_login_longitude is not none %}
       <a class="btn btn-sm btn-outline-light rounded-3 d-none d-lg-inline-flex align-items-center gap-1" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ current_user.last_login_latitude }},{{ current_user.last_login_longitude }}">
@@ -200,10 +267,14 @@
       {% endif %}
       <div class="dropdown">
         <button class="btn btn-outline-light border-0 rounded-circle" data-bs-toggle="dropdown" aria-label="User menu">
-          <i class="bi bi-person-circle fs-5"></i>
+          {% if current_user.avatar_url %}
+          <img class="navbar-avatar" src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}">
+          {% else %}
+          <span class="navbar-avatar">{{ current_user.full_name[:1]|upper }}</span>
+          {% endif %}
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 mt-2">
-          <li><span class="dropdown-item-text"><strong>{{ current_user.full_name }}</strong><br><small class="text-secondary">{{ current_user.role|title }}</small></span></li>
+          <li><span class="dropdown-item-text"><strong>{{ current_user.full_name }}</strong><br><small class="text-secondary">{{ current_user.company_name or app_name }} · {{ current_user.role|title }}</small></span></li>
           <li><hr class="dropdown-divider"></li>
           <li>
             <form method="post" action="/logout">
@@ -279,9 +350,18 @@
             <h5 class="mb-1 fw-bold">{{ 'Recent shipments'|tr }}</h5>
             <div class="muted small">{{ 'Click a reference number to view its complete delivery timeline.'|tr }}</div>
           </div>
-          <div class="input-group search-box">
-            <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
-            <input id="shipmentSearch" class="form-control border-start-0" placeholder="{{ 'Search reference, employee, AWB, or external waybill'|tr }}">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <form method="get" action="/" class="d-flex align-items-center gap-2">
+              <label class="small muted fw-semibold" for="dateSort">{{ 'Sort by date'|tr }}</label>
+              <select class="form-select form-select-sm" id="dateSort" name="sort" style="width:auto">
+                <option value="date_desc" {{ 'selected' if sort == 'date_desc' else '' }}>{{ 'Newest first'|tr }}</option>
+                <option value="date_asc" {{ 'selected' if sort == 'date_asc' else '' }}>{{ 'Oldest first'|tr }}</option>
+              </select>
+            </form>
+            <div class="input-group search-box">
+              <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
+              <input id="shipmentSearch" class="form-control border-start-0" placeholder="{{ 'Search reference, employee, AWB, or external waybill'|tr }}">
+            </div>
           </div>
         </div>
         <div class="table-responsive">
@@ -300,7 +380,11 @@
                 <td>
                   <div class="d-flex align-items-center gap-2">
                     <span class="avatar">{{ s.employee.name[:1]|upper }}</span>
-                    <div><div class="fw-medium">{{ s.employee.name }}</div><div class="small muted">{{ s.employee.department }}</div></div>
+                    <div class="min-w-0">
+                      <div class="fw-medium">{{ s.employee.name }}</div>
+                      <div class="small muted">{{ s.employee.department }}</div>
+                      <span class="company-chip text-truncate"><i class="bi bi-building"></i>{{ s.employee.company_name or app_name }}</span>
+                    </div>
                   </div>
                 </td>
                 <td><span class="fw-semibold">{{ s.courier|upper }}</span><div class="small muted">{{ s.awb }}</div></td>
@@ -376,6 +460,14 @@
               <input class="form-control" name="full_name" required placeholder="New Operator">
             </div>
             <div>
+              <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
+              <input class="form-control" name="company_name" placeholder="{{ app_name }}">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Avatar URL'|tr }}</label>
+              <input class="form-control" name="avatar_url" type="url" placeholder="https://example.com/avatar.jpg">
+            </div>
+            <div>
               <label class="form-label fw-semibold">{{ 'Role'|tr }}</label>
               <select class="form-select" name="role" id="newUserRole" required>
                 {% for role in user_roles %}
@@ -388,7 +480,7 @@
               <select class="form-select" name="employee_id">
                 <option value="">{{ 'Choose employee'|tr }}</option>
                 {% for e in employees %}
-                <option value="{{ e.id }}" {{ 'disabled' if e.id in assigned_employee_ids else '' }}>{{ e.name }} — {{ e.department }}{{ ' (has account)' if e.id in assigned_employee_ids else '' }}</option>
+                <option value="{{ e.id }}" {{ 'disabled' if e.id in assigned_employee_ids else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{{ ' (has account)' if e.id in assigned_employee_ids else '' }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -412,14 +504,22 @@
             {% for account in users %}
             <div class="user-row">
               <div class="d-flex align-items-start gap-2">
+                {% if account.avatar_url %}
+                <img class="avatar" src="{{ account.avatar_url }}" alt="{{ account.full_name }}">
+                {% else %}
                 <span class="avatar">{{ account.full_name[:1]|upper }}</span>
+                {% endif %}
                 <div class="min-w-0 flex-grow-1">
                   <div class="fw-semibold text-truncate">{{ account.full_name }}</div>
                   <div class="small muted text-truncate">@{{ account.username }}</div>
+                  <div class="small text-secondary text-truncate"><i class="bi bi-building me-1"></i>{{ account.company_name or app_name }}</div>
                   <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
                     <span class="role-chip role-{{ account.role }}">{{ account.role }}</span>
                     <span class="small {{ 'text-success' if account.is_active else 'text-secondary' }}">{{ ('Active' if account.is_active else 'Inactive')|tr }}</span>
                   </div>
+                  <button type="button" class="btn btn-sm btn-soft mt-3" data-bs-toggle="modal" data-bs-target="#editUserModal{{ account.id }}">
+                    <i class="bi bi-pencil-square me-1"></i>{{ 'Edit account'|tr }}
+                  </button>
                   {% if account.last_login_latitude is not none and account.last_login_longitude is not none %}
                   <div class="small mt-2">
                     <a class="fw-semibold text-decoration-none d-inline-flex align-items-center gap-1" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ account.last_login_latitude }},{{ account.last_login_longitude }}">
@@ -450,6 +550,80 @@
   </section>
 </main>
 
+{% if current_user.role == 'admin' %}
+{% for account in users %}
+<div class="modal fade" id="editUserModal{{ account.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/users/{{ account.id }}/update" class="edit-user-form">
+        <div class="modal-header border-0 px-4 pt-4 pb-2">
+          <div>
+            <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'Edit account'|tr }}</span>
+            <h4 class="modal-title fw-bold">{{ account.full_name }}</h4>
+            <p class="muted mb-0">@{{ account.username }}</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body px-4 py-4">
+          <div class="vstack gap-3">
+            <div>
+              <label class="form-label fw-semibold">{{ 'Username'|tr }}</label>
+              <input class="form-control" name="username" required value="{{ account.username }}">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Full name'|tr }}</label>
+              <input class="form-control" name="full_name" required value="{{ account.full_name }}">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
+              <input class="form-control" name="company_name" value="{{ account.company_name or '' }}" placeholder="{{ app_name }}">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Avatar URL'|tr }}</label>
+              <input class="form-control" name="avatar_url" type="url" value="{{ account.avatar_url or '' }}" placeholder="https://example.com/avatar.jpg">
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'Role'|tr }}</label>
+              <select class="form-select edit-user-role" name="role" required>
+                {% for role in user_roles %}
+                <option value="{{ role }}" {{ 'selected' if account.role == role else '' }}>{{ role|title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="edit-employee-link-group">
+              <label class="form-label fw-semibold">{{ 'Linked employee'|tr }}</label>
+              <select class="form-select" name="employee_id">
+                <option value="">{{ 'Choose employee'|tr }}</option>
+                {% for e in employees %}
+                {% set linked_to_other = e.id in assigned_employee_ids and account.employee_id != e.id %}
+                <option value="{{ e.id }}" {{ 'selected' if account.employee_id == e.id else '' }} {{ 'disabled' if linked_to_other else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{{ ' (has account)' if linked_to_other else '' }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="form-label fw-semibold">{{ 'New password'|tr }}</label>
+              <input class="form-control" name="password" type="password" minlength="8" placeholder="{{ 'Leave blank to keep current password.'|tr }}">
+            </div>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="editUserActive{{ account.id }}" {{ 'checked' if account.is_active else '' }}>
+              <label class="form-check-label" for="editUserActive{{ account.id }}">{{ 'Active account'|tr }}</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0">
+          <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button>
+          <button type="submit" class="btn btn-primary px-4">
+            <span class="button-label"><i class="bi bi-check2-circle me-2"></i>{{ 'Update account'|tr }}</span>
+            <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Updating...'|tr }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
 {% if current_user.role in ['admin','operator'] %}
 <div class="modal fade" id="createShipmentModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -468,7 +642,7 @@
             <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Reference number'|tr }}</label><input class="form-control" name="reference_no" required placeholder="DOC-2026-0002"></div>
             <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Document title'|tr }}</label><input class="form-control" name="title" required placeholder="Employment certificate"></div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Document type'|tr }}</label><input class="form-control" name="document_type" value="Document"></div>
-            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label><select class="form-select" name="employee_id" required>{% for e in employees %}<option value="{{ e.id }}">{{ e.name }} — {{ e.department }}</option>{% endfor %}</select></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label><select class="form-select" name="employee_id" required>{% for e in employees %}<option value="{{ e.id }}">{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}</option>{% endfor %}</select></div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Courier'|tr }}</label><select class="form-select" name="courier" id="courierSelect" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option></select></div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'AWB / waybill'|tr }}</label>
@@ -545,27 +719,34 @@
   </div>
 </div>
 
-<div class="modal fade" id="awbErrorModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade error-modal" id="awbErrorModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-body p-4">
+      <div class="error-hero">
         <div class="d-flex align-items-start gap-3">
-          <div class="rounded-circle bg-danger-subtle text-danger d-grid flex-shrink-0" style="width:52px;height:52px;place-items:center">
-            <i class="bi bi-exclamation-triangle fs-4"></i>
-          </div>
-          <div>
-            <h4 class="fw-bold mb-2" id="awbErrorTitle">{{ 'Invalid AWB code'|tr }}</h4>
-            <p class="muted mb-3" id="awbErrorMessage">{{ 'The courier provider could not find this AWB.'|tr }}</p>
-            <div class="map-detail p-3 small">
-              <div><span class="muted d-block">{{ 'Courier'|tr }}</span><strong id="awbErrorCourier">-</strong></div>
-              <div class="mt-2"><span class="muted d-block">{{ 'AWB / waybill'|tr }}</span><strong id="awbErrorCode">-</strong></div>
-              <div class="mt-2"><span class="muted d-block">{{ 'Provider detail'|tr }}</span><span id="awbErrorDetail">-</span></div>
-            </div>
-            <div class="d-flex justify-content-end mt-4">
-              <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">{{ 'Review AWB'|tr }}</button>
-            </div>
+          <div class="error-icon"><i class="bi bi-exclamation-triangle fs-4"></i></div>
+          <div class="pe-3">
+            <h4 class="fw-bold mb-1" id="awbErrorTitle">{{ 'Invalid AWB code'|tr }}</h4>
+            <p class="muted mb-0" id="awbErrorMessage">{{ 'The courier provider could not find this AWB.'|tr }}</p>
           </div>
         </div>
+      </div>
+      <div class="modal-body p-4">
+        <div class="error-meta-grid mb-3">
+          <div class="error-meta-card">
+            <span class="muted d-block small">{{ 'Courier'|tr }}</span>
+            <strong id="awbErrorCourier">-</strong>
+          </div>
+          <div class="error-meta-card">
+            <span class="muted d-block small">{{ 'AWB / waybill'|tr }}</span>
+            <strong id="awbErrorCode">-</strong>
+          </div>
+        </div>
+        <div class="small fw-semibold text-danger mb-2">{{ 'Provider detail'|tr }}</div>
+        <div class="error-detail-box" id="awbErrorDetail">-</div>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-0">
+        <button type="button" class="btn btn-primary px-4 w-100" data-bs-dismiss="modal">{{ 'Review AWB'|tr }}</button>
       </div>
     </div>
   </div>
@@ -581,6 +762,12 @@
   <div id="userSuccessToast" class="toast text-bg-success" role="alert">
     <div class="d-flex">
       <div class="toast-body"><i class="bi bi-person-check-fill me-2"></i>{{ 'User account created successfully.'|tr }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+  <div id="userUpdatedToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-person-gear me-2"></i>{{ 'User account updated successfully.'|tr }}</div>
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
@@ -614,6 +801,7 @@
     unknownLookupError: {{ ('Unknown lookup error.'|tr)|tojson }},
   };
   const searchInput = document.getElementById('shipmentSearch');
+  const dateSort = document.getElementById('dateSort');
   const table = document.getElementById('shipmentTable');
   const searchEmpty = document.getElementById('searchEmpty');
   const packageMapModal = document.getElementById('packageMapModal');
@@ -683,6 +871,10 @@
     });
     searchEmpty.classList.toggle('d-none', visible !== 0 || rows.length === 0);
     table.classList.toggle('d-none', visible === 0 && rows.length > 0);
+  });
+
+  dateSort?.addEventListener('change', function () {
+    this.form?.submit();
   });
 
   const createForm = document.getElementById('createShipmentForm');
@@ -811,6 +1003,28 @@
     button.querySelector('.button-loading').classList.remove('d-none');
   });
 
+  document.querySelectorAll('.edit-user-form').forEach((form) => {
+    const roleSelect = form.querySelector('.edit-user-role');
+    const employeeGroup = form.querySelector('.edit-employee-link-group');
+    const employeeSelect = employeeGroup?.querySelector('select');
+    const toggleEditEmployeeLink = () => {
+      const needsEmployee = roleSelect?.value === 'employee';
+      employeeGroup?.classList.toggle('d-none', !needsEmployee);
+      if (employeeSelect) {
+        employeeSelect.required = needsEmployee;
+        if (!needsEmployee) employeeSelect.value = '';
+      }
+    };
+    roleSelect?.addEventListener('change', toggleEditEmployeeLink);
+    toggleEditEmployeeLink();
+    form.addEventListener('submit', function () {
+      const button = form.querySelector('button[type="submit"]');
+      button.disabled = true;
+      button.querySelector('.button-label')?.classList.add('d-none');
+      button.querySelector('.button-loading')?.classList.remove('d-none');
+    });
+  });
+
   packageMapModal?.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     if (!button) return;
@@ -847,6 +1061,12 @@
   {% if user_created %}
   window.addEventListener('DOMContentLoaded', () => {
     bootstrap.Toast.getOrCreateInstance(document.getElementById('userSuccessToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/');
+  });
+  {% endif %}
+  {% if user_updated %}
+  window.addEventListener('DOMContentLoaded', () => {
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('userUpdatedToast'), {delay: 3500}).show();
     window.history.replaceState({}, document.title, '/');
   });
   {% endif %}

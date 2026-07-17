@@ -6,70 +6,160 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
-    body{min-height:100vh;background:linear-gradient(135deg,#eef0ff,#f7f8fc 48%,#eef6ff);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-    .login-shell{min-height:100vh}
-    .login-card{width:min(470px,92vw);border:0;border-radius:24px;box-shadow:0 28px 80px rgba(30,41,59,.14);overflow:hidden}
-    .brand-mark{width:56px;height:56px;border-radius:17px;display:grid;place-items:center;background:linear-gradient(135deg,#8179ff,#4f46e5);color:white;box-shadow:0 12px 30px rgba(79,70,229,.3)}
-    .form-control{border-radius:12px;padding:.8rem .9rem;border-color:#dfe3ec}
-    .form-control:focus{border-color:#918bff;box-shadow:0 0 0 .22rem rgba(79,70,229,.12)}
-    .btn-primary{--bs-btn-bg:#4f46e5;--bs-btn-border-color:#4f46e5;border-radius:12px}
-    .demo-box{background:#f7f8fc;border:1px solid #e9ebf2;border-radius:15px}
-    .location-note{border:1px solid #e9ebf2;border-radius:14px;background:#fbfcff}
+    :root{--ink:#132033;--muted:#68758a;--line:#dfe6ef;--blue:#2457d6;--green:#0f8f69;--amber:#f59e0b}
+    *{box-sizing:border-box}
+    body{min-height:100vh;margin:0;background:#eef3f8;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    .auth-page{min-height:100vh;display:grid;place-items:center;padding:28px}
+    .auth-shell{width:min(1120px,100%);display:grid;grid-template-columns:minmax(0,1.05fr) minmax(390px,.82fr);border-radius:28px;overflow:hidden;background:#fff;box-shadow:0 26px 80px rgba(15,23,42,.16)}
+    .story-panel{position:relative;min-height:680px;padding:42px;background:linear-gradient(145deg,#11213a 0%,#173358 58%,#0f766e 100%);color:#fff;overflow:hidden}
+    .story-panel:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:44px 44px;opacity:.35}
+    .story-panel:after{content:"";position:absolute;left:10%;right:10%;bottom:-120px;height:260px;background:radial-gradient(circle,rgba(34,197,94,.26),transparent 66%)}
+    .story-content{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:36px}
+    .brand-lockup{display:flex;align-items:center;gap:14px}
+    .brand-mark{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:#fff;color:var(--blue);box-shadow:0 16px 38px rgba(0,0,0,.18)}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:.42rem .75rem;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.11);font-size:.78rem;font-weight:750;text-transform:uppercase;letter-spacing:.06em}
+    .story-title{max-width:560px;font-size:clamp(2.45rem,4vw,4.35rem);line-height:.98;font-weight:850;letter-spacing:0;margin:18px 0 16px}
+    .story-copy{max-width:500px;color:rgba(255,255,255,.78);font-size:1.05rem;line-height:1.65}
+    .route-board{position:relative;margin-top:22px;max-width:560px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:rgba(255,255,255,.11);backdrop-filter:blur(14px);padding:22px}
+    .route-line{position:absolute;left:46px;top:78px;bottom:78px;width:2px;background:linear-gradient(#60a5fa,#34d399)}
+    .route-stop{position:relative;display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0}
+    .stop-icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:#fff;color:var(--blue);box-shadow:0 10px 24px rgba(0,0,0,.16)}
+    .route-stop:last-child .stop-icon{color:var(--green)}
+    .stop-label{font-size:.78rem;color:rgba(255,255,255,.62);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .stop-value{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .status-pill{border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.16);padding:.35rem .65rem;font-size:.78rem;font-weight:750;color:#d1fae5}
+    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .metric{border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(255,255,255,.1);padding:16px}
+    .metric strong{display:block;font-size:1.35rem}.metric span{color:rgba(255,255,255,.68);font-size:.82rem}
+    .signin-panel{padding:36px 48px 42px;display:flex;flex-direction:column;justify-content:center}
+    .language-switch{display:flex;justify-content:flex-end;gap:8px;margin-bottom:34px}
+    .language-switch .btn{border-radius:999px;font-weight:700}
+    .panel-kicker{color:var(--green);font-size:.8rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+    .signin-title{font-size:2.15rem;font-weight:850;letter-spacing:0;margin:.45rem 0 .65rem}
+    .signin-copy{color:var(--muted);line-height:1.6;margin-bottom:1.7rem}
+    .form-label{font-weight:760;color:#1f2937}
+    .input-group{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+    .input-group:focus-within{border-color:#7aa2ff;box-shadow:0 0 0 .22rem rgba(36,87,214,.12)}
+    .input-group-text,.form-control,.password-toggle{border:0;background:#fff}
+    .form-control{padding:.9rem .9rem}.form-control:focus{box-shadow:none}
+    .password-toggle{color:#64748b;padding:0 1rem}
+    .btn-primary{--bs-btn-bg:var(--blue);--bs-btn-border-color:var(--blue);--bs-btn-hover-bg:#1d45aa;--bs-btn-hover-border-color:#1d45aa;border-radius:14px;font-weight:800}
+    .location-note{border:1px solid #dce8f5;border-radius:16px;background:#f7fbff;color:var(--muted)}
+    .location-note i{color:var(--blue)}
+    .demo-box{background:#f8fafc;border:1px solid #e5eaf1;border-radius:18px}
+    .demo-account{padding:.55rem .65rem;border-radius:12px;background:#fff;border:1px solid #edf1f6}
+    @media (max-width: 960px){
+      .auth-page{padding:18px}.auth-shell{grid-template-columns:1fr}.story-panel{min-height:auto;padding:28px}.metric-row{grid-template-columns:1fr 1fr 1fr}.signin-panel{padding:28px}.language-switch{margin-bottom:24px}
+    }
+    @media (max-width: 576px){
+      .auth-page{padding:0}.auth-shell{border-radius:0;min-height:100vh}.story-panel{display:none}.signin-panel{padding:24px 18px}.signin-title{font-size:1.85rem}
+    }
   </style>
 </head>
 <body>
-<div class="container login-shell d-grid align-items-center py-5">
-  <div class="card login-card mx-auto">
-    <div class="card-body p-4 p-md-5">
-      <div class="d-flex justify-content-end gap-2 mb-3">
+<main class="auth-page">
+  <section class="auth-shell">
+    <aside class="story-panel" aria-label="{{ 'Shipping operations overview'|tr }}">
+      <div class="story-content">
+        <div>
+          <div class="brand-lockup">
+            <div class="brand-mark"><i class="bi bi-box-seam fs-3"></i></div>
+            <div>
+              <div class="fw-bold fs-5">{{ app_name }}</div>
+              <div class="text-white-50 small">{{ 'Employee delivery operations'|tr }}</div>
+            </div>
+          </div>
+          <div class="mt-5">
+            <span class="eyebrow"><i class="bi bi-truck"></i>{{ 'Shipping business portal'|tr }}</span>
+            <h1 class="story-title">{{ 'Track every employee package from origin to arrival.'|tr }}</h1>
+            <p class="story-copy">{{ 'Monitor AWB status, origin, destination, courier movement, and employee handoff from one operational dashboard.'|tr }}</p>
+          </div>
+          <div class="route-board">
+            <div class="route-line"></div>
+            <div class="route-stop">
+              <div class="stop-icon"><i class="bi bi-building"></i></div>
+              <div>
+                <div class="stop-label">{{ 'Origin hub'|tr }}</div>
+                <div class="stop-value">Jakarta Distribution Center</div>
+              </div>
+              <span class="status-pill">{{ 'Checked in'|tr }}</span>
+            </div>
+            <div class="route-stop">
+              <div class="stop-icon"><i class="bi bi-truck"></i></div>
+              <div>
+                <div class="stop-label">{{ 'In transit'|tr }}</div>
+                <div class="stop-value">Line haul JNE / J&T</div>
+              </div>
+              <span class="status-pill">{{ 'Live AWB'|tr }}</span>
+            </div>
+            <div class="route-stop">
+              <div class="stop-icon"><i class="bi bi-geo-alt"></i></div>
+              <div>
+                <div class="stop-label">{{ 'Destination'|tr }}</div>
+                <div class="stop-value">Employee Office Branch</div>
+              </div>
+              <span class="status-pill">{{ 'ETA 2 days'|tr }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="metric-row">
+          <div class="metric"><strong>24/7</strong><span>{{ 'Tracking visibility'|tr }}</span></div>
+          <div class="metric"><strong>AWB</strong><span>{{ 'Courier lookup'|tr }}</span></div>
+          <div class="metric"><strong>GPS</strong><span>{{ 'Login location'|tr }}</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="signin-panel">
+      <div class="language-switch">
         {% for code, label in languages.items() %}
         <a class="btn btn-sm {{ 'btn-primary' if code == lang else 'btn-outline-secondary' }}" href="/language?lang={{ code }}&next=/login">{{ label }}</a>
         {% endfor %}
       </div>
-      <div class="brand-mark mb-4"><i class="bi bi-box-seam fs-3"></i></div>
-      <h2 class="fw-bold mb-2">{{ 'Welcome back'|tr }}</h2>
-      <p class="text-secondary mb-4">{{ 'Sign in to {app_name} using your assigned account.'|tr|replace('{app_name}', app_name) }}</p>
+      <div class="panel-kicker">{{ 'Secure shipment access'|tr }}</div>
+      <h2 class="signin-title">{{ 'Welcome back'|tr }}</h2>
+      <p class="signin-copy">{{ 'Sign in to {app_name} using your assigned account.'|tr|replace('{app_name}', app_name) }}</p>
       {% if error %}<div class="alert alert-danger rounded-3"><i class="bi bi-exclamation-circle me-2"></i>{{ error }}</div>{% endif %}
       <form method="post" action="/login" id="loginForm">
         <input type="hidden" name="latitude" id="latitude">
         <input type="hidden" name="longitude" id="longitude">
         <input type="hidden" name="accuracy" id="accuracy">
         <div class="mb-3">
-          <label class="form-label fw-semibold">{{ 'Username'|tr }}</label>
-          <div class="input-group"><span class="input-group-text bg-white"><i class="bi bi-person"></i></span><input class="form-control border-start-0" name="username" autocomplete="username" required autofocus></div>
+          <label class="form-label">{{ 'Username'|tr }}</label>
+          <div class="input-group"><span class="input-group-text"><i class="bi bi-person-badge"></i></span><input class="form-control" name="username" autocomplete="username" required autofocus></div>
         </div>
         <div class="mb-4">
-          <label class="form-label fw-semibold">{{ 'Password'|tr }}</label>
+          <label class="form-label">{{ 'Password'|tr }}</label>
           <div class="input-group">
-            <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
-            <input class="form-control border-start-0 border-end-0" id="password" type="password" name="password" autocomplete="current-password" required>
-            <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePassword"><i class="bi bi-eye"></i></button>
+            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+            <input class="form-control" id="password" type="password" name="password" autocomplete="current-password" required>
+            <button class="password-toggle" type="button" id="togglePassword" aria-label="{{ 'Password'|tr }}"><i class="bi bi-eye"></i></button>
           </div>
         </div>
-        <div class="location-note d-flex align-items-start gap-2 p-3 mb-3 small text-secondary">
-          <i class="bi bi-geo-alt text-primary mt-1"></i>
+        <div class="location-note d-flex align-items-start gap-3 p-3 mb-3 small">
+          <i class="bi bi-crosshair mt-1"></i>
           <div>
-            <div class="fw-semibold text-dark">{{ 'Current location detection'|tr }}</div>
+            <div class="fw-bold text-dark">{{ 'Current location detection'|tr }}</div>
             <div id="locationStatus">{{ 'Location will be detected automatically when you sign in.'|tr }}</div>
           </div>
         </div>
-        <button class="btn btn-primary w-100 py-2" id="loginButton">
+        <button class="btn btn-primary w-100 py-3" id="loginButton">
           <span class="button-label"><i class="bi bi-box-arrow-in-right me-2"></i>{{ 'Sign in'|tr }}</span>
           <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Detecting location...'|tr }}</span>
         </button>
       </form>
       <div class="demo-box p-3 mt-4">
-        <div class="small fw-semibold mb-2"><i class="bi bi-key me-1"></i>{{ 'Demo accounts'|tr }}</div>
+        <div class="small fw-bold mb-2"><i class="bi bi-key me-1"></i>{{ 'Demo accounts'|tr }}</div>
         <div class="row g-2 small text-secondary">
-          <div class="col-6"><strong class="text-dark">admin</strong><br>Admin123!</div>
-          <div class="col-6"><strong class="text-dark">operator</strong><br>Operator123!</div>
-          <div class="col-6"><strong class="text-dark">andriana</strong><br>Employee123!</div>
-          <div class="col-6"><strong class="text-dark">siti</strong><br>Employee123!</div>
+          <div class="col-6"><div class="demo-account"><strong class="text-dark">admin</strong><br>Admin123!</div></div>
+          <div class="col-6"><div class="demo-account"><strong class="text-dark">operator</strong><br>Operator123!</div></div>
+          <div class="col-6"><div class="demo-account"><strong class="text-dark">andriana</strong><br>Employee123!</div></div>
+          <div class="col-6"><div class="demo-account"><strong class="text-dark">siti</strong><br>Employee123!</div></div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
+    </section>
+  </section>
+</main>
 <script>
   const i18n = {
     signingIn: {{ ('Signing in...'|tr)|tojson }},

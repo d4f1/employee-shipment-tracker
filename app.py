@@ -58,6 +58,7 @@ class Employee(Base):
     employee_code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(150))
     email: Mapped[str] = mapped_column(String(150), unique=True)
+    company_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     department: Mapped[str] = mapped_column(String(100), default="-")
     shipments: Mapped[list["Shipment"]] = relationship(back_populates="employee")
     user: Mapped[Optional["User"]] = relationship(back_populates="employee", uselist=False)
@@ -69,6 +70,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(150))
+    company_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(30), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -154,11 +157,17 @@ def ensure_optional_columns():
         "last_login_state": "VARCHAR(200)",
         "last_login_country": "VARCHAR(120)",
         "last_login_postcode": "VARCHAR(40)",
+        "company_name": "VARCHAR(200)",
+        "avatar_url": "VARCHAR(500)",
     }
     with engine.begin() as connection:
         for column_name, column_type in missing_user_columns.items():
             if column_name not in user_columns:
                 connection.execute(text(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"))
+    employee_columns = {column["name"] for column in inspect(engine).get_columns("employees")}
+    if "company_name" not in employee_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE employees ADD COLUMN company_name VARCHAR(200)"))
 
 
 ensure_optional_columns()
@@ -182,6 +191,20 @@ TRANSLATIONS = {
         "Location detected. Signing in...": "Lokasi terdeteksi. Sedang masuk...",
         "Location permission was skipped. Signing in without location.": "Izin lokasi dilewati. Masuk tanpa lokasi.",
         "Employee delivery operations": "Operasional pengiriman karyawan",
+        "Shipping operations overview": "Ringkasan operasional pengiriman",
+        "Shipping business portal": "Portal bisnis pengiriman",
+        "Track every employee package from origin to arrival.": "Pantau setiap paket karyawan dari asal hingga tiba.",
+        "Monitor AWB status, origin, destination, courier movement, and employee handoff from one operational dashboard.": "Pantau status AWB, asal, tujuan, pergerakan kurir, dan serah terima karyawan dari satu dashboard operasional.",
+        "Origin hub": "Hub asal",
+        "Checked in": "Tercatat",
+        "In transit": "Dalam perjalanan",
+        "Live AWB": "AWB live",
+        "Destination": "Tujuan",
+        "ETA 2 days": "ETA 2 hari",
+        "Tracking visibility": "Visibilitas pelacakan",
+        "Courier lookup": "Pencarian kurir",
+        "Login location": "Lokasi masuk",
+        "Secure shipment access": "Akses pengiriman aman",
         "Mock API": "API Mock",
         "Live API": "API Live",
         "Logout": "Keluar",
@@ -194,6 +217,9 @@ TRANSLATIONS = {
         "Delivered": "Terkirim",
         "Shipping cost": "Biaya kirim",
         "Recent shipments": "Pengiriman terbaru",
+        "Sort by date": "Urutkan tanggal",
+        "Newest first": "Terbaru dulu",
+        "Oldest first": "Terlama dulu",
         "Click a reference number to view its complete delivery timeline.": "Klik nomor referensi untuk melihat linimasa pengiriman lengkap.",
         "Search reference, employee, AWB, or external waybill": "Cari referensi, karyawan, AWB, atau waybill eksternal",
         "Reference": "Referensi",
@@ -216,12 +242,22 @@ TRANSLATIONS = {
         "Linked employee": "Karyawan terkait",
         "Choose employee": "Pilih karyawan",
         "Temporary password": "Kata sandi sementara",
+        "Profile details": "Detail profil",
+        "Company name": "Nama perusahaan",
+        "Avatar URL": "URL avatar",
+        "Company": "Perusahaan",
         "Active account": "Akun aktif",
         "Add account": "Tambah akun",
         "Adding...": "Menambahkan...",
+        "Edit account": "Ubah akun",
+        "Update account": "Perbarui akun",
+        "Updating...": "Memperbarui...",
+        "New password": "Kata sandi baru",
+        "Leave blank to keep current password.": "Kosongkan untuk mempertahankan kata sandi saat ini.",
         "Active": "Aktif",
         "Inactive": "Tidak aktif",
         "No users yet.": "Belum ada pengguna.",
+        "User account updated successfully.": "Akun pengguna berhasil diperbarui.",
         "New delivery": "Pengiriman baru",
         "Create a shipment": "Buat pengiriman",
         "Register the document, recipient, courier, cost, and expected delivery time.": "Daftarkan dokumen, penerima, kurir, biaya, dan estimasi waktu pengiriman.",
@@ -279,6 +315,8 @@ TRANSLATIONS = {
         "recorded event(s)": "event tercatat",
         "Latest first": "Terbaru dulu",
         "Refresh tracking status?": "Refresh status pelacakan?",
+        "Refresh tracking failed": "Refresh pelacakan gagal",
+        "The courier provider could not refresh this AWB.": "Penyedia kurir tidak dapat memperbarui AWB ini.",
         "Refresh now": "Refresh sekarang",
         "Refreshing...": "Sedang refresh...",
         "Tracking refreshed successfully.": "Pelacakan berhasil diperbarui.",
@@ -619,21 +657,30 @@ provider = RajaOngkirProvider()
 def seed_data():
     with SessionLocal() as db:
         employees = db.scalars(select(Employee).order_by(Employee.id)).all()
+        sample_employee_companies = {
+            "EMP-001": "Acme Logistics",
+            "EMP-002": "Nusantara Finance",
+            "EMP-003": "Operations Hub",
+        }
         if not employees:
             employees = [
-                Employee(employee_code="EMP-001", name="Andriana Khadafi", email="andriana@example.com", department="Engineering"),
-                Employee(employee_code="EMP-002", name="Siti Rahma", email="siti@example.com", department="Finance"),
-                Employee(employee_code="EMP-003", name="Budi Santoso", email="budi@example.com", department="Operations"),
+                Employee(employee_code="EMP-001", name="Andriana Khadafi", email="andriana@example.com", company_name=sample_employee_companies["EMP-001"], department="Engineering"),
+                Employee(employee_code="EMP-002", name="Siti Rahma", email="siti@example.com", company_name=sample_employee_companies["EMP-002"], department="Finance"),
+                Employee(employee_code="EMP-003", name="Budi Santoso", email="budi@example.com", company_name=sample_employee_companies["EMP-003"], department="Operations"),
             ]
             db.add_all(employees)
             db.flush()
+        else:
+            for employee in employees:
+                if not employee.company_name and employee.employee_code in sample_employee_companies:
+                    employee.company_name = sample_employee_companies[employee.employee_code]
 
         if not db.scalar(select(User.id).limit(1)):
             db.add_all([
-                User(username="admin", full_name="System Administrator", password_hash=password_hash.hash("Admin123!"), role="admin"),
-                User(username="operator", full_name="Delivery Operator", password_hash=password_hash.hash("Operator123!"), role="operator"),
-                User(username="andriana", full_name=employees[0].name, password_hash=password_hash.hash("Employee123!"), role="employee", employee_id=employees[0].id),
-                User(username="siti", full_name=employees[1].name, password_hash=password_hash.hash("Employee123!"), role="employee", employee_id=employees[1].id),
+                User(username="admin", full_name="System Administrator", company_name="Employee Shipment Tracker", password_hash=password_hash.hash("Admin123!"), role="admin"),
+                User(username="operator", full_name="Delivery Operator", company_name="Employee Shipment Tracker", password_hash=password_hash.hash("Operator123!"), role="operator"),
+                User(username="andriana", full_name=employees[0].name, company_name="Employee Shipment Tracker", password_hash=password_hash.hash("Employee123!"), role="employee", employee_id=employees[0].id),
+                User(username="siti", full_name=employees[1].name, company_name="Employee Shipment Tracker", password_hash=password_hash.hash("Employee123!"), role="employee", employee_id=employees[1].id),
             ])
 
         if not db.scalar(select(Shipment.id).limit(1)):
@@ -692,6 +739,8 @@ def api_login(
             "id": user.id,
             "username": user.username,
             "full_name": user.full_name,
+            "company_name": user.company_name,
+            "avatar_url": user.avatar_url,
             "role": user.role,
             "employee_id": user.employee_id,
         },
@@ -704,6 +753,8 @@ def api_me(current_user: User = Depends(get_current_api_user)):
         "id": current_user.id,
         "username": current_user.username,
         "full_name": current_user.full_name,
+        "company_name": current_user.company_name,
+        "avatar_url": current_user.avatar_url,
         "role": current_user.role,
         "employee_id": current_user.employee_id,
     }
@@ -791,6 +842,7 @@ def list_shipments(
         "reference_no": s.reference_no,
         "title": s.title,
         "employee": s.employee.name,
+        "employee_company": s.employee.company_name,
         "courier": s.courier,
         "awb": s.awb,
         "external_awb": s.external_awb,
@@ -821,6 +873,7 @@ def shipment_detail(
         "title": shipment.title,
         "document_type": shipment.document_type,
         "employee": shipment.employee.name,
+        "employee_company": shipment.employee.company_name,
         "courier": shipment.courier,
         "awb": shipment.awb,
         "external_awb": shipment.external_awb,
@@ -973,7 +1026,9 @@ def dashboard(
     request: Request,
     created: Optional[int] = None,
     user_created: Optional[int] = None,
+    user_updated: Optional[int] = None,
     user_error: Optional[str] = None,
+    sort: str = Query("date_desc"),
     db: Session = Depends(get_db),
 ):
     user = get_current_web_user(request, db)
@@ -982,7 +1037,9 @@ def dashboard(
     employees = db.scalars(select(Employee).order_by(Employee.name)).all() if user.role in {"admin", "operator"} else []
     users = db.scalars(select(User).order_by(User.created_at.desc())).all() if user.role == "admin" else []
     assigned_employee_ids = {account.employee_id for account in users if account.employee_id}
-    stmt = select(Shipment).order_by(Shipment.created_at.desc())
+    sort = sort if sort in {"date_asc", "date_desc"} else "date_desc"
+    sort_expression = Shipment.created_at.asc() if sort == "date_asc" else Shipment.created_at.desc()
+    stmt = select(Shipment).order_by(sort_expression)
     if user.role == "employee":
         stmt = stmt.where(Shipment.employee_id == user.employee_id)
     shipments = db.scalars(stmt).all()
@@ -1007,7 +1064,9 @@ def dashboard(
             mock_mode=RAJAONGKIR_MOCK,
             created=bool(created),
             user_created=bool(user_created),
+            user_updated=bool(user_updated),
             user_error=user_error,
+            sort=sort,
         ),
     )
 
@@ -1017,6 +1076,8 @@ def create_user_form(
     request: Request,
     username: str = Form(...),
     full_name: str = Form(...),
+    company_name: Optional[str] = Form(None),
+    avatar_url: Optional[str] = Form(None),
     role: str = Form(...),
     password: str = Form(...),
     employee_id: Optional[str] = Form(None),
@@ -1030,6 +1091,8 @@ def create_user_form(
 
     username = username.strip()
     full_name = full_name.strip()
+    company_name = company_name.strip() if company_name else None
+    avatar_url = avatar_url.strip() if avatar_url else None
     role = role.strip().lower()
     password = password.strip()
 
@@ -1054,6 +1117,8 @@ def create_user_form(
     db.add(User(
         username=username,
         full_name=full_name,
+        company_name=company_name,
+        avatar_url=avatar_url,
         role=role,
         password_hash=password_hash.hash(password),
         employee_id=selected_employee_id,
@@ -1063,11 +1128,81 @@ def create_user_form(
     return dashboard_redirect(user_created=1)
 
 
+@app.post("/users/{account_id}/update")
+def update_user_form(
+    account_id: int,
+    request: Request,
+    username: str = Form(...),
+    full_name: str = Form(...),
+    company_name: Optional[str] = Form(None),
+    avatar_url: Optional[str] = Form(None),
+    role: str = Form(...),
+    password: Optional[str] = Form(None),
+    employee_id: Optional[str] = Form(None),
+    is_active: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    account = db.get(User, account_id)
+    if not account:
+        return dashboard_redirect(user_error="User account was not found.")
+
+    username = username.strip()
+    full_name = full_name.strip()
+    company_name = company_name.strip() if company_name else None
+    avatar_url = avatar_url.strip() if avatar_url else None
+    role = role.strip().lower()
+    password = password.strip() if password else ""
+    active = is_active == "on"
+
+    if role not in USER_ROLES:
+        return dashboard_redirect(user_error="Choose an existing role.")
+    if not username or not full_name:
+        return dashboard_redirect(user_error="Username and full name are required.")
+    existing_username = db.scalar(select(User.id).where(User.username == username, User.id != account.id))
+    if existing_username:
+        return dashboard_redirect(user_error="Username already exists.")
+    if password and len(password) < 8:
+        return dashboard_redirect(user_error="Password must be at least 8 characters.")
+    if account.id == user.id and (role != "admin" or not active):
+        return dashboard_redirect(user_error="You cannot remove admin access from your own account.")
+
+    selected_employee_id = int(employee_id) if employee_id and employee_id.isdigit() else None
+    if role == "employee":
+        if not selected_employee_id:
+            return dashboard_redirect(user_error="Employee accounts must be linked to an employee.")
+        if not db.get(Employee, selected_employee_id):
+            return dashboard_redirect(user_error="Selected employee was not found.")
+        linked_user_id = db.scalar(select(User.id).where(User.employee_id == selected_employee_id, User.id != account.id))
+        if linked_user_id:
+            return dashboard_redirect(user_error="Selected employee already has an account.")
+    else:
+        selected_employee_id = None
+
+    account.username = username
+    account.full_name = full_name
+    account.company_name = company_name
+    account.avatar_url = avatar_url
+    account.role = role
+    account.employee_id = selected_employee_id
+    account.is_active = active
+    if password:
+        account.password_hash = password_hash.hash(password)
+
+    db.commit()
+    return dashboard_redirect(user_updated=1)
+
+
 @app.get("/shipments/{shipment_id}", response_class=HTMLResponse)
 def shipment_page(
     shipment_id: int,
     request: Request,
     refreshed: Optional[int] = None,
+    refresh_error: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     user = get_current_web_user(request, db)
@@ -1088,6 +1223,7 @@ def shipment_page(
             current_user=user,
             mock_mode=RAJAONGKIR_MOCK,
             refreshed=bool(refreshed),
+            refresh_error=refresh_error,
         ),
     )
 
@@ -1144,5 +1280,10 @@ async def refresh_tracking_form(shipment_id: int, request: Request, db: Session 
     shipment = db.get(Shipment, shipment_id)
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
-    await apply_tracking_refresh(shipment, db)
+    try:
+        await apply_tracking_refresh(shipment, db)
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail, default=str)
+        query = urlencode({"refresh_error": detail})
+        return RedirectResponse(url=f"/shipments/{shipment_id}?{query}", status_code=303)
     return RedirectResponse(url=f"/shipments/{shipment_id}?refreshed=1", status_code=303)

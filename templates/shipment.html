@@ -26,8 +26,16 @@
     .modal.show .modal-dialog{transform:none}
     .location-button{border:0;background:transparent;color:white;padding:0;font-weight:700;text-align:left}
     .location-button:hover{text-decoration:underline}
+    .navbar-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;object-fit:cover;background:rgba(255,255,255,.18);color:white}
     .map-frame{width:100%;min-height:380px;border:0;border-radius:16px;background:#eef0f6}
     .map-detail{border:1px solid var(--border);border-radius:14px;background:#fbfcff}
+    .error-modal .modal-content{border-radius:28px;overflow:hidden}
+    .error-hero{background:linear-gradient(180deg,#fff7f8,#fff);border-bottom:1px solid #f3d8df;padding:1.5rem 1.5rem 1.1rem}
+    .error-icon{width:52px;height:52px;border-radius:18px;display:grid;place-items:center;background:#ffe4e9;color:#dc2626;box-shadow:inset 0 0 0 1px #fecdd3;flex-shrink:0}
+    .error-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+    .error-meta-card{border:1px solid var(--border);border-radius:14px;background:#fafbff;padding:.8rem .9rem;min-width:0}
+    .error-detail-box{border:1px solid #ffe0e6;border-radius:16px;background:#fff8fa;padding:.95rem;color:#4b1720;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:.82rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;max-height:150px;overflow:auto}
+    @media (max-width:576px){.error-meta-grid{grid-template-columns:1fr}}
     .toast{border:0;border-radius:15px;box-shadow:0 16px 48px rgba(15,23,42,.18)}
   </style>
 </head>
@@ -36,7 +44,12 @@
   <div class="container-fluid page-shell px-3 px-lg-4 py-2">
     <a class="navbar-brand fw-bold" href="/"><i class="bi bi-box-seam me-2"></i>{{ app_name }}</a>
     <div class="d-flex align-items-center gap-3">
-      <span class="text-white-50 small d-none d-sm-inline">{{ current_user.full_name }} · {{ current_user.role|title }}</span>
+      {% if current_user.avatar_url %}
+      <img class="navbar-avatar" src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}">
+      {% else %}
+      <span class="navbar-avatar">{{ current_user.full_name[:1]|upper }}</span>
+      {% endif %}
+      <span class="text-white-50 small d-none d-sm-inline">{{ current_user.full_name }} · {{ current_user.company_name or app_name }} · {{ current_user.role|title }}</span>
       <div class="btn-group btn-group-sm" role="group" aria-label="Language">
         {% for code, label in languages.items() %}
         <a class="btn {{ 'btn-light' if code == lang else 'btn-outline-light' }}" href="/language?lang={{ code }}&next=/shipments/{{ shipment.id }}">{{ label }}</a>
@@ -61,7 +74,11 @@
         <span class="badge rounded-pill bg-white text-primary px-3 py-2 fs-6">{{ shipment.status }}</span>
       </div>
       <div class="row g-3 mt-3">
-        <div class="col-md-4"><div class="text-white-50 small">{{ 'Employee'|tr }}</div><strong>{{ shipment.employee.name }}</strong></div>
+        <div class="col-md-4">
+          <div class="text-white-50 small">{{ 'Employee'|tr }}</div>
+          <strong>{{ shipment.employee.name }}</strong>
+          <div class="text-white-50 small"><i class="bi bi-building me-1"></i>{{ shipment.employee.company_name or app_name }}</div>
+        </div>
         <div class="col-md-4"><div class="text-white-50 small">{{ 'Courier'|tr }} / AWB</div><strong>{{ shipment.courier|upper }} · {{ shipment.awb }}</strong></div>
         <div class="col-md-4"><div class="text-white-50 small">{{ 'External AWB / waybill'|tr }}</div><strong>{{ shipment.external_awb or '-' }}</strong></div>
         <div class="col-md-4">
@@ -165,6 +182,39 @@
 </div>
 {% endif %}
 
+<div class="modal fade error-modal" id="refreshErrorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="error-hero">
+        <div class="d-flex align-items-start gap-3">
+          <div class="error-icon"><i class="bi bi-exclamation-triangle fs-4"></i></div>
+          <div class="pe-3">
+            <h4 class="fw-bold mb-1" id="refreshErrorTitle">{{ 'Refresh tracking failed'|tr }}</h4>
+            <p class="muted mb-0" id="refreshErrorMessage">{{ 'The courier provider could not refresh this AWB.'|tr }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body p-4">
+        <div class="error-meta-grid mb-3">
+          <div class="error-meta-card">
+            <span class="muted d-block small">{{ 'Courier'|tr }}</span>
+            <strong>{{ shipment.courier|upper }}</strong>
+          </div>
+          <div class="error-meta-card">
+            <span class="muted d-block small">{{ 'AWB / waybill'|tr }}</span>
+            <strong>{{ shipment.awb }}</strong>
+          </div>
+        </div>
+        <div class="small fw-semibold text-danger mb-2">{{ 'Provider detail'|tr }}</div>
+        <div class="error-detail-box" id="refreshErrorDetail">-</div>
+      </div>
+      <div class="modal-footer border-0 px-4 pb-4 pt-0">
+        <button type="button" class="btn btn-primary px-4 w-100" data-bs-dismiss="modal">{{ 'Review AWB'|tr }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="packageMapModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
@@ -213,7 +263,47 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  const i18n = {
+    invalidAwbCode: {{ ('Invalid AWB code'|tr)|tojson }},
+    refreshFailed: {{ ('Refresh tracking failed'|tr)|tojson }},
+    providerCannotRefresh: {{ ('The courier provider could not refresh this AWB.'|tr)|tojson }},
+    providerInvalidAwb: {{ ('The courier provider reported this AWB as invalid.'|tr)|tojson }},
+  };
+  const refreshErrorDetail = {{ refresh_error|tojson if refresh_error else 'null' }};
   const packageMapModal = document.getElementById('packageMapModal');
+
+  const parseRefreshError = (detail) => {
+    if (!detail) {
+      return {
+        title: i18n.refreshFailed,
+        message: i18n.providerCannotRefresh,
+        detail: '-',
+      };
+    }
+
+    const jsonStart = detail.indexOf('{');
+    if (jsonStart !== -1) {
+      try {
+        const providerPayload = JSON.parse(detail.slice(jsonStart));
+        const providerMessage = providerPayload?.meta?.message;
+        if (providerMessage) {
+          return {
+            title: providerMessage.toLowerCase().includes('invalid') ? i18n.invalidAwbCode : i18n.refreshFailed,
+            message: providerMessage.toLowerCase().includes('invalid') ? i18n.providerInvalidAwb : providerMessage,
+            detail,
+          };
+        }
+      } catch (error) {
+        // Fall through to raw provider detail.
+      }
+    }
+
+    return {
+      title: detail.toLowerCase().includes('invalid awb') ? i18n.invalidAwbCode : i18n.refreshFailed,
+      message: detail.toLowerCase().includes('invalid awb') ? i18n.providerInvalidAwb : i18n.providerCannotRefresh,
+      detail,
+    };
+  };
 
   packageMapModal?.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
@@ -251,6 +341,16 @@
   {% if refreshed %}
   window.addEventListener('DOMContentLoaded', () => {
     bootstrap.Toast.getOrCreateInstance(document.getElementById('refreshToast'), {delay:3500}).show();
+    window.history.replaceState({}, document.title, '/shipments/{{ shipment.id }}');
+  });
+  {% endif %}
+  {% if refresh_error %}
+  window.addEventListener('DOMContentLoaded', () => {
+    const parsedError = parseRefreshError(refreshErrorDetail);
+    document.getElementById('refreshErrorTitle').textContent = parsedError.title;
+    document.getElementById('refreshErrorMessage').textContent = parsedError.message;
+    document.getElementById('refreshErrorDetail').textContent = parsedError.detail;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('refreshErrorModal')).show();
     window.history.replaceState({}, document.title, '/shipments/{{ shipment.id }}');
   });
   {% endif %}
