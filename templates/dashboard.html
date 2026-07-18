@@ -274,6 +274,10 @@
       background: #f4f6ff;
       outline: 0;
     }
+    .address-suggestion.active {
+      background: #eef2ff;
+      box-shadow: inset 0 0 0 1px #8b83ff;
+    }
     .address-suggestion-icon {
       width: 32px;
       height: 32px;
@@ -619,8 +623,8 @@
         <span class="badge rounded-pill bg-white bg-opacity-25 mb-3">
           <i class="bi bi-shield-check me-1"></i>{{ current_user.role|title }} {{ 'access'|tr }}
         </span>
-        <h1 class="display-6 fw-bold mb-2">{{ 'Shipment Dashboard'|tr }}</h1>
-        <p class="mb-0 text-white-50 fs-5">{{ 'Monitor company documents and packages from dispatch until employee receipt.'|tr }}</p>
+        <h1 class="display-6 fw-bold mb-2">{{ 'GA Dashboard'|tr }}</h1>
+        <p class="mb-0 text-white-50 fs-5">{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}</p>
       </div>
       {% if current_user.role in ['admin','operator'] %}
       <div class="col-lg-4 text-lg-end">
@@ -648,6 +652,12 @@
         </button>
         <button class="nav-link" id="budget-tab" data-bs-toggle="pill" data-bs-target="#budgetPanel" type="button" role="tab" aria-controls="budgetPanel" aria-selected="false">
           <i class="bi bi-wallet2"></i><span>{{ 'Monthly budget'|tr }}</span>
+        </button>
+        <button class="nav-link" id="operators-tab" data-bs-toggle="pill" data-bs-target="#operatorsPanel" type="button" role="tab" aria-controls="operatorsPanel" aria-selected="false">
+          <i class="bi bi-person-workspace"></i><span>{{ 'Operators'|tr }}</span>
+        </button>
+        <button class="nav-link" id="locations-tab" data-bs-toggle="pill" data-bs-target="#locationsPanel" type="button" role="tab" aria-controls="locationsPanel" aria-selected="false">
+          <i class="bi bi-geo-alt"></i><span>{{ 'Locations'|tr }}</span>
         </button>
         <button class="nav-link" id="admin-tab" data-bs-toggle="pill" data-bs-target="#adminPanel" type="button" role="tab" aria-controls="adminPanel" aria-selected="false">
           <i class="bi bi-people"></i><span>{{ 'Admin'|tr }}</span>
@@ -723,7 +733,7 @@
         <div class="table-responsive">
           <table class="table align-middle mb-0" id="shipmentTable">
             <thead>
-              <tr><th>{{ 'Reference'|tr }}</th><th>{{ 'Document'|tr }}</th><th>{{ 'Employee'|tr }}</th><th>{{ 'Courier'|tr }}</th><th>{{ 'Ticket number'|tr }}</th><th>{{ 'PO number'|tr }}</th><th>{{ 'Route'|tr }}</th><th>{{ 'Cost'|tr }}</th><th>{{ 'Status'|tr }}</th><th>{{ 'Last location'|tr }}</th></tr>
+              <tr><th>{{ 'Reference'|tr }}</th><th>{{ 'Item'|tr }}</th><th>{{ 'Employee'|tr }}</th><th>{{ 'Courier'|tr }}</th><th>{{ 'Ticket number'|tr }}</th><th>{{ 'PO number'|tr }}</th><th>{{ 'Route'|tr }}</th><th>{{ 'Cost'|tr }}</th><th>{{ 'Status'|tr }}</th><th>{{ 'Last location'|tr }}</th></tr>
             </thead>
             <tbody>
             {% for s in shipments %}
@@ -1013,6 +1023,208 @@
 
       </section>
     </div>
+    <div class="tab-pane fade" id="operatorsPanel" role="tabpanel" aria-labelledby="operators-tab" tabindex="0">
+      <section class="row g-4 align-items-start">
+        <aside class="col-12">
+          <div class="card surface-card sidebar-card">
+            <div class="card-header bg-white border-0 p-3 p-lg-4">
+              <div class="d-flex align-items-center justify-content-between gap-3">
+                <div>
+                  <h5 class="fw-bold mb-1">{{ 'Active operators/vendors'|tr }}</h5>
+                  <div class="muted small">{{ 'Monitor active senders and item totals.'|tr }}</div>
+                </div>
+                <span class="metric-icon bg-info-subtle text-info-emphasis"><i class="bi bi-person-workspace"></i></span>
+              </div>
+            </div>
+            <div class="card-body pt-0">
+              <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                  <div class="budget-stat">
+                    <span class="small muted">{{ 'Total active operators'|tr }}</span>
+                    <strong>{{ operator_counts['active'] }}</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                  <div class="budget-stat">
+                    <span class="small muted">{{ 'Items sent'|tr }}</span>
+                    <strong>{{ operator_counts['items'] }}</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                  <div class="budget-stat">
+                    <span class="small muted">{{ 'Delivered items'|tr }}</span>
+                    <strong class="text-success">{{ operator_counts['delivered'] }}</strong>
+                  </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                  <div class="budget-stat">
+                    <span class="small muted">{{ 'In-progress items'|tr }}</span>
+                    <strong class="text-warning">{{ operator_counts['in_progress'] }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>{{ 'Vendor sender'|tr }}</th>
+                      <th>{{ 'Company'|tr }}</th>
+                      <th>{{ 'Items sent'|tr }}</th>
+                      <th>{{ 'Delivered items'|tr }}</th>
+                      <th>{{ 'In-progress items'|tr }}</th>
+                      <th>{{ 'Shipping cost'|tr }}</th>
+                      <th>{{ 'Last sent'|tr }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in operator_analytics %}
+                    <tr>
+                      <td>
+                        <div class="d-flex align-items-center gap-2">
+                          {% if row.account.avatar_url %}
+                          <img class="avatar" src="{{ row.account.avatar_url }}" alt="{{ row.account.full_name }}">
+                          {% else %}
+                          <span class="avatar">{{ row.account.full_name[:1]|upper }}</span>
+                          {% endif %}
+                          <div class="min-w-0">
+                            <div class="fw-semibold">{{ row.account.full_name }}</div>
+                            <div class="small muted">@{{ row.account.username }}</div>
+                            <div class="sender-tags">
+                              <button type="button" class="sender-tag sender-tag-vendor" data-filter-tag="#Vendor">#Vendor</button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{{ row.account.company_name or app_name }}</td>
+                      <td class="fw-bold">{{ row.items_sent }}</td>
+                      <td class="text-success fw-semibold">{{ row.delivered }}</td>
+                      <td class="text-warning fw-semibold">{{ row.in_progress }}</td>
+                      <td class="fw-semibold">Rp {{ "{:,.0f}".format(row.shipping_cost) }}</td>
+                      <td class="small muted">{{ row.last_sent.strftime('%d %b %Y, %H:%M') if row.last_sent else ('Never sent'|tr) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                      <td colspan="7" class="text-center empty-state">
+                        <i class="bi bi-person-workspace display-5 text-secondary"></i>
+                        <h5 class="mt-3">{{ 'No active operators yet.'|tr }}</h5>
+                        <p class="muted mb-0">{{ 'Create accounts with existing roles.'|tr }}</p>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </div>
+    <div class="tab-pane fade" id="locationsPanel" role="tabpanel" aria-labelledby="locations-tab" tabindex="0">
+      <section class="row g-4 align-items-start">
+        <aside class="col-12">
+          <div class="card surface-card sidebar-card">
+            <div class="card-header bg-white border-0 p-3 p-lg-4">
+              <div class="d-flex align-items-center justify-content-between gap-3">
+                <div>
+                  <h5 class="fw-bold mb-1">{{ 'Company locations'|tr }}</h5>
+                  <div class="muted small">{{ 'Register company and branch addresses for manual shipment entry.'|tr }}</div>
+                </div>
+                <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-geo-alt"></i></span>
+              </div>
+            </div>
+            <div class="card-body pt-0">
+              <div class="row g-4">
+                <div class="col-lg-4">
+                  <form method="post" action="/locations/create" class="vstack gap-3">
+                    <div class="fw-bold"><i class="bi bi-building-add me-1"></i>{{ 'Add branch location'|tr }}</div>
+                    <div>
+                      <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
+                      <input class="form-control" name="company_name" required placeholder="Acme Logistics">
+                    </div>
+                    <div>
+                      <label class="form-label fw-semibold">{{ 'Branch name'|tr }}</label>
+                      <input class="form-control" name="branch_name" required placeholder="Head Office">
+                    </div>
+                    <div>
+                      <label class="form-label fw-semibold">{{ 'Full address'|tr }}</label>
+                      <div class="address-suggest-field">
+                        <textarea class="form-control" name="address" id="companyAddressInput" rows="3" required autocomplete="off" placeholder="Street, building, district"></textarea>
+                        <div class="address-suggestions d-none" id="companyAddressSuggestions"></div>
+                      </div>
+                      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
+                        <div class="small muted">{{ 'Choose a suggested address or validate it in the map preview before saving.'|tr }}</div>
+                        <button class="btn btn-sm btn-soft" id="companyAddressValidateButton" type="button">
+                          <i class="bi bi-map me-1"></i>{{ 'Validate address'|tr }}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="form-label fw-semibold">{{ 'Road'|tr }}</label>
+                      <input class="form-control" name="road" id="companyRoadInput" placeholder="Jalan Kedoya Raya">
+                    </div>
+                    <div class="row g-2">
+                      <div class="col-6">
+                        <label class="form-label fw-semibold">{{ 'City'|tr }}</label>
+                        <input class="form-control" name="city" id="companyCityInput" placeholder="Jakarta Barat">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label fw-semibold">{{ 'Province'|tr }}</label>
+                        <input class="form-control" name="state" id="companyStateInput" placeholder="DKI Jakarta">
+                      </div>
+                    </div>
+                    <div class="row g-2">
+                      <div class="col-6">
+                        <label class="form-label fw-semibold">{{ 'Postal code'|tr }}</label>
+                        <input class="form-control" name="postcode" id="companyPostcodeInput" placeholder="11520">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label fw-semibold">{{ 'Country'|tr }}</label>
+                        <input class="form-control" name="country" id="companyCountryInput" value="Indonesia">
+                      </div>
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save location'|tr }}</button>
+                  </form>
+                </div>
+                <div class="col-lg-8">
+                  <div class="fw-bold mb-3">{{ 'Saved locations'|tr }}</div>
+                  <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th>{{ 'Company'|tr }}</th>
+                          <th>{{ 'Branch name'|tr }}</th>
+                          <th>{{ 'Full address'|tr }}</th>
+                          <th>{{ 'Postal code'|tr }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for location in company_locations %}
+                        <tr>
+                          <td class="fw-semibold">{{ location.company_name }}</td>
+                          <td>{{ location.branch_name }}</td>
+                          <td class="small">{{ location.address }}{% if location.city %}, {{ location.city }}{% endif %}{% if location.state %}, {{ location.state }}{% endif %}{% if location.country %}, {{ location.country }}{% endif %}</td>
+                          <td class="fw-semibold">{{ location.postcode or '-' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                          <td colspan="4" class="text-center empty-state">
+                            <i class="bi bi-geo-alt display-5 text-secondary"></i>
+                            <h5 class="mt-3">{{ 'No company locations yet.'|tr }}</h5>
+                            <p class="muted mb-0">{{ 'Register company and branch addresses for manual shipment entry.'|tr }}</p>
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </div>
     <div class="tab-pane fade" id="adminPanel" role="tabpanel" aria-labelledby="admin-tab" tabindex="0">
       <section class="row g-4 align-items-start">
     <aside class="col-12">
@@ -1220,7 +1432,7 @@
           <div>
             <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'New delivery'|tr }}</span>
             <h4 class="modal-title fw-bold">{{ 'Create a shipment'|tr }}</h4>
-            <p class="muted mb-0">{{ 'Register the document, recipient, courier, cost, and expected delivery time.'|tr }}</p>
+            <p class="muted mb-0">{{ 'Register the item, recipient, courier, cost, and expected delivery time.'|tr }}</p>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
@@ -1231,8 +1443,8 @@
               <input class="form-control" value="{{ 'Auto generated after save'|tr }}" disabled>
               <div class="small muted mt-1">{{ 'Generated from shipment ID'|tr }}</div>
             </div>
-            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Document title'|tr }}</label><input class="form-control" name="title" required placeholder="Employment certificate"></div>
-            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Document type'|tr }}</label><input class="form-control" name="document_type" value="Document"></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Item name'|tr }}</label><input class="form-control" name="title" required placeholder="Laptop, documents, samples"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Item type'|tr }}</label><input class="form-control" name="document_type" value="Item"></div>
             <div class="col-md-5">
               <label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label>
               <select class="form-select" name="recipient_user_id" required>
@@ -1325,7 +1537,7 @@
               <div class="small muted mb-1">{{ 'Last location'|tr }}</div>
               <h5 class="fw-bold mb-3" id="mapLocation">-</h5>
               <div class="vstack gap-3 small">
-                <div><span class="muted d-block">{{ 'Document'|tr }}</span><strong id="mapTitle">-</strong></div>
+                <div><span class="muted d-block">{{ 'Item'|tr }}</span><strong id="mapTitle">-</strong></div>
                 <div><span class="muted d-block">{{ 'Employee'|tr }}</span><strong id="mapEmployee">-</strong></div>
                 <div><span class="muted d-block">{{ 'Courier'|tr }} / AWB</span><strong id="mapCourier">-</strong></div>
                 <div><span class="muted d-block">{{ 'Ticket number'|tr }}</span><strong id="mapExternalAwb">-</strong></div>
@@ -1337,6 +1549,39 @@
               <a class="btn btn-soft w-100 mt-4" id="openMapLink" target="_blank" rel="noopener">
                 <i class="bi bi-map me-2"></i>{{ 'Open in Google Maps'|tr }}
               </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="companyAddressMapModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header border-0 px-4 pt-4 pb-2">
+        <div>
+          <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'Address validation'|tr }}</span>
+          <h4 class="modal-title fw-bold">{{ 'Validate address'|tr }}</h4>
+          <p class="muted mb-0">{{ 'Preview this address in maps and apply the suggested details.'|tr }}</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body px-4 py-4">
+        <div class="row g-4">
+          <div class="col-lg-8">
+            <iframe id="companyAddressMapFrame" class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          </div>
+          <div class="col-lg-4">
+            <div class="map-detail p-3 h-100">
+              <div class="small muted mb-1">{{ 'Suggested address'|tr }}</div>
+              <h5 class="fw-bold mb-3" id="companyAddressMapTitle">-</h5>
+              <div class="small muted mb-3" id="companyAddressMapDetail">-</div>
+              <div class="vstack gap-2" id="companyAddressModalSuggestions"></div>
+              <button type="button" class="btn btn-primary w-100 mt-4" id="useCompanyAddressButton">
+                <i class="bi bi-check2-circle me-2"></i>{{ 'Use this address'|tr }}
+              </button>
             </div>
           </div>
         </div>
@@ -1409,6 +1654,12 @@
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
+  <div id="locationSavedToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-geo-alt-fill me-2"></i>{{ 'Location saved successfully.'|tr }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
   <div id="budgetErrorToast" class="toast text-bg-danger" role="alert">
     <div class="d-flex">
       <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ budget_error }}</div>
@@ -1459,6 +1710,20 @@
   const destinationInput = document.getElementById('destinationInput');
   const originSuggestions = document.getElementById('originSuggestions');
   const destinationSuggestions = document.getElementById('destinationSuggestions');
+  const companyAddressInput = document.getElementById('companyAddressInput');
+  const companyAddressSuggestions = document.getElementById('companyAddressSuggestions');
+  const companyAddressValidateButton = document.getElementById('companyAddressValidateButton');
+  const companyAddressMapModal = document.getElementById('companyAddressMapModal');
+  const companyAddressMapFrame = document.getElementById('companyAddressMapFrame');
+  const companyAddressMapTitle = document.getElementById('companyAddressMapTitle');
+  const companyAddressMapDetail = document.getElementById('companyAddressMapDetail');
+  const companyAddressModalSuggestions = document.getElementById('companyAddressModalSuggestions');
+  const useCompanyAddressButton = document.getElementById('useCompanyAddressButton');
+  const companyRoadInput = document.getElementById('companyRoadInput');
+  const companyCityInput = document.getElementById('companyCityInput');
+  const companyStateInput = document.getElementById('companyStateInput');
+  const companyPostcodeInput = document.getElementById('companyPostcodeInput');
+  const companyCountryInput = document.getElementById('companyCountryInput');
   const etaDaysInput = document.getElementById('etaDaysInput');
   const shippingCostInput = document.getElementById('shippingCostInput');
   const allowManualAwbInput = document.getElementById('allowManualAwbInput');
@@ -1472,8 +1737,12 @@
     if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
   };
   window.addEventListener('DOMContentLoaded', () => {
+    {% if current_user.role == 'admin' %}
     if (window.location.hash === '#budgetPanel') showDashboardTab('#budget-tab');
+    if (window.location.hash === '#operatorsPanel') showDashboardTab('#operators-tab');
+    if (window.location.hash === '#locationsPanel') showDashboardTab('#locations-tab');
     if (window.location.hash === '#adminPanel') showDashboardTab('#admin-tab');
+    {% endif %}
     initBudgetCharts();
   });
   let originTouched = false;
@@ -1817,6 +2086,123 @@
     destinationTouched = true;
   });
 
+  let selectedCompanyAddressSuggestion = null;
+
+  const getCompanyAddressQuery = () => [
+    companyAddressInput?.value.trim(),
+    companyCityInput?.value.trim(),
+    companyStateInput?.value.trim(),
+    companyPostcodeInput?.value.trim(),
+    companyCountryInput?.value.trim(),
+  ].filter(Boolean).join(', ');
+
+  const getMapsEmbedUrl = (query) => `https://maps.google.com/maps?q=${encodeURIComponent(query || 'Indonesia')}&output=embed`;
+
+  const applyCompanyAddressSuggestion = (suggestion) => {
+    if (!suggestion) return;
+    if (suggestion.label && companyAddressInput) companyAddressInput.value = suggestion.label;
+    if (suggestion.road && companyRoadInput) companyRoadInput.value = suggestion.road;
+    if (suggestion.city && companyCityInput) companyCityInput.value = suggestion.city;
+    if (suggestion.state && companyStateInput) companyStateInput.value = suggestion.state;
+    if (suggestion.postcode && companyPostcodeInput) companyPostcodeInput.value = suggestion.postcode;
+    if (suggestion.country && companyCountryInput) companyCountryInput.value = suggestion.country;
+  };
+
+  const setCompanyAddressMapSelection = (suggestion) => {
+    selectedCompanyAddressSuggestion = suggestion || null;
+    const query = suggestion?.label || getCompanyAddressQuery();
+    if (companyAddressMapTitle) companyAddressMapTitle.textContent = query || '-';
+    if (companyAddressMapDetail) companyAddressMapDetail.textContent = suggestion?.secondary || query || '-';
+    if (companyAddressMapFrame) companyAddressMapFrame.src = getMapsEmbedUrl(query);
+  };
+
+  const renderCompanyAddressModalSuggestions = (suggestions) => {
+    if (!companyAddressModalSuggestions) return;
+    companyAddressModalSuggestions.innerHTML = '';
+    if (!suggestions.length) {
+      const empty = document.createElement('div');
+      empty.className = 'small muted rounded-3 border p-3';
+      empty.textContent = i18n.noAddressSuggestions;
+      companyAddressModalSuggestions.appendChild(empty);
+      return;
+    }
+    suggestions.slice(0, 5).forEach((suggestion, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `address-suggestion w-100 text-start ${index === 0 ? 'active' : ''}`;
+      const icon = document.createElement('span');
+      icon.className = 'address-suggestion-icon';
+      icon.innerHTML = '<i class="bi bi-geo-alt"></i>';
+      const copy = document.createElement('span');
+      const title = document.createElement('span');
+      title.className = 'address-suggestion-title';
+      title.textContent = suggestion.label || '-';
+      const meta = document.createElement('span');
+      meta.className = 'address-suggestion-meta';
+      meta.textContent = suggestion.secondary || suggestion.source || '-';
+      copy.appendChild(title);
+      copy.appendChild(meta);
+      button.appendChild(icon);
+      button.appendChild(copy);
+      button.addEventListener('click', () => {
+        companyAddressModalSuggestions.querySelectorAll('.address-suggestion').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        setCompanyAddressMapSelection(suggestion);
+      });
+      companyAddressModalSuggestions.appendChild(button);
+    });
+  };
+
+  const lookupCompanyAddressForModal = async () => {
+    const query = getCompanyAddressQuery();
+    setCompanyAddressMapSelection({ label: query || '-', secondary: i18n.searchingAddress });
+    if (!companyAddressModalSuggestions) return;
+    companyAddressModalSuggestions.innerHTML = `<div class="small muted rounded-3 border p-3"><span class="spinner-border spinner-border-sm me-2"></span>${i18n.searchingAddress}</div>`;
+
+    if (!companyAddressInput?.value.trim() || companyAddressInput.value.trim().length < 3) {
+      renderCompanyAddressModalSuggestions([]);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({ query: companyAddressInput.value.trim() });
+      const response = await fetch(`/api/location/search?${params.toString()}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error('Address lookup failed');
+      const payload = await response.json();
+      const suggestions = payload.suggestions || [];
+      renderCompanyAddressModalSuggestions(suggestions);
+      setCompanyAddressMapSelection(suggestions[0] || { label: query, secondary: i18n.noAddressSuggestions });
+    } catch (error) {
+      renderCompanyAddressModalSuggestions([]);
+      setCompanyAddressMapSelection({ label: query, secondary: i18n.noAddressSuggestions });
+    }
+  };
+
+  setupAddressLookup(companyAddressInput, companyAddressSuggestions, (suggestion) => {
+    if (!suggestion) return;
+    applyCompanyAddressSuggestion(suggestion);
+    setCompanyAddressMapSelection(suggestion);
+  });
+
+  companyAddressValidateButton?.addEventListener('click', () => {
+    const modal = bootstrap.Modal.getOrCreateInstance(companyAddressMapModal);
+    modal.show();
+    lookupCompanyAddressForModal();
+  });
+
+  useCompanyAddressButton?.addEventListener('click', () => {
+    if (selectedCompanyAddressSuggestion?.label && selectedCompanyAddressSuggestion.secondary !== i18n.noAddressSuggestions) {
+      applyCompanyAddressSuggestion(selectedCompanyAddressSuggestion);
+    }
+    bootstrap.Modal.getOrCreateInstance(companyAddressMapModal).hide();
+  });
+
+  companyAddressMapModal?.addEventListener('hidden.bs.modal', () => {
+    if (companyAddressMapFrame) companyAddressMapFrame.src = '';
+  });
+
   const lookupAwbRoute = async () => {
     const courier = courierSelect?.value;
     const awb = awbInput?.value.trim();
@@ -2018,6 +2404,13 @@
     showDashboardTab('#budget-tab');
     bootstrap.Toast.getOrCreateInstance(document.getElementById('budgetItemToast'), {delay: 3500}).show();
     window.history.replaceState({}, document.title, '/?budget_month={{ budget_month }}#budgetPanel');
+  });
+  {% endif %}
+  {% if location_created %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#locations-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('locationSavedToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/#locationsPanel');
   });
   {% endif %}
   {% if budget_error %}

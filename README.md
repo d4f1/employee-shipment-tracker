@@ -1,6 +1,6 @@
 # Employee Shipment Tracker — JWT MVP
 
-A FastAPI, SQLite and Bootstrap application for tracking company documents and parcels delivered to employees.
+A FastAPI, SQLite and Bootstrap application for tracking company items and parcels delivered to employees.
 
 ## Authentication and roles
 

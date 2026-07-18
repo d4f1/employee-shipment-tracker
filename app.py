@@ -107,7 +107,7 @@ class Shipment(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     reference_no: Mapped[str] = mapped_column(String(80), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(200))
-    document_type: Mapped[str] = mapped_column(String(100), default="Document")
+    document_type: Mapped[str] = mapped_column(String(100), default="Item")
     employee_id: Mapped[int] = mapped_column(ForeignKey("employees.id"))
     created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     sender_tags: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -170,6 +170,23 @@ class PurchaseItem(Base):
     category: Mapped[str] = mapped_column(String(100), index=True)
     amount: Mapped[float] = mapped_column(Float, default=0)
     note: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class CompanyLocation(Base):
+    __tablename__ = "company_locations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_name: Mapped[str] = mapped_column(String(200), index=True)
+    branch_name: Mapped[str] = mapped_column(String(200), index=True)
+    address: Mapped[str] = mapped_column(String(500))
+    road: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    city: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    state: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    postcode: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -256,13 +273,48 @@ TRANSLATIONS = {
         "Live API": "API Live",
         "Logout": "Keluar",
         "access": "akses",
-        "Shipment Dashboard": "Dasbor Pengiriman",
-        "Monitor company documents and packages from dispatch until employee receipt.": "Pantau dokumen dan paket perusahaan dari pengiriman sampai diterima karyawan.",
+        "GA Dashboard": "Dasbor GA",
+        "Monitor company items and packages from dispatch until employee receipt.": "Pantau item dan paket perusahaan dari pengiriman sampai diterima karyawan.",
         "Create shipment": "Buat pengiriman",
         "Total shipments": "Total pengiriman",
         "Dashboard menu": "Menu dashboard",
         "Shipping": "Pengiriman",
         "Admin": "Admin",
+        "Operators": "Operator",
+        "Locations": "Lokasi",
+        "Company locations": "Lokasi perusahaan",
+        "Register company and branch addresses for manual shipment entry.": "Daftarkan alamat perusahaan dan cabang untuk input pengiriman manual.",
+        "Add branch location": "Tambah lokasi cabang",
+        "Branch name": "Nama cabang",
+        "Full address": "Alamat lengkap",
+        "Road": "Jalan",
+        "City": "Kota",
+        "Province": "Provinsi",
+        "Postal code": "Kode pos",
+        "Country": "Negara",
+        "Save location": "Simpan lokasi",
+        "Validate address": "Validasi alamat",
+        "Address validation": "Validasi alamat",
+        "Use this address": "Gunakan alamat ini",
+        "Suggested address": "Alamat yang disarankan",
+        "Preview this address in maps and apply the suggested details.": "Pratinjau alamat di peta dan gunakan detail yang disarankan.",
+        "Open in Google Maps": "Buka di Google Maps",
+        "Choose a suggested address or open Google Maps before saving.": "Pilih alamat yang disarankan atau buka Google Maps sebelum menyimpan.",
+        "Choose a suggested address or validate it in the map preview before saving.": "Pilih alamat yang disarankan atau validasi di pratinjau peta sebelum menyimpan.",
+        "Location saved successfully.": "Lokasi berhasil disimpan.",
+        "No company locations yet.": "Belum ada lokasi perusahaan.",
+        "Saved locations": "Lokasi tersimpan",
+        "Active operators/vendors": "Operator/vendor aktif",
+        "Monitor active senders and item totals.": "Pantau pengirim aktif dan total item.",
+        "Total active operators": "Total operator aktif",
+        "Items sent": "Item terkirim",
+        "Delivered items": "Item terkirim selesai",
+        "In-progress items": "Item dalam proses",
+        "No active operators yet.": "Belum ada operator aktif.",
+        "Last sent": "Terakhir kirim",
+        "Never sent": "Belum pernah kirim",
+        "Vendor sender": "Pengirim vendor",
+        "Sender analytics": "Analitik pengirim",
         "In progress": "Dalam proses",
         "Delivered": "Terkirim",
         "Shipping cost": "Biaya kirim",
@@ -273,7 +325,7 @@ TRANSLATIONS = {
         "Click a reference number to view its complete delivery timeline.": "Klik nomor referensi untuk melihat linimasa pengiriman lengkap.",
         "Search reference, employee, AWB, ticket, PO number, or hashtag": "Cari referensi, karyawan, AWB, tiket, nomor PO, atau hashtag",
         "Reference": "Referensi",
-        "Document": "Dokumen",
+        "Item": "Item",
         "Employee": "Karyawan",
         "Courier": "Kurir",
         "Ticket number": "Nomor tiket",
@@ -348,12 +400,12 @@ TRANSLATIONS = {
         "No chart data yet.": "Belum ada data grafik.",
         "New delivery": "Pengiriman baru",
         "Create a shipment": "Buat pengiriman",
-        "Register the document, recipient, courier, cost, and expected delivery time.": "Daftarkan dokumen, penerima, kurir, biaya, dan estimasi waktu pengiriman.",
+        "Register the item, recipient, courier, cost, and expected delivery time.": "Daftarkan item, penerima, kurir, biaya, dan estimasi waktu pengiriman.",
         "Reference number": "Nomor referensi",
         "Auto generated after save": "Dibuat otomatis setelah disimpan",
         "Generated from shipment ID": "Dibuat dari ID pengiriman",
-        "Document title": "Judul dokumen",
-        "Document type": "Jenis dokumen",
+        "Item name": "Nama item",
+        "Item type": "Jenis item",
         "Employee recipient": "Penerima karyawan",
         "AWB / waybill": "AWB / waybill",
         "Lookup": "Cari",
@@ -637,6 +689,10 @@ def search_geocode(query: str, limit: int = 6) -> list[dict]:
             "primary": road or area or city or label.split(",")[0],
             "secondary": format_provider_location(area, city, state, postcode, address.get("country")),
             "postcode": postcode,
+            "road": road,
+            "city": city,
+            "state": state,
+            "country": address.get("country"),
             "latitude": parse_optional_float(item.get("lat")),
             "longitude": parse_optional_float(item.get("lon")),
         })
@@ -648,12 +704,56 @@ def search_saved_locations(db: Session, query: str, limit: int = 6) -> list[dict
     if len(normalized_query) < 3:
         return []
 
+    suggestions = []
+    seen = set()
+    branch_locations = db.scalars(
+        select(CompanyLocation)
+        .where(CompanyLocation.is_active.is_(True))
+        .order_by(CompanyLocation.company_name, CompanyLocation.branch_name)
+    ).all()
+    for location in branch_locations:
+        label = format_provider_location(
+            location.address,
+            location.city,
+            location.state,
+            location.postcode,
+            location.country,
+        )
+        haystack = " ".join(
+            part for part in [
+                location.company_name,
+                location.branch_name,
+                label,
+                location.road,
+                location.city,
+                location.postcode,
+            ] if part
+        ).lower()
+        label_key = (label or "").lower()
+        if normalized_query not in haystack or not label or label_key in seen:
+            continue
+        seen.add(label_key)
+        suggestions.append({
+            "label": label,
+            "primary": f"{location.branch_name} - {location.company_name}",
+            "secondary": label,
+            "postcode": location.postcode,
+            "road": location.road,
+            "city": location.city,
+            "state": location.state,
+            "country": location.country,
+            "latitude": None,
+            "longitude": None,
+            "source": "company_location",
+        })
+        if len(suggestions) >= limit:
+            return suggestions
+
     values = []
     shipments = db.scalars(select(Shipment).order_by(Shipment.created_at.desc())).all()
     for shipment in shipments:
         values.extend([shipment.origin, shipment.destination])
 
-    seen = set()
     ranked = []
     for value in values:
         clean_value = (value or "").strip()
@@ -667,14 +767,19 @@ def search_saved_locations(db: Session, query: str, limit: int = 6) -> list[dict
         ranked.append((rank, clean_value))
 
     ranked.sort(key=lambda item: (item[0], item[1].lower()))
-    suggestions = []
     for _, value in ranked[:limit]:
+        if len(suggestions) >= limit:
+            break
         parts = [part.strip() for part in value.split(",") if part.strip()]
         suggestions.append({
             "label": value,
             "primary": parts[0] if parts else value,
             "secondary": ", ".join(parts[1:]) if len(parts) > 1 else "Saved shipment address",
             "postcode": None,
+            "road": None,
+            "city": None,
+            "state": None,
+            "country": None,
             "latitude": None,
             "longitude": None,
             "source": "saved",
@@ -1687,7 +1792,7 @@ def shipment_detail(
 @app.post("/api/shipments")
 async def create_shipment(
     title: str = Form(...),
-    document_type: str = Form("Document"),
+    document_type: str = Form("Item"),
     employee_id: Optional[int] = Form(None),
     recipient_user_id: Optional[int] = Form(None),
     courier: str = Form(...),
@@ -1836,6 +1941,7 @@ def dashboard(
     user_error: Optional[str] = None,
     budget_updated: Optional[int] = None,
     budget_item_created: Optional[int] = None,
+    location_created: Optional[int] = None,
     budget_error: Optional[str] = None,
     budget_month: Optional[str] = None,
     sort: str = Query("date_desc"),
@@ -1868,6 +1974,14 @@ def dashboard(
         "delivered": sum(s.status in {"DELIVERED", "RECEIVED"} for s in all_shipments),
         "cost": sum(s.shipping_cost for s in all_shipments),
     }
+    operator_analytics = []
+    operator_counts = {
+        "active": 0,
+        "items": 0,
+        "delivered": 0,
+        "in_progress": 0,
+    }
+    company_locations = []
     budget_month = normalize_budget_month(budget_month)
     monthly_budget = None
     purchase_items = []
@@ -1886,6 +2000,33 @@ def dashboard(
         "usageAmounts": [0, 0],
     }
     if user.role == "admin":
+        company_locations = db.scalars(
+            select(CompanyLocation).order_by(CompanyLocation.company_name, CompanyLocation.branch_name)
+        ).all()
+        active_operators = [
+            account for account in users
+            if account.role == "operator" and account.is_active
+        ]
+        for account in active_operators:
+            sent_shipments = [shipment for shipment in all_shipments if shipment.created_by_id == account.id]
+            delivered_count = sum(shipment.status in {"DELIVERED", "RECEIVED"} for shipment in sent_shipments)
+            in_progress_count = len(sent_shipments) - delivered_count
+            last_sent = max((shipment.created_at for shipment in sent_shipments), default=None)
+            operator_analytics.append({
+                "account": account,
+                "items_sent": len(sent_shipments),
+                "delivered": delivered_count,
+                "in_progress": in_progress_count,
+                "shipping_cost": sum(shipment.shipping_cost for shipment in sent_shipments),
+                "last_sent": last_sent,
+            })
+        operator_analytics.sort(key=lambda row: (-row["items_sent"], row["account"].full_name.lower()))
+        operator_counts = {
+            "active": len(active_operators),
+            "items": sum(row["items_sent"] for row in operator_analytics),
+            "delivered": sum(row["delivered"] for row in operator_analytics),
+            "in_progress": sum(row["in_progress"] for row in operator_analytics),
+        }
         monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == budget_month))
         purchase_items = db.scalars(
             select(PurchaseItem)
@@ -1965,10 +2106,14 @@ def dashboard(
             budget_remaining=budget_remaining,
             budget_category_totals=budget_category_totals,
             budget_chart_data=budget_chart_data,
+            operator_analytics=operator_analytics,
+            operator_counts=operator_counts,
             budget_updated=bool(budget_updated),
             budget_item_created=bool(budget_item_created),
+            location_created=bool(location_created),
             budget_error=budget_error,
             sort=sort,
+            company_locations=company_locations,
         ),
     )
 
@@ -2164,6 +2309,45 @@ def create_purchase_item_form(
     return dashboard_redirect(budget_item_created=1, budget_month=month)
 
 
+@app.post("/locations/create")
+def create_company_location_form(
+    request: Request,
+    company_name: str = Form(...),
+    branch_name: str = Form(...),
+    address: str = Form(...),
+    road: Optional[str] = Form(None),
+    city: Optional[str] = Form(None),
+    state: Optional[str] = Form(None),
+    postcode: Optional[str] = Form(None),
+    country: Optional[str] = Form("Indonesia"),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    company_name = company_name.strip()
+    branch_name = branch_name.strip()
+    address = address.strip()
+    if not company_name or not branch_name or not address:
+        return dashboard_redirect(user_error="Company, branch, and address are required.")
+
+    db.add(CompanyLocation(
+        company_name=company_name,
+        branch_name=branch_name,
+        address=address,
+        road=road.strip() if road else None,
+        city=city.strip() if city else None,
+        state=state.strip() if state else None,
+        postcode=postcode.strip() if postcode else None,
+        country=country.strip() if country else None,
+        created_by_id=user.id,
+    ))
+    db.commit()
+    return dashboard_redirect(location_created=1)
+
+
 @app.get("/shipments/{shipment_id}", response_class=HTMLResponse)
 def shipment_page(
     shipment_id: int,
@@ -2199,7 +2383,7 @@ def shipment_page(
 async def create_shipment_form(
     request: Request,
     title: str = Form(...),
-    document_type: str = Form("Document"),
+    document_type: str = Form("Item"),
     employee_id: Optional[int] = Form(None),
     recipient_user_id: Optional[int] = Form(None),
     courier: str = Form(...),
