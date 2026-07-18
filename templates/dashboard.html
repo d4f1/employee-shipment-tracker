@@ -239,6 +239,65 @@
       border-color: #918bff;
       box-shadow: 0 0 0 .22rem rgba(79,70,229,.12);
     }
+    .address-suggest-field {
+      position: relative;
+    }
+    .address-suggestions {
+      position: absolute;
+      z-index: 1080;
+      top: calc(100% + .35rem);
+      left: 0;
+      right: 0;
+      max-height: 260px;
+      overflow-y: auto;
+      border: 1px solid #dfe3ec;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 18px 45px rgba(15,23,42,.16);
+      padding: .35rem;
+    }
+    .address-suggestion {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 32px minmax(0, 1fr);
+      gap: .6rem;
+      align-items: start;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--app-text);
+      padding: .65rem .7rem;
+      text-align: left;
+    }
+    .address-suggestion:hover,
+    .address-suggestion:focus {
+      background: #f4f6ff;
+      outline: 0;
+    }
+    .address-suggestion-icon {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: #eef0ff;
+      color: var(--app-primary);
+      flex-shrink: 0;
+    }
+    .address-suggestion-title {
+      display: block;
+      font-weight: 750;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+    .address-suggestion-meta {
+      display: block;
+      margin-top: .18rem;
+      color: var(--app-muted);
+      font-size: .82rem;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+    }
     .toast {
       border: 0; border-radius: 15px;
       box-shadow: 0 16px 48px rgba(15,23,42,.18);
@@ -1156,6 +1215,7 @@
   <div class="modal-dialog modal-xl modal-dialog-centered create-shipment-dialog">
     <div class="modal-content create-shipment-content">
       <form method="post" action="/shipments/create" id="createShipmentForm" class="create-shipment-form">
+        <input type="hidden" name="allow_manual_awb" id="allowManualAwbInput" value="0">
         <div class="modal-header border-0 px-4 pt-4 pb-2">
           <div>
             <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'New delivery'|tr }}</span>
@@ -1173,7 +1233,16 @@
             </div>
             <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Document title'|tr }}</label><input class="form-control" name="title" required placeholder="Employment certificate"></div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Document type'|tr }}</label><input class="form-control" name="document_type" value="Document"></div>
-            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label><select class="form-select" name="employee_id" required>{% for e in employees %}<option value="{{ e.id }}">{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}</option>{% endfor %}</select></div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label>
+              <select class="form-select" name="recipient_user_id" required>
+                {% for account in recipient_accounts %}
+                <option value="{{ account.id }}">
+                  {{ account.full_name }} — {{ account.company_name or app_name }} · {{ account.role|title }}{% if account.employee %} · {{ account.employee.department }}{% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Courier'|tr }}</label><select class="form-select" name="courier" id="courierSelect" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option></select></div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'AWB / waybill'|tr }}</label>
@@ -1192,19 +1261,31 @@
             </div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'Origin'|tr }}</label>
-              <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
-                <input class="form-control" name="origin" id="originInput" required value="{{ current_user.last_login_address or current_user.last_login_road or current_user.last_login_city or 'Jakarta' }}">
+              <div class="address-suggest-field">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+                  <input class="form-control" name="origin" id="originInput" required autocomplete="off" value="{{ current_user.last_login_address or current_user.last_login_road or current_user.last_login_city or 'Jakarta' }}">
+                </div>
+                <div class="address-suggestions d-none" id="originSuggestions"></div>
               </div>
               <div class="small muted mt-1" id="originLocationStatus">{{ 'Uses your detected current location when available.'|tr }}</div>
             </div>
-            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Destination'|tr }}</label><div class="input-group"><span class="input-group-text"><i class="bi bi-pin-map"></i></span><input class="form-control" name="destination" id="destinationInput" required placeholder="Yogyakarta"></div></div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{{ 'Destination'|tr }}</label>
+              <div class="address-suggest-field">
+                <div class="input-group">
+                  <span class="input-group-text"><i class="bi bi-pin-map"></i></span>
+                  <input class="form-control" name="destination" id="destinationInput" required autocomplete="off" placeholder="Yogyakarta">
+                </div>
+                <div class="address-suggestions d-none" id="destinationSuggestions"></div>
+              </div>
+            </div>
             <div class="col-md-2"><label class="form-label fw-semibold">{{ 'ETA days'|tr }}</label><input class="form-control" name="eta_days" id="etaDaysInput" type="number" min="0" value="0"></div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'Shipping cost'|tr }}</label>
               <div class="input-group">
                 <span class="input-group-text">Rp</span>
-                <input class="form-control" name="shipping_cost" id="shippingCostInput" type="number" min="0" value="0" readonly>
+                <input class="form-control" name="shipping_cost" id="shippingCostInput" type="number" min="0" step="1" value="0">
               </div>
               <div class="small muted mt-1">{{ 'Filled from AWB provider lookup.'|tr }}</div>
             </div>
@@ -1363,6 +1444,8 @@
     addressReadFailed: {{ ('Could not read address details. Origin uses your last detected address.'|tr)|tojson }},
     locationSkippedOrigin: {{ ('Location permission was skipped. Origin uses your last detected address.'|tr)|tojson }},
     unknownLookupError: {{ ('Unknown lookup error.'|tr)|tojson }},
+    searchingAddress: {{ ('Searching address...'|tr)|tojson }},
+    noAddressSuggestions: {{ ('No address suggestions found.'|tr)|tojson }},
   };
   const budgetChartData = {{ budget_chart_data|tojson if current_user.role == 'admin' else 'null' }};
   const searchInput = document.getElementById('shipmentSearch');
@@ -1374,8 +1457,11 @@
   const createShipmentModal = document.getElementById('createShipmentModal');
   const originInput = document.getElementById('originInput');
   const destinationInput = document.getElementById('destinationInput');
+  const originSuggestions = document.getElementById('originSuggestions');
+  const destinationSuggestions = document.getElementById('destinationSuggestions');
   const etaDaysInput = document.getElementById('etaDaysInput');
   const shippingCostInput = document.getElementById('shippingCostInput');
+  const allowManualAwbInput = document.getElementById('allowManualAwbInput');
   const courierSelect = document.getElementById('courierSelect');
   const awbInput = document.getElementById('awbInput');
   const lookupAwbButton = document.getElementById('lookupAwbButton');
@@ -1519,6 +1605,14 @@
     bootstrap.Modal.getOrCreateInstance(awbErrorModal).show();
   };
 
+  const enableManualAwbFallback = () => {
+    if (allowManualAwbInput) allowManualAwbInput.value = '1';
+  };
+
+  const disableManualAwbFallback = () => {
+    if (allowManualAwbInput) allowManualAwbInput.value = '0';
+  };
+
   function filterShipmentRows(query) {
     if (!table || !searchEmpty) return;
     const normalizedQuery = (query || '').toLowerCase().trim();
@@ -1553,11 +1647,51 @@
   });
 
   const createForm = document.getElementById('createShipmentForm');
-  createForm?.addEventListener('submit', function () {
+  const setCreateButtonLoading = (isLoading) => {
     const button = document.getElementById('createSubmitButton');
-    button.disabled = true;
-    button.querySelector('.button-label').classList.add('d-none');
-    button.querySelector('.button-loading').classList.remove('d-none');
+    if (!button) return;
+    button.disabled = isLoading;
+    button.querySelector('.button-label')?.classList.toggle('d-none', isLoading);
+    button.querySelector('.button-loading')?.classList.toggle('d-none', !isLoading);
+  };
+
+  createForm?.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    if (!createForm.checkValidity()) {
+      createForm.reportValidity();
+      return;
+    }
+
+    setCreateButtonLoading(true);
+    const courier = courierSelect?.value;
+    const awb = awbInput?.value.trim();
+
+    try {
+      const response = await fetch(createForm.action, {
+        method: 'POST',
+        body: new FormData(createForm),
+        headers: {
+          Accept: 'application/json',
+          'X-Requested-With': 'fetch',
+        },
+      });
+      if (!response.ok) {
+        let payload = {};
+        try {
+          payload = await response.json();
+        } catch (error) {
+          payload = { detail: i18n.awbLookupFailed };
+        }
+        throw parseAwbError(payload);
+      }
+      const payload = await response.json();
+      window.location.href = payload.redirect_url || '/?created=1';
+    } catch (error) {
+      enableManualAwbFallback();
+      showAwbErrorModal(courier, awb, error);
+      if (awbLookupStatus) awbLookupStatus.textContent = i18n.cannotLookupAwb;
+      setCreateButtonLoading(false);
+    }
   });
 
   originInput?.addEventListener('input', () => {
@@ -1565,6 +1699,121 @@
   });
 
   destinationInput?.addEventListener('input', () => {
+    destinationTouched = true;
+  });
+
+  const closeAddressSuggestions = (menu) => {
+    if (!menu) return;
+    menu.classList.add('d-none');
+    menu.innerHTML = '';
+  };
+
+  const renderAddressSuggestions = (menu, suggestions, input, onSelect) => {
+    if (!menu) return;
+    menu.innerHTML = '';
+    if (!suggestions.length) {
+      const empty = document.createElement('div');
+      empty.className = 'px-3 py-2 small muted';
+      empty.textContent = i18n.noAddressSuggestions;
+      menu.appendChild(empty);
+      menu.classList.remove('d-none');
+      return;
+    }
+
+    suggestions.forEach((suggestion) => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'address-suggestion';
+
+      const icon = document.createElement('span');
+      icon.className = 'address-suggestion-icon';
+      icon.innerHTML = '<i class="bi bi-geo-alt"></i>';
+
+      const copy = document.createElement('span');
+      const title = document.createElement('span');
+      title.className = 'address-suggestion-title';
+      title.textContent = suggestion.primary || suggestion.label;
+      const meta = document.createElement('span');
+      meta.className = 'address-suggestion-meta';
+      meta.textContent = suggestion.secondary || suggestion.label;
+
+      copy.appendChild(title);
+      copy.appendChild(meta);
+      option.appendChild(icon);
+      option.appendChild(copy);
+
+      option.addEventListener('mousedown', (event) => event.preventDefault());
+      option.addEventListener('click', () => {
+        input.value = suggestion.label;
+        onSelect?.(suggestion);
+        closeAddressSuggestions(menu);
+        input.focus();
+      });
+      menu.appendChild(option);
+    });
+    menu.classList.remove('d-none');
+  };
+
+  const renderAddressLoading = (menu) => {
+    if (!menu) return;
+    menu.innerHTML = '';
+    const loading = document.createElement('div');
+    loading.className = 'px-3 py-2 small muted';
+    loading.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${i18n.searchingAddress}`;
+    menu.appendChild(loading);
+    menu.classList.remove('d-none');
+  };
+
+  const setupAddressLookup = (input, menu, onTouch) => {
+    if (!input || !menu) return;
+    let lookupTimer;
+    let activeController;
+    let latestQuery = '';
+
+    const lookup = () => {
+      const query = input.value.trim();
+      onTouch?.();
+      window.clearTimeout(lookupTimer);
+      if (query.length < 3) {
+        closeAddressSuggestions(menu);
+        return;
+      }
+      latestQuery = query;
+      lookupTimer = window.setTimeout(async () => {
+        activeController?.abort();
+        activeController = new AbortController();
+        renderAddressLoading(menu);
+        try {
+          const params = new URLSearchParams({ query });
+          const response = await fetch(`/api/location/search?${params.toString()}`, {
+            headers: { Accept: 'application/json' },
+            signal: activeController.signal,
+          });
+          if (!response.ok) throw new Error('Address lookup failed');
+          const payload = await response.json();
+          if (input.value.trim() !== latestQuery) return;
+          renderAddressSuggestions(menu, payload.suggestions || [], input, onTouch);
+        } catch (error) {
+          if (error.name !== 'AbortError') closeAddressSuggestions(menu);
+        }
+      }, 320);
+    };
+
+    input.addEventListener('input', lookup);
+    input.addEventListener('focus', () => {
+      if (input.value.trim().length >= 3 && menu.children.length) menu.classList.remove('d-none');
+    });
+    input.addEventListener('blur', () => {
+      window.setTimeout(() => closeAddressSuggestions(menu), 160);
+    });
+  };
+
+  setupAddressLookup(originInput, originSuggestions, () => {
+    originTouched = true;
+    originDetected = false;
+  });
+
+  setupAddressLookup(destinationInput, destinationSuggestions, () => {
     destinationTouched = true;
   });
 
@@ -1595,14 +1844,14 @@
         throw parseAwbError(payload);
       }
       const payload = await response.json();
-      if (payload.origin && !originTouched) {
+      if (payload.origin) {
         originInput.value = payload.origin;
-        originTouched = true;
         originDetected = true;
+        originTouched = false;
       }
-      if (payload.destination && !destinationTouched) {
+      if (payload.destination) {
         destinationInput.value = payload.destination;
-        destinationTouched = true;
+        destinationTouched = false;
       }
       if (payload.eta_days !== null && payload.eta_days !== undefined && etaDaysInput) {
         etaDaysInput.value = payload.eta_days;
@@ -1610,9 +1859,11 @@
       if (payload.shipping_cost !== null && payload.shipping_cost !== undefined && shippingCostInput) {
         shippingCostInput.value = Math.round(Number(payload.shipping_cost) || 0);
       }
+      disableManualAwbFallback();
       const sourceLabel = payload.source === 'courier_payload' ? i18n.courierData : i18n.trackingTimeline;
       if (awbLookupStatus) awbLookupStatus.textContent = i18n.routeFilledTemplate.replace('{source}', sourceLabel).replace('{status}', payload.status || '-');
     } catch (error) {
+      enableManualAwbFallback();
       showAwbErrorModal(courier, awb, error);
       if (awbLookupStatus) awbLookupStatus.textContent = i18n.cannotLookupAwb;
     } finally {
@@ -1622,6 +1873,7 @@
   };
 
   lookupAwbButton?.addEventListener('click', lookupAwbRoute);
+  awbInput?.addEventListener('input', disableManualAwbFallback);
   awbInput?.addEventListener('blur', () => {
     if (awbInput.value.trim() && !destinationInput?.value.trim()) lookupAwbRoute();
   });

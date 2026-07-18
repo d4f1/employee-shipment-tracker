@@ -11,7 +11,7 @@ import jwt
 from jinja2 import pass_context
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.templating import Jinja2Templates
 from jwt import InvalidTokenError
@@ -39,6 +39,10 @@ RAJAONGKIR_BASE_URL = os.getenv(
 NOMINATIM_REVERSE_URL = os.getenv(
     "NOMINATIM_REVERSE_URL", "https://nominatim.openstreetmap.org/reverse"
 )
+NOMINATIM_SEARCH_URL = os.getenv(
+    "NOMINATIM_SEARCH_URL", "https://nominatim.openstreetmap.org/search"
+)
+GEOCODER_COUNTRYCODES = os.getenv("GEOCODER_COUNTRYCODES", "id").strip()
 GEOCODER_USER_AGENT = os.getenv(
     "GEOCODER_USER_AGENT", "employee-shipment-tracker-demo/1.0"
 )
@@ -524,6 +528,12 @@ def dashboard_redirect(**params):
     return RedirectResponse(url=f"/{query}", status_code=303)
 
 
+def request_prefers_json(request: Request) -> bool:
+    accept = request.headers.get("accept", "")
+    requested_with = request.headers.get("x-requested-with", "")
+    return "application/json" in accept or requested_with == "fetch"
+
+
 def normalize_budget_month(value: Optional[str]) -> str:
     if value:
         try:
@@ -573,6 +583,124 @@ def reverse_geocode(latitude: Optional[float], longitude: Optional[float]) -> di
         "country": address.get("country"),
         "postcode": address.get("postcode"),
     }
+
+
+def search_geocode(query: str, limit: int = 6) -> list[dict]:
+    normalized_query = query.strip()
+    if len(normalized_query) < 3:
+        return []
+    try:
+        params = {
+            "format": "jsonv2",
+            "q": normalized_query,
+            "addressdetails": 1,
+            "limit": max(1, min(limit, 8)),
+            "accept-language": "id,en",
+        }
+        if GEOCODER_COUNTRYCODES:
+            params["countrycodes"] = GEOCODER_COUNTRYCODES
+        response = httpx.get(
+            NOMINATIM_SEARCH_URL,
+            params=params,
+            headers={"User-Agent": GEOCODER_USER_AGENT},
+            timeout=4,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError):
+        return []
+
+    if not isinstance(payload, list):
+        return []
+
+    suggestions = []
+    seen = set()
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        address = item.get("address") if isinstance(item.get("address"), dict) else {}
+        display_name = item.get("display_name")
+        label = display_name or format_location_address(address)
+        if not label:
+            continue
+        normalized_label = label.lower()
+        if normalized_label in seen:
+            continue
+        seen.add(normalized_label)
+        road = address.get("road") or address.get("pedestrian") or address.get("footway")
+        area = address.get("neighbourhood") or address.get("suburb") or address.get("village")
+        city = address.get("city") or address.get("town") or address.get("municipality") or address.get("county")
+        state = address.get("state")
+        postcode = address.get("postcode")
+        suggestions.append({
+            "label": label,
+            "primary": road or area or city or label.split(",")[0],
+            "secondary": format_provider_location(area, city, state, postcode, address.get("country")),
+            "postcode": postcode,
+            "latitude": parse_optional_float(item.get("lat")),
+            "longitude": parse_optional_float(item.get("lon")),
+        })
+    return suggestions
+
+
+def search_saved_locations(db: Session, query: str, limit: int = 6) -> list[dict]:
+    normalized_query = query.strip().lower()
+    if len(normalized_query) < 3:
+        return []
+
+    values = []
+    shipments = db.scalars(select(Shipment).order_by(Shipment.created_at.desc())).all()
+    for shipment in shipments:
+        values.extend([shipment.origin, shipment.destination])
+
+    seen = set()
+    ranked = []
+    for value in values:
+        clean_value = (value or "").strip()
+        if not clean_value:
+            continue
+        lower_value = clean_value.lower()
+        if normalized_query not in lower_value or lower_value in seen:
+            continue
+        seen.add(lower_value)
+        rank = 0 if lower_value.startswith(normalized_query) else 1
+        ranked.append((rank, clean_value))
+
+    ranked.sort(key=lambda item: (item[0], item[1].lower()))
+    suggestions = []
+    for _, value in ranked[:limit]:
+        parts = [part.strip() for part in value.split(",") if part.strip()]
+        suggestions.append({
+            "label": value,
+            "primary": parts[0] if parts else value,
+            "secondary": ", ".join(parts[1:]) if len(parts) > 1 else "Saved shipment address",
+            "postcode": None,
+            "latitude": None,
+            "longitude": None,
+            "source": "saved",
+        })
+    return suggestions
+
+
+def is_postal_code_only(value: Optional[str]) -> bool:
+    return bool(value and re.fullmatch(r"\d{4,6}", value.strip()))
+
+
+def format_location_suggestion(suggestion: dict) -> Optional[str]:
+    primary = suggestion.get("primary")
+    secondary = suggestion.get("secondary")
+    label = suggestion.get("label")
+    return format_provider_location(primary, secondary) or label
+
+
+def enrich_postal_code_location(value: Optional[str]) -> Optional[str]:
+    if not is_postal_code_only(value):
+        return value
+    suggestions = search_geocode(value.strip(), limit=1)
+    if not suggestions:
+        return value
+    enriched_location = format_location_suggestion(suggestions[0])
+    return enriched_location or value
 
 
 def format_location_address(details: dict) -> Optional[str]:
@@ -639,6 +767,40 @@ def parse_integer_from_value(value: Optional[str]) -> Optional[int]:
         return int(value)
     match = re.search(r"\d+", str(value))
     return int(match.group(0)) if match else None
+
+
+def normalize_package_weight(value: Optional[str]) -> int:
+    parsed_value = parse_number_from_value(value)
+    if parsed_value is None or parsed_value <= 0:
+        return 1000
+    if parsed_value < 30:
+        return max(int(parsed_value * 1000), 1)
+    return max(int(parsed_value), 1)
+
+
+def estimate_days_from_events(events: list[dict]) -> Optional[int]:
+    event_times = []
+    for event in events:
+        event_time = event.get("event_time")
+        if isinstance(event_time, datetime):
+            event_times.append(event_time)
+    if len(event_times) < 2:
+        return None
+    elapsed = max(event_times) - min(event_times)
+    days = elapsed.days
+    if elapsed.seconds or elapsed.microseconds:
+        days += 1
+    return max(days, 0)
+
+
+def latest_meaningful_location(events: list[dict]) -> Optional[str]:
+    meaningful_events = [
+        event for event in events
+        if event.get("location") and event.get("location") != "-"
+    ]
+    if not meaningful_events:
+        return None
+    return max(meaningful_events, key=lambda event: event.get("event_time") or datetime.min)["location"]
 
 
 def format_provider_location(*parts: Optional[str]) -> Optional[str]:
@@ -733,6 +895,8 @@ def extract_awb_route(result: dict) -> dict:
         "sla",
         "lead_time",
     )))
+    if eta_days is None:
+        eta_days = estimate_days_from_events(events)
     timeline_locations = [
         event.get("location")
         for event in events
@@ -746,6 +910,11 @@ def extract_awb_route(result: dict) -> dict:
         format_provider_location(explicit_destination, explicit_destination_area, explicit_destination_postcode)
         or (timeline_locations[-1] if timeline_locations else None)
     )
+    origin = enrich_postal_code_location(origin)
+    destination = enrich_postal_code_location(destination)
+    last_location = enrich_postal_code_location(
+        latest_meaningful_location(events) or result.get("last_location") or destination or "-"
+    )
     return {
         "origin": origin,
         "destination": destination,
@@ -753,7 +922,7 @@ def extract_awb_route(result: dict) -> dict:
         "eta_days": eta_days,
         "origin_postal_code": explicit_origin_postcode,
         "destination_postal_code": explicit_destination_postcode,
-        "last_location": result.get("last_location") or destination or "-",
+        "last_location": last_location,
         "status": result.get("status") or "UNKNOWN",
         "events": events,
         "source": "courier_payload" if explicit_origin or explicit_destination or shipping_cost is not None or eta_days is not None else "tracking_timeline",
@@ -829,6 +998,38 @@ def display_sender_tags(shipment: Shipment) -> str:
     return ""
 
 
+def ensure_employee_for_user_account(account: User, db: Session) -> Employee:
+    if account.employee:
+        return account.employee
+    employee = Employee(
+        employee_code=f"USR-{account.id:04d}",
+        name=account.full_name,
+        email=f"user-{account.id}@employee-shipment.local",
+        company_name=account.company_name,
+        department=account.role.title(),
+    )
+    db.add(employee)
+    db.flush()
+    account.employee_id = employee.id
+    return employee
+
+
+def resolve_recipient_employee_id(
+    db: Session,
+    *,
+    recipient_user_id: Optional[int],
+    employee_id: Optional[int],
+) -> int:
+    if recipient_user_id:
+        account = db.get(User, recipient_user_id)
+        if not account or not account.is_active:
+            raise HTTPException(status_code=404, detail="Recipient account not found")
+        return ensure_employee_for_user_account(account, db).id
+    if employee_id and db.get(Employee, employee_id):
+        return employee_id
+    raise HTTPException(status_code=404, detail="Employee not found")
+
+
 def build_reference_number(shipment_id: int) -> str:
     return f"DOC-{datetime.utcnow().year}-{shipment_id:04d}"
 
@@ -864,6 +1065,7 @@ def create_shipment_record(
     destination: str,
     shipping_cost: float,
     eta_days: int,
+    last_location: Optional[str] = None,
 ) -> Shipment:
     if not db.get(Employee, employee_id):
         raise HTTPException(status_code=404, detail="Employee not found")
@@ -882,6 +1084,7 @@ def create_shipment_record(
         destination=destination,
         shipping_cost=shipping_cost,
         eta_days=eta_days,
+        last_location=last_location or "-",
         expected_arrival=datetime.utcnow() + timedelta(days=eta_days) if eta_days else None,
     )
     db.add(shipment)
@@ -901,18 +1104,145 @@ async def resolve_awb_shipment_fields(
     awb: str,
     origin: str,
     destination: str,
+    fallback_shipping_cost: float = 0,
+    fallback_eta_days: int = 0,
 ) -> dict:
     result = await provider.track(awb.strip(), courier.strip().lower())
     route = extract_awb_route(result)
+    route = await enrich_awb_route_cost(
+        route,
+        result,
+        courier=courier,
+        fallback_origin=origin,
+        fallback_destination=destination,
+    )
     return {
         "origin": route.get("origin") or origin,
         "destination": route.get("destination") or destination,
-        "shipping_cost": route.get("shipping_cost") if route.get("shipping_cost") is not None else 0,
-        "eta_days": route.get("eta_days") if route.get("eta_days") is not None else 0,
+        "shipping_cost": route.get("shipping_cost") if route.get("shipping_cost") is not None else fallback_shipping_cost,
+        "eta_days": route.get("eta_days") if route.get("eta_days") is not None else fallback_eta_days,
+        "last_location": route.get("last_location") or "-",
     }
 
 
 class RajaOngkirProvider:
+    def _normalize_manifest_items(self, value) -> list[dict]:
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+        if isinstance(value, dict):
+            for nested_value in value.values():
+                if isinstance(nested_value, list):
+                    return [item for item in nested_value if isinstance(item, dict)]
+            return [value]
+        return []
+
+    def _normalize_payload_items(self, payload: dict) -> list[dict]:
+        data = payload.get("data") or payload.get("rajaongkir") or payload.get("results") or payload
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        if isinstance(data, dict):
+            for key in ("data", "results", "costs"):
+                nested_value = data.get(key)
+                if isinstance(nested_value, list):
+                    return [item for item in nested_value if isinstance(item, dict)]
+            return [data]
+        return []
+
+    async def _request_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: Optional[dict] = None,
+        data: Optional[dict] = None,
+    ) -> Optional[dict]:
+        if not RAJAONGKIR_API_KEY:
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.request(
+                    method,
+                    f"{RAJAONGKIR_BASE_URL}{path}",
+                    params=params,
+                    data=data,
+                    headers={"key": RAJAONGKIR_API_KEY},
+                )
+            if response.status_code >= 400:
+                return None
+            payload = response.json()
+        except (httpx.HTTPError, ValueError):
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    async def find_domestic_destination_id(self, query: str, postcode: Optional[str] = None) -> Optional[str]:
+        payload = await self._request_json(
+            "GET",
+            "/destination/domestic-destination",
+            params={"search": query, "limit": 10, "offset": 0},
+        )
+        if not payload:
+            return None
+        items = self._normalize_payload_items(payload)
+        if postcode:
+            for item in items:
+                item_postcode = str(item.get("zip_code") or item.get("postal_code") or item.get("postcode") or "")
+                if item_postcode == postcode:
+                    return str(item.get("id") or item.get("destination_id") or "")
+        for item in items:
+            destination_id = item.get("id") or item.get("destination_id")
+            if destination_id:
+                return str(destination_id)
+        return None
+
+    async def calculate_domestic_shipping_cost(
+        self,
+        *,
+        courier: str,
+        origin_postcode: Optional[str],
+        destination_postcode: Optional[str],
+        origin_label: Optional[str],
+        destination_label: Optional[str],
+        weight: int,
+    ) -> dict:
+        origin_query = origin_postcode or origin_label or ""
+        destination_query = destination_postcode or destination_label or ""
+        origin_id = await self.find_domestic_destination_id(origin_query, origin_postcode)
+        destination_id = await self.find_domestic_destination_id(destination_query, destination_postcode)
+        if not origin_id or not destination_id:
+            return {}
+
+        payload = await self._request_json(
+            "POST",
+            "/calculate/domestic-cost",
+            data={
+                "origin": origin_id,
+                "destination": destination_id,
+                "weight": weight,
+                "courier": courier,
+                "price": "lowest",
+            },
+        )
+        if not payload:
+            return {}
+        cost_items = self._normalize_payload_items(payload)
+        costs = [
+            parse_number_from_value(find_first_value(item, ("shipping_cost", "cost", "value", "price", "tariff")))
+            for item in cost_items
+        ]
+        valid_costs = [cost for cost in costs if cost is not None and cost > 0]
+        eta_days = parse_integer_from_value(find_first_value(payload, (
+            "etd",
+            "eta_days",
+            "estimate_day",
+            "estimated_day",
+            "estimated_days",
+            "duration",
+        )))
+        return {
+            "shipping_cost": min(valid_costs) if valid_costs else None,
+            "eta_days": eta_days,
+        }
+
     async def track(self, awb: str, courier: str) -> dict:
         if RAJAONGKIR_MOCK:
             now = datetime.utcnow()
@@ -952,22 +1282,61 @@ class RajaOngkirProvider:
         if not RAJAONGKIR_API_KEY:
             raise HTTPException(status_code=503, detail="RAJAONGKIR_API_KEY is not configured")
 
-        async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(
-                f"{RAJAONGKIR_BASE_URL}/track/waybill",
-                params={"awb": awb, "courier": courier},
-                headers={"key": RAJAONGKIR_API_KEY},
-            )
-        if response.status_code >= 400:
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(
+                    f"{RAJAONGKIR_BASE_URL}/track/waybill",
+                    params={"awb": awb, "courier": courier},
+                    headers={"key": RAJAONGKIR_API_KEY},
+                )
+        except httpx.HTTPError as exc:
             raise HTTPException(
                 status_code=502,
+                detail=f"RajaOngkir request failed: {exc}",
+            ) from exc
+
+        if response.status_code >= 400:
+            raise HTTPException(
+                status_code=404 if response.status_code == 404 else 502,
                 detail=f"RajaOngkir returned HTTP {response.status_code}: {response.text[:300]}",
             )
 
-        payload = response.json()
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=f"RajaOngkir returned invalid JSON: {response.text[:300]}",
+            ) from exc
+
+        if not isinstance(payload, dict):
+            raise HTTPException(
+                status_code=502,
+                detail="RajaOngkir returned an unexpected response format.",
+            )
+
+        meta = payload.get("meta")
+        if isinstance(meta, dict) and meta.get("status") == "error":
+            raise HTTPException(
+                status_code=404 if meta.get("code") == 404 else 502,
+                detail=json.dumps(payload),
+            )
+
         data = payload.get("data") or payload.get("rajaongkir") or payload
+        if isinstance(data, list):
+            data = next((item for item in data if isinstance(item, dict)), {})
+        if not isinstance(data, dict):
+            raise HTTPException(
+                status_code=502,
+                detail="RajaOngkir returned an unexpected data format.",
+            )
+
         summary = data.get("summary") or data.get("delivery_status") or {}
-        manifests = data.get("manifest") or data.get("history") or []
+        if not isinstance(summary, dict):
+            summary = {"status": summary}
+        manifests = self._normalize_manifest_items(
+            data.get("manifest") or data.get("history") or data.get("tracking") or data.get("details")
+        )
         current_status = summary.get("status") or data.get("status") or "UNKNOWN"
         if isinstance(current_status, dict):
             current_status = current_status.get("status") or current_status.get("pod_status") or "UNKNOWN"
@@ -976,9 +1345,13 @@ class RajaOngkirProvider:
         for item in manifests:
             event_time = datetime.utcnow()
             time_value = item.get("manifest_date") or item.get("date") or item.get("event_time")
+            clock_value = item.get("manifest_time") or item.get("time")
             if time_value:
                 try:
-                    event_time = datetime.fromisoformat(str(time_value).replace("Z", "+00:00"))
+                    parsed_time_value = str(time_value).replace("Z", "+00:00")
+                    if clock_value and "T" not in parsed_time_value and " " not in parsed_time_value:
+                        parsed_time_value = f"{parsed_time_value}T{clock_value}"
+                    event_time = datetime.fromisoformat(parsed_time_value)
                     if event_time.tzinfo:
                         event_time = event_time.astimezone(timezone.utc).replace(tzinfo=None)
                 except ValueError:
@@ -1001,6 +1374,31 @@ class RajaOngkirProvider:
 
 
 provider = RajaOngkirProvider()
+
+
+async def enrich_awb_route_cost(
+    route: dict,
+    result: dict,
+    *,
+    courier: str,
+    fallback_origin: Optional[str] = None,
+    fallback_destination: Optional[str] = None,
+) -> dict:
+    if route.get("shipping_cost") is not None:
+        return route
+    calculated_cost = await provider.calculate_domestic_shipping_cost(
+        courier=courier.strip().lower(),
+        origin_postcode=route.get("origin_postal_code"),
+        destination_postcode=route.get("destination_postal_code"),
+        origin_label=route.get("origin") or fallback_origin,
+        destination_label=route.get("destination") or fallback_destination,
+        weight=normalize_package_weight(find_first_value(result.get("raw") or {}, ("weight", "shipment_weight", "actual_weight"))),
+    )
+    if calculated_cost.get("shipping_cost") is not None:
+        route["shipping_cost"] = calculated_cost["shipping_cost"]
+    if route.get("eta_days") is None and calculated_cost.get("eta_days") is not None:
+        route["eta_days"] = calculated_cost["eta_days"]
+    return route
 
 
 def seed_data():
@@ -1149,6 +1547,33 @@ def reverse_location_for_form(
     }
 
 
+@app.get("/api/location/search")
+def search_location_for_form(
+    request: Request,
+    query: str = Query(..., min_length=3),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Login is required")
+    require_roles(user, "admin", "operator")
+    saved_suggestions = search_saved_locations(db, query)
+    remaining_limit = max(0, 6 - len(saved_suggestions))
+    provider_suggestions = search_geocode(query, remaining_limit) if remaining_limit else []
+    seen = {item["label"].strip().lower() for item in saved_suggestions}
+    suggestions = saved_suggestions[:]
+    for item in provider_suggestions:
+        label_key = item["label"].strip().lower()
+        if label_key in seen:
+            continue
+        seen.add(label_key)
+        suggestions.append(item)
+    return {
+        "query": query.strip(),
+        "suggestions": suggestions,
+    }
+
+
 @app.get("/api/awb/lookup")
 async def lookup_awb_route(
     request: Request,
@@ -1168,6 +1593,7 @@ async def lookup_awb_route(
 
     result = await provider.track(awb, courier)
     route = extract_awb_route(result)
+    route = await enrich_awb_route_cost(route, result, courier=courier)
     return {
         "courier": courier,
         "awb": awb,
@@ -1262,7 +1688,8 @@ def shipment_detail(
 async def create_shipment(
     title: str = Form(...),
     document_type: str = Form("Document"),
-    employee_id: int = Form(...),
+    employee_id: Optional[int] = Form(None),
+    recipient_user_id: Optional[int] = Form(None),
     courier: str = Form(...),
     awb: str = Form(...),
     external_awb: Optional[str] = Form(None),
@@ -1276,12 +1703,17 @@ async def create_shipment(
     db: Session = Depends(get_db),
 ):
     require_roles(current_user, "admin", "operator")
-    provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination)
+    recipient_employee_id = resolve_recipient_employee_id(
+        db,
+        recipient_user_id=recipient_user_id,
+        employee_id=employee_id,
+    )
+    provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination, shipping_cost, eta_days)
     shipment = create_shipment_record(
         db,
         title=title,
         document_type=document_type,
-        employee_id=employee_id,
+        employee_id=recipient_employee_id,
         created_by_id=current_user.id,
         courier=courier,
         awb=awb,
@@ -1292,6 +1724,7 @@ async def create_shipment(
         destination=provider_fields["destination"],
         shipping_cost=provider_fields["shipping_cost"],
         eta_days=provider_fields["eta_days"],
+        last_location=provider_fields["last_location"],
     )
     return {"id": shipment.id, "reference_no": shipment.reference_no}
 
@@ -1312,8 +1745,21 @@ async def refresh_tracking(
 
 async def apply_tracking_refresh(shipment: Shipment, db: Session) -> None:
     result = await provider.track(shipment.awb, shipment.courier)
+    route = extract_awb_route(result)
+    route = await enrich_awb_route_cost(
+        route,
+        result,
+        courier=shipment.courier,
+        fallback_origin=shipment.origin,
+        fallback_destination=shipment.destination,
+    )
     shipment.status = result["status"]
-    shipment.last_location = result["last_location"]
+    shipment.last_location = route["last_location"]
+    if route.get("shipping_cost") is not None:
+        shipment.shipping_cost = route["shipping_cost"]
+    if route.get("eta_days") is not None:
+        shipment.eta_days = route["eta_days"]
+        shipment.expected_arrival = shipment.created_at + timedelta(days=route["eta_days"]) if route["eta_days"] else None
     shipment.delivered_at = result["delivered_at"]
     shipment.provider_raw = json.dumps(result["raw"], default=str)
     shipment.updated_at = datetime.utcnow()
@@ -1400,6 +1846,9 @@ def dashboard(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     employees = db.scalars(select(Employee).order_by(Employee.name)).all() if user.role in {"admin", "operator"} else []
+    recipient_accounts = db.scalars(
+        select(User).where(User.is_active.is_(True)).order_by(User.full_name)
+    ).all() if user.role in {"admin", "operator"} else []
     users = db.scalars(select(User).order_by(User.created_at.desc())).all() if user.role == "admin" else []
     assigned_employee_ids = {account.employee_id for account in users if account.employee_id}
     sort = sort if sort in {"date_asc", "date_desc"} else "date_desc"
@@ -1485,6 +1934,7 @@ def dashboard(
             request,
             current_user=user,
             employees=employees,
+            recipient_accounts=recipient_accounts,
             users=users,
             assigned_employee_ids=assigned_employee_ids,
             user_roles=USER_ROLES,
@@ -1750,7 +2200,8 @@ async def create_shipment_form(
     request: Request,
     title: str = Form(...),
     document_type: str = Form("Document"),
-    employee_id: int = Form(...),
+    employee_id: Optional[int] = Form(None),
+    recipient_user_id: Optional[int] = Form(None),
     courier: str = Form(...),
     awb: str = Form(...),
     external_awb: Optional[str] = Form(None),
@@ -1760,6 +2211,7 @@ async def create_shipment_form(
     destination: str = Form(...),
     shipping_cost: float = Form(0),
     eta_days: int = Form(0),
+    allow_manual_awb: str = Form("0"),
     db: Session = Depends(get_db),
 ):
     user = get_current_web_user(request, db)
@@ -1767,12 +2219,29 @@ async def create_shipment_form(
         return RedirectResponse(url="/login", status_code=303)
     require_roles(user, "admin", "operator")
     try:
-        provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination)
+        recipient_employee_id = resolve_recipient_employee_id(
+            db,
+            recipient_user_id=recipient_user_id,
+            employee_id=employee_id,
+        )
+        try:
+            provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination, shipping_cost, eta_days)
+        except HTTPException as exc:
+            if exc.status_code == 404 and allow_manual_awb == "1":
+                provider_fields = {
+                    "origin": origin,
+                    "destination": destination,
+                    "shipping_cost": shipping_cost,
+                    "eta_days": eta_days,
+                    "last_location": destination,
+                }
+            else:
+                raise
         create_shipment_record(
             db,
             title=title,
             document_type=document_type,
-            employee_id=employee_id,
+            employee_id=recipient_employee_id,
             created_by_id=user.id,
             courier=courier,
             awb=awb,
@@ -1783,11 +2252,19 @@ async def create_shipment_form(
             destination=provider_fields["destination"],
             shipping_cost=provider_fields["shipping_cost"],
             eta_days=provider_fields["eta_days"],
+            last_location=provider_fields["last_location"],
         )
     except HTTPException as exc:
-        if exc.status_code in {409, 502, 503}:
+        if exc.status_code in {404, 409, 502, 503}:
+            if request_prefers_json(request):
+                return JSONResponse(
+                    status_code=exc.status_code,
+                    content={"detail": exc.detail},
+                )
             return dashboard_redirect(user_error=str(exc.detail))
         raise
+    if request_prefers_json(request):
+        return {"redirect_url": "/?created=1"}
     return RedirectResponse(url="/?created=1", status_code=303)
 
 
