@@ -106,6 +106,7 @@ class Shipment(Base):
     document_type: Mapped[str] = mapped_column(String(100), default="Document")
     employee_id: Mapped[int] = mapped_column(ForeignKey("employees.id"))
     created_by_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
+    sender_tags: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     courier: Mapped[str] = mapped_column(String(40))
     awb: Mapped[str] = mapped_column(String(100), index=True)
     external_awb: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -183,6 +184,9 @@ def ensure_optional_columns():
     if "created_by_id" not in shipment_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE shipments ADD COLUMN created_by_id INTEGER"))
+    if "sender_tags" not in shipment_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE shipments ADD COLUMN sender_tags VARCHAR(255)"))
     user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
     missing_user_columns = {
         "last_login_at": "DATETIME",
@@ -263,7 +267,7 @@ TRANSLATIONS = {
         "Newest first": "Terbaru dulu",
         "Oldest first": "Terlama dulu",
         "Click a reference number to view its complete delivery timeline.": "Klik nomor referensi untuk melihat linimasa pengiriman lengkap.",
-        "Search reference, employee, AWB, ticket, or PO number": "Cari referensi, karyawan, AWB, tiket, atau nomor PO",
+        "Search reference, employee, AWB, ticket, PO number, or hashtag": "Cari referensi, karyawan, AWB, tiket, nomor PO, atau hashtag",
         "Reference": "Referensi",
         "Document": "Dokumen",
         "Employee": "Karyawan",
@@ -296,6 +300,9 @@ TRANSLATIONS = {
         "Avatar URL": "URL avatar",
         "Company": "Perusahaan",
         "Sender": "Pengirim",
+        "Sender source": "Sumber pengirim",
+        "Sender hashtags": "Hashtag pengirim",
+        "Add optional tags separated by spaces.": "Tambahkan tag opsional dipisahkan spasi.",
         "Active account": "Akun aktif",
         "Add account": "Tambah akun",
         "Adding...": "Menambahkan...",
@@ -793,6 +800,35 @@ def sort_tracking_events_for_timeline(events: list[TrackingEvent]) -> list[Track
     )
 
 
+def base_sender_tag_for_role(role: str) -> str:
+    return "#HO" if role == "admin" else "#Vendor"
+
+
+def normalize_sender_tags(value: Optional[str], role: str) -> str:
+    base_tag = base_sender_tag_for_role(role)
+    tags = [base_tag]
+    reserved_tags = {"#ho", "#vendor"}
+    for raw_tag in re.split(r"[\s,]+", value or ""):
+        clean_tag = raw_tag.strip()
+        if not clean_tag:
+            continue
+        clean_tag = clean_tag if clean_tag.startswith("#") else f"#{clean_tag}"
+        clean_tag = re.sub(r"[^A-Za-z0-9_#-]", "", clean_tag)
+        if clean_tag.lower() in reserved_tags and clean_tag.lower() != base_tag.lower():
+            continue
+        if len(clean_tag) > 1 and clean_tag.lower() not in {tag.lower() for tag in tags}:
+            tags.append(clean_tag)
+    return " ".join(tags[:8])
+
+
+def display_sender_tags(shipment: Shipment) -> str:
+    if shipment.sender_tags:
+        return shipment.sender_tags
+    if shipment.created_by:
+        return normalize_sender_tags(None, shipment.created_by.role)
+    return ""
+
+
 def build_reference_number(shipment_id: int) -> str:
     return f"DOC-{datetime.utcnow().year}-{shipment_id:04d}"
 
@@ -823,6 +859,7 @@ def create_shipment_record(
     awb: str,
     external_awb: Optional[str],
     po_number: Optional[str],
+    sender_tags: Optional[str],
     origin: str,
     destination: str,
     shipping_cost: float,
@@ -836,6 +873,7 @@ def create_shipment_record(
         document_type=document_type,
         employee_id=employee_id,
         created_by_id=created_by_id,
+        sender_tags=sender_tags,
         courier=courier.lower(),
         awb=awb,
         external_awb=external_awb or None,
@@ -1003,6 +1041,7 @@ def seed_data():
                 document_type="Contract",
                 employee_id=employees[0].id,
                 created_by_id=sender.id if sender else None,
+                sender_tags=normalize_sender_tags(None, sender.role if sender else "operator"),
                 courier="jne",
                 awb="MOCK123456789",
                 external_awb="TCK-MOCK-2026-0001",
@@ -1161,6 +1200,7 @@ def list_shipments(
         "sender": s.created_by.full_name if s.created_by else None,
         "sender_role": s.created_by.role if s.created_by else None,
         "sender_company": s.created_by.company_name if s.created_by else None,
+        "sender_tags": display_sender_tags(s),
         "courier": s.courier,
         "awb": s.awb,
         "ticket_number": s.external_awb,
@@ -1196,6 +1236,7 @@ def shipment_detail(
         "sender": shipment.created_by.full_name if shipment.created_by else None,
         "sender_role": shipment.created_by.role if shipment.created_by else None,
         "sender_company": shipment.created_by.company_name if shipment.created_by else None,
+        "sender_tags": display_sender_tags(shipment),
         "courier": shipment.courier,
         "awb": shipment.awb,
         "ticket_number": shipment.external_awb,
@@ -1226,6 +1267,7 @@ async def create_shipment(
     awb: str = Form(...),
     external_awb: Optional[str] = Form(None),
     po_number: Optional[str] = Form(None),
+    sender_tags: Optional[str] = Form(None),
     origin: str = Form(...),
     destination: str = Form(...),
     shipping_cost: float = Form(0),
@@ -1245,6 +1287,7 @@ async def create_shipment(
         awb=awb,
         external_awb=external_awb,
         po_number=po_number,
+        sender_tags=normalize_sender_tags(sender_tags, current_user.role),
         origin=provider_fields["origin"],
         destination=provider_fields["destination"],
         shipping_cost=provider_fields["shipping_cost"],
@@ -1712,6 +1755,7 @@ async def create_shipment_form(
     awb: str = Form(...),
     external_awb: Optional[str] = Form(None),
     po_number: Optional[str] = Form(None),
+    sender_tags: Optional[str] = Form(None),
     origin: str = Form(...),
     destination: str = Form(...),
     shipping_cost: float = Form(0),
@@ -1734,6 +1778,7 @@ async def create_shipment_form(
             awb=awb,
             external_awb=external_awb,
             po_number=po_number,
+            sender_tags=normalize_sender_tags(sender_tags, user.role),
             origin=provider_fields["origin"],
             destination=provider_fields["destination"],
             shipping_cost=provider_fields["shipping_cost"],

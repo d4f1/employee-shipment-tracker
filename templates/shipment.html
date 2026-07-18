@@ -29,6 +29,10 @@
     .navbar-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;object-fit:cover;background:rgba(255,255,255,.18);color:white}
     .map-frame{width:100%;min-height:380px;border:0;border-radius:16px;background:#eef0f6}
     .map-detail{border:1px solid var(--border);border-radius:14px;background:#fbfcff}
+    .sender-tags{display:flex;flex-wrap:wrap;gap:.3rem;justify-content:flex-end}
+    .sender-tag{display:inline-flex;align-items:center;border-radius:999px;padding:.18rem .5rem;background:#eef0ff;color:var(--primary);font-size:.76rem;font-weight:800;line-height:1.2}
+    .sender-tag-ho{background:#fef3c7;color:#92400e}
+    .sender-tag-vendor{background:#ecfeff;color:#0e7490}
     .error-modal .modal-content{border-radius:28px;overflow:hidden}
     .error-hero{background:linear-gradient(180deg,#fff7f8,#fff);border-bottom:1px solid #f3d8df;padding:1.5rem 1.5rem 1.1rem}
     .error-icon{width:52px;height:52px;border-radius:18px;display:grid;place-items:center;background:#ffe4e9;color:#dc2626;box-shadow:inset 0 0 0 1px #fecdd3;flex-shrink:0}
@@ -119,6 +123,25 @@
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Document type'|tr }}</span><strong class="text-end">{{ shipment.document_type }}</strong></div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Ticket number'|tr }}</span><strong class="text-end">{{ shipment.external_awb or '-' }}</strong></div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'PO number'|tr }}</span><strong class="text-end">{{ shipment.po_number or '-' }}</strong></div>
+        <div class="detail-row d-flex justify-content-between gap-3">
+          <span class="muted">{{ 'Sender source'|tr }}</span>
+          <div class="text-end">
+            {% if shipment.created_by %}
+            <strong>{{ shipment.created_by.full_name }}</strong>
+            <div class="small muted text-capitalize">{{ shipment.created_by.role }} · {{ shipment.created_by.company_name or app_name }}</div>
+            {% else %}
+            <strong>-</strong>
+            {% endif %}
+            {% set sender_tags = shipment.sender_tags or ('#HO' if shipment.created_by and shipment.created_by.role == 'admin' else ('#Vendor' if shipment.created_by and shipment.created_by.role == 'operator' else '')) %}
+            {% if sender_tags %}
+            <div class="sender-tags mt-2">
+              {% for tag in sender_tags.split() %}
+              <span class="sender-tag {{ 'sender-tag-ho' if tag|lower == '#ho' else ('sender-tag-vendor' if tag|lower == '#vendor' else '') }}">{{ tag }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Route'|tr }}</span><strong class="text-end">{{ shipment.origin }} → {{ shipment.destination }}</strong></div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Shipping cost'|tr }}</span><strong class="text-end">Rp {{ "{:,.0f}".format(shipment.shipping_cost) }}</strong></div>
         <div class="detail-row d-flex justify-content-between gap-3"><span class="muted">{{ 'Estimated duration'|tr }}</span><strong class="text-end">{{ shipment.eta_days }} day(s)</strong></div>

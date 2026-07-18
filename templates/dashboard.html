@@ -106,6 +106,38 @@
       font-weight: 700;
       line-height: 1.2;
     }
+    .sender-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .25rem;
+      margin-top: .35rem;
+    }
+    .sender-tag {
+      display: inline-flex;
+      align-items: center;
+      border: 0;
+      border-radius: 999px;
+      padding: .18rem .45rem;
+      background: #eef0ff;
+      color: var(--app-primary);
+      font-size: .72rem;
+      font-weight: 800;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+    .sender-tag:hover { filter: brightness(.97); }
+    .sender-tag:focus-visible {
+      outline: 2px solid rgba(79,70,229,.45);
+      outline-offset: 2px;
+    }
+    .sender-tag-vendor {
+      background: #ecfeff;
+      color: #0e7490;
+    }
+    .sender-tag-ho {
+      background: #fef3c7;
+      color: #92400e;
+    }
     .navbar-avatar {
       width: 36px; height: 36px; border-radius: 50%;
       display:grid; place-items:center; font-weight:700;
@@ -170,6 +202,29 @@
       border: 0; border-radius: 22px;
       box-shadow: 0 28px 80px rgba(15,23,42,.20);
       overflow: hidden;
+    }
+    .create-shipment-dialog {
+      max-height: calc(100vh - 3rem);
+    }
+    .create-shipment-content {
+      max-height: calc(100vh - 3rem);
+    }
+    .create-shipment-form {
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 3rem);
+    }
+    .create-shipment-body {
+      overflow-y: auto;
+      padding-bottom: 1rem !important;
+    }
+    .create-shipment-footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      background: white;
+      border-top: 1px solid var(--app-border) !important;
+      padding-top: 1rem !important;
     }
     .modal.fade .modal-dialog {
       transform: translateY(18px) scale(.985);
@@ -602,7 +657,7 @@
             </form>
             <div class="input-group search-box">
               <span class="input-group-text border-end-0"><i class="bi bi-search"></i></span>
-              <input id="shipmentSearch" class="form-control border-start-0" placeholder="{{ 'Search reference, employee, AWB, ticket, or PO number'|tr }}">
+              <input id="shipmentSearch" class="form-control border-start-0" placeholder="{{ 'Search reference, employee, AWB, ticket, PO number, or hashtag'|tr }}">
             </div>
           </div>
         </div>
@@ -636,6 +691,14 @@
                           <span>-</span>
                         {% endif %}
                       </div>
+                      {% set sender_tags = s.sender_tags or ('#HO' if s.created_by and s.created_by.role == 'admin' else ('#Vendor' if s.created_by and s.created_by.role == 'operator' else '')) %}
+                      {% if sender_tags %}
+                      <div class="sender-tags" aria-label="{{ 'Sender hashtags'|tr }}">
+                        {% for tag in sender_tags.split() %}
+                        <button type="button" class="sender-tag {{ 'sender-tag-ho' if tag|lower == '#ho' else ('sender-tag-vendor' if tag|lower == '#vendor' else '') }}" data-filter-tag="{{ tag }}">{{ tag }}</button>
+                        {% endfor %}
+                      </div>
+                      {% endif %}
                     </div>
                   </div>
                 </td>
@@ -1090,9 +1153,9 @@
 
 {% if current_user.role in ['admin','operator'] %}
 <div class="modal fade" id="createShipmentModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <form method="post" action="/shipments/create" id="createShipmentForm">
+  <div class="modal-dialog modal-xl modal-dialog-centered create-shipment-dialog">
+    <div class="modal-content create-shipment-content">
+      <form method="post" action="/shipments/create" id="createShipmentForm" class="create-shipment-form">
         <div class="modal-header border-0 px-4 pt-4 pb-2">
           <div>
             <span class="badge rounded-pill text-bg-primary-subtle text-primary mb-2">{{ 'New delivery'|tr }}</span>
@@ -1101,7 +1164,7 @@
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body px-4 py-4">
+        <div class="modal-body px-4 py-4 create-shipment-body">
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'Reference number'|tr }}</label>
@@ -1122,6 +1185,11 @@
             </div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Ticket number'|tr }}</label><input class="form-control" name="external_awb" placeholder="Ticket number"></div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'PO number'|tr }}</label><input class="form-control" name="po_number" placeholder="Purchase order number"></div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">{{ 'Sender hashtags'|tr }}</label>
+              <input class="form-control" name="sender_tags" value="{{ '#HO' if current_user.role == 'admin' else '#Vendor' }}" placeholder="#HO #Urgent">
+              <div class="small muted mt-1">{{ 'Add optional tags separated by spaces.'|tr }}</div>
+            </div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'Origin'|tr }}</label>
               <div class="input-group">
@@ -1142,7 +1210,7 @@
             </div>
           </div>
         </div>
-        <div class="modal-footer border-0 px-4 pb-4 pt-0">
+        <div class="modal-footer border-0 px-4 pb-4 pt-0 create-shipment-footer">
           <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button>
           <button type="submit" class="btn btn-primary px-4" id="createSubmitButton">
             <span class="button-label"><i class="bi bi-check2-circle me-2"></i>{{ 'Create shipment'|tr }}</span>
@@ -1451,17 +1519,33 @@
     bootstrap.Modal.getOrCreateInstance(awbErrorModal).show();
   };
 
-  searchInput?.addEventListener('input', function () {
-    const query = this.value.toLowerCase().trim();
+  function filterShipmentRows(query) {
+    if (!table || !searchEmpty) return;
+    const normalizedQuery = (query || '').toLowerCase().trim();
     const rows = Array.from(table.querySelectorAll('tbody tr')).filter(row => !row.querySelector('.empty-state'));
     let visible = 0;
     rows.forEach(row => {
-      const match = row.innerText.toLowerCase().includes(query);
+      const match = row.innerText.toLowerCase().includes(normalizedQuery);
       row.classList.toggle('d-none', !match);
       if (match) visible++;
     });
     searchEmpty.classList.toggle('d-none', visible !== 0 || rows.length === 0);
     table.classList.toggle('d-none', visible === 0 && rows.length > 0);
+  }
+
+  searchInput?.addEventListener('input', function () {
+    filterShipmentRows(this.value);
+  });
+
+  document.querySelectorAll('[data-filter-tag]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tag = button.dataset.filterTag || button.textContent.trim();
+      if (searchInput) {
+        searchInput.value = tag;
+        filterShipmentRows(tag);
+        searchInput.focus();
+      }
+    });
   });
 
   dateSort?.addEventListener('change', function () {
