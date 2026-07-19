@@ -106,6 +106,27 @@ curl http://127.0.0.1:8000/api/shipments \
   -H 'Authorization: Bearer YOUR_TOKEN'
 ```
 
+## Google sign-in and registration
+
+The anonymous landing page opens authentication in a modal and supports both existing Google-account login and new employee registration.
+
+1. In Google Cloud Console, create an OAuth 2.0 Client ID for a **Web application**.
+2. Add this authorized redirect URI for local development:
+
+```text
+http://127.0.0.1:8000/auth/google/callback
+```
+
+3. Set these values in `.env` and restart the application:
+
+```env
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://127.0.0.1:8000/auth/google/callback
+```
+
+For deployment, replace `GOOGLE_REDIRECT_URI` with the HTTPS callback URL for the deployed domain and add the exact same URI in Google Cloud Console. New Google registrations are created with the `employee` role.
+
 ## Role access
 
 | Feature | Admin | Operator | Employee |

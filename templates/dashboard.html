@@ -8,12 +8,12 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
     :root {
-      --app-primary: #4f46e5;
-      --app-primary-dark: #3730a3;
-      --app-bg: #f4f6fb;
-      --app-text: #172033;
-      --app-muted: #75809a;
-      --app-border: #e8ebf2;
+      --app-primary: #ef174c;
+      --app-primary-dark: #b20d36;
+      --app-bg: #f7f7f8;
+      --app-text: #252525;
+      --app-muted: #707174;
+      --app-border: #e2e2e3;
     }
     * { box-sizing: border-box; }
     body {
@@ -23,14 +23,14 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     }
     .app-navbar {
-      background: linear-gradient(120deg, #111827, #252f48);
-      box-shadow: 0 10px 30px rgba(15, 23, 42, .16);
+      background: linear-gradient(120deg, #252525 0%, #707174 66%, #ef174c 155%);
+      box-shadow: 0 10px 30px rgba(37, 37, 37, .2);
     }
     .brand-mark {
       width: 38px; height: 38px; border-radius: 12px;
       display: grid; place-items: center;
-      background: linear-gradient(135deg, #8179ff, #4f46e5);
-      box-shadow: 0 8px 20px rgba(79,70,229,.35);
+      background: linear-gradient(135deg, #ef174c, #c50f3d);
+      box-shadow: 0 8px 20px rgba(239,23,76,.32);
     }
     .page-shell { max-width: 1600px; margin: 0 auto; }
     .hero-panel {
@@ -38,10 +38,33 @@
       border-radius: 24px;
       overflow: hidden;
       background:
-        radial-gradient(circle at 88% 22%, rgba(255,255,255,.22), transparent 24%),
-        linear-gradient(120deg, #4f46e5, #6d5dfc 52%, #8b5cf6);
+        radial-gradient(circle at 88% 22%, rgba(255,255,255,.18), transparent 24%),
+        linear-gradient(120deg, #252525 0%, #707174 56%, #ef174c 145%);
       color: white;
-      box-shadow: 0 18px 48px rgba(79,70,229,.20);
+      box-shadow: 0 18px 48px rgba(37,37,37,.20);
+    }
+    .hero-ticker {
+      max-width: 760px;
+      overflow: hidden;
+      white-space: nowrap;
+      color: rgba(255,255,255,.72);
+      font-size: 1rem;
+      font-weight: 600;
+      mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+    }
+    .hero-ticker-track {
+      display: inline-flex;
+      min-width: max-content;
+      animation: hero-ticker-scroll 16s linear infinite;
+    }
+    .hero-ticker-track span { padding-right: 4rem; }
+    @keyframes hero-ticker-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-ticker-track { animation: none; }
+      .hero-ticker-track span:last-child { display: none; }
     }
     .surface-card {
       border: 1px solid rgba(232,235,242,.9);
@@ -67,10 +90,10 @@
       border-radius: 12px;
     }
     .btn-soft {
-      background: #eef0ff; color: var(--app-primary);
-      border: 1px solid #e1e4ff; border-radius: 12px;
+      background: #fff0f4; color: var(--app-primary);
+      border: 1px solid #ffd5df; border-radius: 12px;
     }
-    .btn-soft:hover { background: #e4e7ff; color: var(--app-primary-dark); }
+    .btn-soft:hover { background: #ffd5df; color: var(--app-primary-dark); }
     .table-card { overflow: hidden; }
     .table thead th {
       padding: 1rem;
@@ -88,7 +111,7 @@
     .avatar {
       width: 38px; height: 38px; border-radius: 12px;
       display:grid; place-items:center; font-weight:700;
-      background:#eef0ff; color:var(--app-primary);
+      background:#fff0f4; color:var(--app-primary);
       object-fit: cover;
       flex-shrink: 0;
     }
@@ -118,7 +141,7 @@
       border: 0;
       border-radius: 999px;
       padding: .18rem .45rem;
-      background: #eef0ff;
+      background: #fff0f4;
       color: var(--app-primary);
       font-size: .72rem;
       font-weight: 800;
@@ -127,7 +150,7 @@
     }
     .sender-tag:hover { filter: brightness(.97); }
     .sender-tag:focus-visible {
-      outline: 2px solid rgba(79,70,229,.45);
+      outline: 2px solid rgba(239,23,76,.45);
       outline-offset: 2px;
     }
     .sender-tag-vendor {
@@ -180,7 +203,7 @@
       background-image: none;
       font-weight: 750;
       color: var(--app-text);
-      box-shadow: 0 6px 18px rgba(79,70,229,.06);
+      box-shadow: 0 6px 18px rgba(239,23,76,.06);
       appearance: none;
     }
     .sort-select-wrap:after {
@@ -195,8 +218,8 @@
       pointer-events: none;
     }
     .sort-select-wrap .form-select:focus {
-      border-color: #918bff;
-      box-shadow: 0 0 0 .22rem rgba(79,70,229,.12);
+      border-color: #ef174c;
+      box-shadow: 0 0 0 .22rem rgba(239,23,76,.12);
     }
     .modal-content {
       border: 0; border-radius: 22px;
@@ -236,8 +259,8 @@
       padding: .72rem .85rem;
     }
     .form-control:focus, .form-select:focus {
-      border-color: #918bff;
-      box-shadow: 0 0 0 .22rem rgba(79,70,229,.12);
+      border-color: #ef174c;
+      box-shadow: 0 0 0 .22rem rgba(239,23,76,.12);
     }
     .address-suggest-field {
       position: relative;
@@ -271,12 +294,12 @@
     }
     .address-suggestion:hover,
     .address-suggestion:focus {
-      background: #f4f6ff;
+      background: #fff7f9;
       outline: 0;
     }
     .address-suggestion.active {
-      background: #eef2ff;
-      box-shadow: inset 0 0 0 1px #8b83ff;
+      background: #fff0f4;
+      box-shadow: inset 0 0 0 1px #ef174c;
     }
     .address-suggestion-icon {
       width: 32px;
@@ -284,7 +307,7 @@
       display: grid;
       place-items: center;
       border-radius: 10px;
-      background: #eef0ff;
+      background: #fff0f4;
       color: var(--app-primary);
       flex-shrink: 0;
     }
@@ -322,7 +345,7 @@
       font-weight: 700;
       text-transform: capitalize;
     }
-    .role-admin { background: #fee2e2; color: #991b1b; }
+    .role-admin { background: #ffd5df; color: #b20d36; }
     .role-operator { background: #e0f2fe; color: #075985; }
     .role-employee { background: #dcfce7; color: #166534; }
     .budget-stat {
@@ -343,7 +366,7 @@
       height: 100%;
       width: var(--budget-used, 0%);
       max-width: 100%;
-      background: linear-gradient(90deg, #22c55e, #4f46e5);
+      background: linear-gradient(90deg, #707174, #ef174c);
       border-radius: inherit;
     }
     .budget-item-row {
@@ -370,10 +393,13 @@
     }
     .dashboard-sidebar {
       position: sticky;
-      top: 96px;
+      top: 88px;
+      min-height: calc(100vh - 112px);
+      display: flex;
+      flex-direction: column;
       border-radius: 22px;
       overflow: hidden;
-      background: linear-gradient(180deg, #111827, #172554);
+      background: linear-gradient(180deg, #252525, #5f6062 70%, #8d1534);
       color: white;
       box-shadow: 0 18px 48px rgba(15,23,42,.16);
     }
@@ -385,7 +411,7 @@
     .sidebar-mark {
       width: 42px; height: 42px; border-radius: 14px;
       display:grid; place-items:center;
-      background: linear-gradient(135deg, #8179ff, #4f46e5);
+      background: linear-gradient(135deg, #ef174c, #c50f3d);
       color: white;
       flex-shrink: 0;
     }
@@ -419,6 +445,7 @@
       box-shadow: none;
       padding: 1rem;
       gap: .45rem;
+      flex: 1;
     }
     .admin-tabs .nav-link {
       border: 0;
@@ -439,7 +466,7 @@
     .admin-tabs .nav-link.active {
       background: var(--app-primary);
       color: white;
-      box-shadow: 0 10px 24px rgba(79,70,229,.24);
+      box-shadow: 0 10px 24px rgba(239,23,76,.24);
     }
     .dashboard-sidebar .admin-tabs .nav-link.active {
       background: rgba(255,255,255,.15);
@@ -451,6 +478,43 @@
       width: 1.25rem;
       text-align: center;
     }
+    .sidebar-help {
+      margin: auto 1rem 1rem;
+      padding: 1rem;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 16px;
+      background: rgba(255,255,255,.08);
+    }
+    .sidebar-help .btn { border-radius: 10px; font-weight: 750; }
+    .dashboard-welcome {
+      border: 1px solid var(--app-border);
+      border-radius: 18px;
+      background: linear-gradient(110deg,#fff 0%,#fff7f9 100%);
+      padding: 1.15rem 1.3rem;
+      box-shadow: 0 8px 24px rgba(30,41,59,.045);
+    }
+    .vendor-view-tabs {
+      gap: .35rem;
+      border-bottom: 1px solid var(--app-border);
+      padding: 0 .2rem;
+    }
+    .vendor-view-tabs .nav-link {
+      border: 0;
+      border-bottom: 3px solid transparent;
+      border-radius: 10px 10px 0 0;
+      color: var(--app-muted);
+      font-weight: 800;
+      padding: .8rem 1.15rem;
+    }
+    .vendor-view-tabs .nav-link:hover { color: var(--app-primary); }
+    .vendor-view-tabs .nav-link.active {
+      color: var(--app-primary);
+      background: #fff0f4;
+      border-bottom-color: var(--app-primary);
+    }
+    .recipient-dropdown-menu { max-height: 22rem; overflow-y: auto; }
+    .recipient-dropdown-menu .recipient-search-wrap { position: sticky; top: 0; z-index: 2; background: #fff; }
+    .recipient-option { white-space: normal; line-height: 1.35; }
     .dashboard-sidebar .admin-tabs .nav-link span {
       min-width: 0;
       overflow-wrap: anywhere;
@@ -486,6 +550,10 @@
       width: 100% !important;
       height: 100% !important;
     }
+    #budgetPanel .sidebar-card > .card-header { padding-bottom: .75rem !important; }
+    #budgetPanel .vendor-view-tabs { margin-top: .75rem !important; }
+    #budgetAnalyticsPanel .chart-card { min-height: 250px; }
+    #budgetAnalyticsPanel .chart-frame { height: 190px; }
     .location-button {
       border: 0;
       background: transparent;
@@ -519,7 +587,7 @@
     .error-icon {
       width: 52px; height: 52px; border-radius: 18px;
       display: grid; place-items: center;
-      background: #ffe4e9; color: #dc2626;
+      background: #ffe4eb; color: #ef174c;
       box-shadow: inset 0 0 0 1px #fecdd3;
       flex-shrink: 0;
     }
@@ -559,7 +627,7 @@
       .navbar-user { display:none; }
       .sidebar-card { position: static; }
       .dashboard-layout { grid-template-columns: 1fr; }
-      .dashboard-sidebar { position: static; border-radius: 18px; }
+      .dashboard-sidebar { position: static; min-height: auto; border-radius: 18px; }
       .sort-control { width: 100%; justify-content: space-between; }
       .sort-select-wrap { flex: 1; min-width: 0; }
     }
@@ -587,7 +655,7 @@
       </div>
       <div class="navbar-user text-end">
         <div class="text-white small fw-semibold">{{ current_user.full_name }}</div>
-        <div class="text-white-50" style="font-size:.75rem">{{ current_user.company_name or app_name }} · {{ current_user.role|title }}</div>
+        <div class="text-white-50" style="font-size:.75rem">{{ current_user.company_name or app_name }} · {{ ('Vendor' if current_user.role == 'operator' else current_user.role|title)|tr }}</div>
       </div>
       {% if current_user.last_login_latitude is not none and current_user.last_login_longitude is not none %}
       <a class="btn btn-sm btn-outline-light rounded-3 d-none d-lg-inline-flex align-items-center gap-1" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ current_user.last_login_latitude }},{{ current_user.last_login_longitude }}">
@@ -603,7 +671,7 @@
           {% endif %}
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 mt-2">
-          <li><span class="dropdown-item-text"><strong>{{ current_user.full_name }}</strong><br><small class="text-secondary">{{ current_user.company_name or app_name }} · {{ current_user.role|title }}</small></span></li>
+          <li><span class="dropdown-item-text"><strong>{{ current_user.full_name }}</strong><br><small class="text-secondary">{{ current_user.company_name or app_name }} · {{ ('Vendor' if current_user.role == 'operator' else current_user.role|title)|tr }}</small></span></li>
           <li><hr class="dropdown-divider"></li>
           <li>
             <form method="post" action="/logout">
@@ -617,14 +685,20 @@
 </nav>
 
 <main class="container-fluid page-shell p-3 p-lg-4">
+  {% if current_user.role != 'admin' %}
   <section class="hero-panel p-4 p-lg-5 mb-4">
     <div class="row align-items-center g-4">
       <div class="col-lg-8">
         <span class="badge rounded-pill bg-white bg-opacity-25 mb-3">
-          <i class="bi bi-shield-check me-1"></i>{{ current_user.role|title }} {{ 'access'|tr }}
+          <i class="bi bi-shield-check me-1"></i>{{ ('Vendor' if current_user.role == 'operator' else current_user.role|title)|tr }} {{ 'access'|tr }}
         </span>
         <h1 class="display-6 fw-bold mb-2">{{ 'GA Dashboard'|tr }}</h1>
-        <p class="mb-0 text-white-50 fs-5">{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}</p>
+        <div class="hero-ticker" role="marquee" aria-label="{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}">
+          <div class="hero-ticker-track">
+            <span>{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}</span>
+            <span aria-hidden="true">{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}</span>
+          </div>
+        </div>
       </div>
       {% if current_user.role in ['admin','operator'] %}
       <div class="col-lg-4 text-lg-end">
@@ -635,6 +709,7 @@
       {% endif %}
     </div>
   </section>
+  {% endif %}
 
   {% if current_user.role == 'admin' %}
   <section class="dashboard-layout mb-4">
@@ -648,13 +723,13 @@
       </div>
       <div class="nav nav-pills admin-tabs flex-column" id="adminDashboardTabs" role="tablist">
         <button class="nav-link active" id="shipping-tab" data-bs-toggle="pill" data-bs-target="#shippingPanel" type="button" role="tab" aria-controls="shippingPanel" aria-selected="true">
-          <i class="bi bi-box-seam"></i><span>{{ 'Shipping'|tr }}</span>
+          <i class="bi bi-grid-fill"></i><span>{{ 'Dashboard'|tr }}</span>
         </button>
         <button class="nav-link" id="budget-tab" data-bs-toggle="pill" data-bs-target="#budgetPanel" type="button" role="tab" aria-controls="budgetPanel" aria-selected="false">
           <i class="bi bi-wallet2"></i><span>{{ 'Monthly budget'|tr }}</span>
         </button>
-        <button class="nav-link" id="operators-tab" data-bs-toggle="pill" data-bs-target="#operatorsPanel" type="button" role="tab" aria-controls="operatorsPanel" aria-selected="false">
-          <i class="bi bi-person-workspace"></i><span>{{ 'Operators'|tr }}</span>
+        <button class="nav-link" id="vendors-tab" data-bs-toggle="pill" data-bs-target="#vendorsPanel" type="button" role="tab" aria-controls="vendorsPanel" aria-selected="false">
+          <i class="bi bi-buildings"></i><span>{{ 'Vendors'|tr }}</span>
         </button>
         <button class="nav-link" id="locations-tab" data-bs-toggle="pill" data-bs-target="#locationsPanel" type="button" role="tab" aria-controls="locationsPanel" aria-selected="false">
           <i class="bi bi-geo-alt"></i><span>{{ 'Locations'|tr }}</span>
@@ -663,10 +738,27 @@
           <i class="bi bi-people"></i><span>{{ 'Admin'|tr }}</span>
         </button>
       </div>
+      <div class="sidebar-help">
+        <div class="fw-bold mb-1"><i class="bi bi-headset me-2"></i>{{ 'Need help?'|tr }}</div>
+        <div class="small text-white-50 mb-3">{{ 'Contact the administrator if you have access or shipment questions.'|tr }}</div>
+        <form method="post" action="/logout"><button class="btn btn-sm btn-light w-100" type="submit"><i class="bi bi-box-arrow-right me-2"></i>{{ 'Logout'|tr }}</button></form>
+      </div>
     </aside>
     <div class="dashboard-content min-w-0">
   <div class="tab-content" id="adminDashboardTabContent">
     <div class="tab-pane fade show active" id="shippingPanel" role="tabpanel" aria-labelledby="shipping-tab" tabindex="0">
+  {% endif %}
+
+  {% if current_user.role == 'admin' %}
+  <div class="dashboard-welcome d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div><h3 class="fw-bold mb-1">{{ 'Welcome'|tr }}, {{ current_user.full_name }} 👋</h3><div class="muted">{{ 'Monitor employee shipment activity in real time.'|tr }}</div></div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createShipmentModal"><i class="bi bi-plus-circle me-2"></i>{{ 'Create shipment'|tr }}</button>
+  </div>
+  <div class="nav nav-tabs vendor-view-tabs mb-3" role="tablist">
+    <button class="nav-link active" id="shipping-data-tab" data-bs-toggle="tab" data-bs-target="#shippingDataPanel" type="button" role="tab"><i class="bi bi-table me-2"></i>{{ 'Shipping data'|tr }}</button>
+    <button class="nav-link" id="shipping-analytics-tab" data-bs-toggle="tab" data-bs-target="#shippingAnalyticsPanel" type="button" role="tab"><i class="bi bi-graph-up-arrow me-2"></i>{{ 'Shipping analytics'|tr }}</button>
+  </div>
+  <div class="tab-content"><div class="tab-pane fade show active" id="shippingDataPanel" role="tabpanel" aria-labelledby="shipping-data-tab">
   {% endif %}
 
   <section class="row g-3 mb-4">
@@ -848,6 +940,14 @@
 
     {% if current_user.role == 'admin' %}
     </div>
+    <div class="tab-pane fade" id="shippingAnalyticsPanel" role="tabpanel" aria-labelledby="shipping-analytics-tab">
+      <section class="card surface-card sidebar-card"><div class="card-header bg-white border-0 p-3 p-lg-4"><h5 class="fw-bold mb-1">{{ 'Shipping analytics'|tr }}</h5><div class="muted small">{{ 'Monthly and yearly shipment delivery performance.'|tr }}</div></div><div class="card-body pt-0"><div class="row g-3">
+        <div class="col-lg-4"><div class="chart-card h-100"><div class="fw-semibold mb-2">{{ 'Delivery status'|tr }} · {{ shipment_chart_data.selectedYear }}</div><div class="chart-frame"><canvas id="shipmentDeliveryPieChart"></canvas></div></div></div>
+        <div class="col-lg-8"><div class="chart-card h-100"><div class="fw-semibold mb-2">{{ 'Monthly sent and delivered items'|tr }}</div><div class="chart-frame"><canvas id="shipmentMonthlyTimelineChart"></canvas></div></div></div>
+        <div class="col-12"><div class="chart-card"><div class="fw-semibold mb-2">{{ 'Yearly sent and delivered items'|tr }}</div><div class="chart-frame"><canvas id="shipmentYearlyTimelineChart"></canvas></div></div></div>
+      </div></div></section>
+    </div></div>
+    </div>
     <div class="tab-pane fade" id="budgetPanel" role="tabpanel" aria-labelledby="budget-tab" tabindex="0">
       <section class="row g-4 align-items-start">
     <aside class="col-12">
@@ -860,8 +960,13 @@
             </div>
             <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></span>
           </div>
+          <div class="nav nav-tabs vendor-view-tabs mt-3" role="tablist">
+            <button class="nav-link active" id="budget-data-tab" type="button" aria-selected="true">{{ 'Budget data'|tr }}</button>
+            <button class="nav-link" id="budget-analytics-tab" type="button" aria-selected="false">{{ 'Budget analytics'|tr }}</button>
+          </div>
         </div>
         <div class="card-body pt-0">
+          <div id="budgetDataPanel" role="tabpanel">
           <div class="row g-4">
             <div class="col-lg-4">
           <form method="get" action="/" class="mb-3">
@@ -875,12 +980,13 @@
 
           <form method="post" action="/budgets/set" class="vstack gap-2 mb-3">
             <input type="hidden" name="month" value="{{ budget_month }}">
-            <label class="form-label fw-semibold">{{ 'Admin monthly budget'|tr }}</label>
+            <label class="form-label fw-semibold">{{ 'Monthly budget total'|tr }}</label>
             <div class="input-group">
               <span class="input-group-text">Rp</span>
-              <input class="form-control" name="amount" type="number" min="0" step="1000" value="{{ '{:.0f}'.format(budget_amount) }}">
+              <input class="form-control" name="amount" type="number" min="1" step="1000" value="{{ '{:.0f}'.format(budget_amount) }}">
             </div>
-            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-2"></i>{{ 'Set budget'|tr }}</button>
+            {% if monthly_budget %}<div class="small muted">{{ 'Enter a new total greater than the current monthly budget.'|tr }}</div>{% endif %}
+            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-2"></i>{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</button>
           </form>
 
           <div class="row g-2 mb-3">
@@ -948,28 +1054,75 @@
             {% endfor %}
           </div>
 
-          <div>
-            <div class="fw-bold mb-2">{{ 'Recent items'|tr }}</div>
-            {% for item in purchase_items[:5] %}
-            <div class="budget-item-row small">
-              <div class="d-flex justify-content-between gap-2">
-                <strong class="text-truncate">{{ item.item_name }}</strong>
-                <span class="fw-semibold">Rp {{ "{:,.0f}".format(item.amount) }}</span>
-              </div>
-              <div class="muted">{{ item.category }} · {{ item.created_at.strftime('%d %b %Y') }}</div>
-              {% if item.note %}<div class="muted">{{ item.note }}</div>{% endif %}
+          <div class="budget-stat"><span class="small muted">{{ 'Purchase items'|tr }}</span><strong>{{ purchase_items|length }}</strong></div>
             </div>
-            {% else %}
-            <div class="text-center py-3 muted">
-              <i class="bi bi-bag display-6"></i>
-              <div class="small mt-2">{{ 'No purchase items yet.'|tr }}</div>
+          </div>
+          <div class="border-top pt-4 mt-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div><div class="fw-bold">{{ 'Annual budget summary'|tr }} · {{ annual_budget_summary.year }}</div><div class="small muted">{{ 'Calculated automatically from all twelve monthly budgets.'|tr }}</div></div><span class="category-pill"><i class="bi bi-calendar-range"></i>{{ annual_budget_summary.year }}</span></div>
+            <div class="row g-2 mb-3">
+              <div class="col-md-4"><div class="budget-stat"><span class="small muted">{{ 'Annual budget'|tr }}</span><strong>Rp {{ "{:,.0f}".format(annual_budget_summary.budget) }}</strong></div></div>
+              <div class="col-md-4"><div class="budget-stat"><span class="small muted">{{ 'Annual spending'|tr }}</span><strong>Rp {{ "{:,.0f}".format(annual_budget_summary.spent) }}</strong></div></div>
+              <div class="col-md-4"><div class="budget-stat"><span class="small muted">{{ 'Annual remaining'|tr }}</span><strong class="{{ 'text-danger' if annual_budget_summary.remaining < 0 else 'text-success' }}">Rp {{ "{:,.0f}".format(annual_budget_summary.remaining) }}</strong></div></div>
+            </div>
+            <details>
+              <summary class="fw-semibold text-primary">{{ 'View monthly annual breakdown'|tr }}</summary>
+              <div class="table-responsive mt-3"><table class="table table-sm align-middle"><thead><tr><th>{{ 'Month'|tr }}</th><th>{{ 'Budget'|tr }}</th><th>{{ 'Spent'|tr }}</th><th>{{ 'Remaining'|tr }}</th><th class="text-end">{{ 'Action'|tr }}</th></tr></thead><tbody>
+                {% for row in annual_budget_summary.months %}<tr><td>{{ row.label }}</td><td>Rp {{ "{:,.0f}".format(row.budget) }}</td><td>Rp {{ "{:,.0f}".format(row.spent) }}</td><td class="{{ 'text-danger' if row.remaining < 0 else '' }}">Rp {{ "{:,.0f}".format(row.remaining) }}</td><td class="text-end">{% if row.budget > 0 %}<button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#editBudget{{ row.month }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button>{% else %}<span class="muted">-</span>{% endif %}</td></tr>{% endfor %}
+              </tbody></table></div>
+            </details>
+            {% for row in annual_budget_summary.months %}{% if row.budget > 0 %}
+            <div class="modal fade budget-edit-modal" id="editBudget{{ row.month }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4"><form method="post" action="/budgets/edit"><div class="modal-header border-0"><div><div class="panel-kicker">{{ 'Edit monthly budget'|tr }}</div><h5 class="modal-title">{{ row.label }} {{ annual_budget_summary.year }}</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body pt-2"><input type="hidden" name="month" value="{{ row.month }}"><label class="form-label fw-semibold">{{ 'Corrected budget total'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required value="{{ '{:.0f}'.format(row.budget) }}"></div><div class="small muted mt-2">{{ 'Editing replaces the existing total without creating a duplicate month.'|tr }}</div></div><div class="modal-footer border-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save changes'|tr }}</button></div></form></div></div></div>
+            {% endif %}{% endfor %}
+          </div>
+          <div class="border-top pt-4 mt-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+              <div><div class="fw-bold">{{ 'Monthly purchase items'|tr }}</div><div class="small muted">{{ 'Search and filter every saved budget item.'|tr }}</div></div>
+              <span class="category-pill"><i class="bi bi-calendar3"></i>{{ budget_month }}</span>
+            </div>
+            <div class="row g-2 mb-3 budget-table-filters">
+              <div class="col-md-3"><select class="form-select" id="budgetSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="item">{{ 'Item name'|tr }}</option><option value="category">{{ 'Category'|tr }}</option><option value="amount">{{ 'Amount'|tr }}</option><option value="note">{{ 'Note'|tr }}</option><option value="date">{{ 'Date'|tr }}</option></select></div>
+              <div class="col-md-5"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="budgetTableSearch" placeholder="{{ 'Search budget items...'|tr }}"></div></div>
+              <div class="col-md-3"><select class="form-select" id="budgetCategoryFilter"><option value="">{{ 'All categories'|tr }}</option>{% for row in budget_category_totals %}<option value="{{ row.category|lower }}">{{ row.category }}</option>{% endfor %}</select></div>
+              <div class="col-md-1 d-grid"><button class="btn btn-soft" id="budgetFilterReset" type="button" title="{{ 'Reset filters'|tr }}"><i class="bi bi-arrow-counterclockwise"></i></button></div>
+            </div>
+            <div class="table-responsive">
+              <table class="table align-middle table-hover mb-0" id="budgetItemsTable">
+                <thead><tr><th>{{ 'Item name'|tr }}</th><th>{{ 'Category'|tr }}</th><th>{{ 'Amount'|tr }}</th><th>{{ 'Note'|tr }}</th><th>{{ 'Date'|tr }}</th><th class="text-end">{{ 'Action'|tr }}</th></tr></thead>
+                <tbody>
+                  {% for item in purchase_items %}
+                  <tr class="budget-item-table-row" data-item="{{ item.item_name|lower }}" data-category="{{ item.category|lower }}" data-amount="{{ item.amount }}" data-note="{{ (item.note or '')|lower }}" data-date="{{ item.created_at.strftime('%Y-%m-%d') }}">
+                    <td class="fw-semibold">{{ item.item_name }}</td><td><span class="category-pill"><i class="bi bi-tag"></i>{{ item.category }}</span></td><td class="fw-semibold">Rp {{ "{:,.0f}".format(item.amount) }}</td><td class="small muted">{{ item.note or '-' }}</td><td class="small">{{ item.created_at.strftime('%d %b %Y') }}</td><td class="text-end"><button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#editBudgetItem{{ item.id }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
+                  </tr>
+                  {% else %}
+                  <tr><td colspan="6" class="text-center empty-state"><i class="bi bi-bag display-6 text-secondary"></i><div class="small mt-2">{{ 'No purchase items yet.'|tr }}</div></td></tr>
+                  {% endfor %}
+                  <tr class="d-none" id="budgetFilterEmpty"><td colspan="6" class="text-center py-4 muted">{{ 'No items match the selected filters.'|tr }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            {% for item in purchase_items %}
+            <div class="modal fade budget-edit-modal" id="editBudgetItem{{ item.id }}" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4">
+                <form method="post" action="/budget-items/{{ item.id }}/edit">
+                  <div class="modal-header border-0"><div><div class="panel-kicker">{{ 'Edit purchase item'|tr }}</div><h5 class="modal-title">{{ item.item_name }}</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+                  <div class="modal-body pt-2 vstack gap-3">
+                    <div><label class="form-label fw-semibold">{{ 'Item name'|tr }}</label><input class="form-control" name="item_name" required value="{{ item.item_name }}"></div>
+                    <div><label class="form-label fw-semibold">{{ 'Category'|tr }}</label><input class="form-control" name="category" required list="budgetCategories" value="{{ item.category }}"></div>
+                    <div><label class="form-label fw-semibold">{{ 'Amount'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required value="{{ '{:.0f}'.format(item.amount) }}"></div></div>
+                    <div><label class="form-label fw-semibold">{{ 'Note'|tr }}</label><textarea class="form-control" name="note" rows="2">{{ item.note or '' }}</textarea></div>
+                  </div>
+                  <div class="modal-footer border-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save changes'|tr }}</button></div>
+                </form>
+              </div></div>
             </div>
             {% endfor %}
-          </div>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
+              <div class="d-flex align-items-center gap-2 small muted"><span id="budgetVisibleCount">{{ purchase_items|length }}</span> {{ 'matching items'|tr }}<select class="form-select form-select-sm" id="budgetPageSize" style="width:auto"><option value="5">5</option><option value="10" selected>10</option><option value="25">25</option></select><span>{{ 'per page'|tr }}</span></div>
+              <div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-soft" id="budgetPreviousPage" type="button"><i class="bi bi-chevron-left me-1"></i>{{ 'Previous'|tr }}</button><span class="small fw-semibold" id="budgetPageInfo">{{ 'Page'|tr }} 1 / 1</span><button class="btn btn-sm btn-soft" id="budgetNextPage" type="button">{{ 'Next'|tr }}<i class="bi bi-chevron-right ms-1"></i></button></div>
             </div>
           </div>
-          <hr class="my-4">
-          <div>
+          </div>
+          <div class="d-none pt-3" id="budgetAnalyticsPanel" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
               <div>
                 <div class="fw-bold">{{ 'Budget analytics'|tr }}</div>
@@ -1023,14 +1176,20 @@
 
       </section>
     </div>
-    <div class="tab-pane fade" id="operatorsPanel" role="tabpanel" aria-labelledby="operators-tab" tabindex="0">
+    <div class="tab-pane fade" id="vendorsPanel" role="tabpanel" aria-labelledby="vendors-tab" tabindex="0">
+      <div class="nav nav-tabs vendor-view-tabs mb-3" id="vendorViewTabs" role="tablist">
+        <button class="nav-link active" id="vendor-data-tab" data-bs-toggle="tab" data-bs-target="#vendorDataPanel" type="button" role="tab" aria-controls="vendorDataPanel" aria-selected="true"><i class="bi bi-table me-2"></i>{{ 'Vendor data'|tr }}</button>
+        <button class="nav-link" id="vendor-analytics-tab" data-bs-toggle="tab" data-bs-target="#vendorAnalyticsPanel" type="button" role="tab" aria-controls="vendorAnalyticsPanel" aria-selected="false"><i class="bi bi-graph-up-arrow me-2"></i>{{ 'Vendor analytics'|tr }}</button>
+      </div>
+      <div class="tab-content" id="vendorViewTabContent">
+      <div class="tab-pane fade show active" id="vendorDataPanel" role="tabpanel" aria-labelledby="vendor-data-tab" tabindex="0">
       <section class="row g-4 align-items-start">
         <aside class="col-12">
           <div class="card surface-card sidebar-card">
             <div class="card-header bg-white border-0 p-3 p-lg-4">
               <div class="d-flex align-items-center justify-content-between gap-3">
                 <div>
-                  <h5 class="fw-bold mb-1">{{ 'Active operators/vendors'|tr }}</h5>
+                  <h5 class="fw-bold mb-1">{{ 'Active vendors'|tr }}</h5>
                   <div class="muted small">{{ 'Monitor active senders and item totals.'|tr }}</div>
                 </div>
                 <span class="metric-icon bg-info-subtle text-info-emphasis"><i class="bi bi-person-workspace"></i></span>
@@ -1040,7 +1199,7 @@
               <div class="row g-3 mb-4">
                 <div class="col-sm-6 col-xl-3">
                   <div class="budget-stat">
-                    <span class="small muted">{{ 'Total active operators'|tr }}</span>
+                    <span class="small muted">{{ 'Total active vendors'|tr }}</span>
                     <strong>{{ operator_counts['active'] }}</strong>
                   </div>
                 </div>
@@ -1064,6 +1223,15 @@
                 </div>
               </div>
 
+              <div class="rounded-4 border bg-light p-3 mb-3" id="vendorFilterPanel">
+              <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><div class="fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>{{ 'Filter vendors'|tr }}</div><span class="small muted">{{ 'Search any vendor table field.'|tr }}</span></div>
+              <div class="row g-2">
+                <div class="col-md-3"><select class="form-select" id="vendorSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="vendor">{{ 'Vendor sender'|tr }}</option><option value="company">{{ 'Company'|tr }}</option><option value="sent">{{ 'Items sent'|tr }}</option><option value="delivered">{{ 'Delivered items'|tr }}</option><option value="progress">{{ 'In-progress items'|tr }}</option><option value="cost">{{ 'Shipping cost'|tr }}</option><option value="date">{{ 'Last sent'|tr }}</option></select></div>
+                <div class="col-md-5"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="vendorTableSearch" placeholder="{{ 'Search vendors...'|tr }}"></div></div>
+                <div class="col-md-3"><select class="form-select" id="vendorPerformanceFilter"><option value="">{{ 'All vendor activity'|tr }}</option><option value="has_shipments">{{ 'Has shipments'|tr }}</option><option value="delivered">{{ 'Has delivered items'|tr }}</option><option value="in_progress">{{ 'Has in-progress items'|tr }}</option><option value="no_shipments">{{ 'No shipments'|tr }}</option></select></div>
+                <div class="col-md-1 d-grid"><button class="btn btn-soft" id="vendorFilterReset" type="button" title="{{ 'Reset filters'|tr }}"><i class="bi bi-arrow-counterclockwise"></i></button></div>
+              </div>
+              </div>
               <div class="table-responsive">
                 <table class="table align-middle mb-0">
                   <thead>
@@ -1079,7 +1247,7 @@
                   </thead>
                   <tbody>
                     {% for row in operator_analytics %}
-                    <tr>
+                    <tr class="vendor-table-row" data-vendor="{{ (row.account.full_name ~ ' ' ~ row.account.username)|lower }}" data-company="{{ (row.account.company_name or app_name)|lower }}" data-sent="{{ row.items_sent }}" data-delivered="{{ row.delivered }}" data-progress="{{ row.in_progress }}" data-cost="{{ row.shipping_cost }}" data-date="{{ row.last_sent.strftime('%Y-%m-%d') if row.last_sent else '' }}">
                       <td>
                         <div class="d-flex align-items-center gap-2">
                           {% if row.account.avatar_url %}
@@ -1107,18 +1275,57 @@
                     <tr>
                       <td colspan="7" class="text-center empty-state">
                         <i class="bi bi-person-workspace display-5 text-secondary"></i>
-                        <h5 class="mt-3">{{ 'No active operators yet.'|tr }}</h5>
+                        <h5 class="mt-3">{{ 'No active vendors yet.'|tr }}</h5>
                         <p class="muted mb-0">{{ 'Create accounts with existing roles.'|tr }}</p>
                       </td>
                     </tr>
                     {% endfor %}
+                    <tr class="d-none" id="vendorFilterEmpty"><td colspan="7" class="text-center py-4 muted">{{ 'No vendors match the selected filters.'|tr }}</td></tr>
                   </tbody>
                 </table>
+              </div>
+              <div class="small muted mt-2"><span id="vendorVisibleCount">{{ operator_analytics|length }}</span> {{ 'matching vendors'|tr }}</div>
+            </div>
+          </div>
+        </aside>
+      </section>
+      </div>
+    <div class="tab-pane fade" id="vendorAnalyticsPanel" role="tabpanel" aria-labelledby="vendor-analytics-tab" tabindex="0">
+      <section class="row g-4 align-items-start">
+        <aside class="col-12">
+          <div class="card surface-card sidebar-card">
+            <div class="card-header bg-white border-0 p-3 p-lg-4">
+              <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
+                <div>
+                  <h5 class="fw-bold mb-1">{{ 'Shipment delivery analytics'|tr }}</h5>
+                  <div class="muted small">{{ 'Compare items sent and delivered across months, years, and vendors.'|tr }}</div>
+                </div>
+                <form method="get" action="/#vendorAnalyticsPanel" class="d-flex align-items-end gap-2">
+                  <input type="hidden" name="sort" value="{{ sort }}">
+                  <input type="hidden" name="budget_month" value="{{ budget_month }}">
+                  <div>
+                    <label class="form-label small fw-semibold mb-1" for="analyticsYear">{{ 'Analytics year'|tr }}</label>
+                    <select class="form-select form-select-sm" id="analyticsYear" name="analytics_year">
+                      {% for year in shipment_chart_data.availableYears %}
+                      <option value="{{ year }}" {{ 'selected' if year == shipment_chart_data.selectedYear else '' }}>{{ year }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel me-1"></i>{{ 'Apply'|tr }}</button>
+                </form>
+              </div>
+            </div>
+            <div class="card-body pt-0">
+              <div class="row g-3">
+                <div class="col-lg-4"><div class="chart-card h-100"><div class="fw-semibold mb-1">{{ 'Items sent by vendor'|tr }} · {{ shipment_chart_data.selectedYear }}</div><div class="small muted mb-2">{{ 'Share of shipment volume assigned to each active vendor.'|tr }}</div><div class="chart-frame"><canvas id="vendorShipmentPieChart"></canvas></div></div></div>
+                <div class="col-lg-8"><div class="chart-card h-100"><div class="fw-semibold mb-1">{{ 'Vendor delivery performance'|tr }} · {{ shipment_chart_data.selectedYear }}</div><div class="small muted mb-2">{{ 'Compare sent and delivered item totals for every active vendor.'|tr }}</div><div class="chart-frame"><canvas id="vendorPerformanceChart"></canvas></div></div></div>
               </div>
             </div>
           </div>
         </aside>
       </section>
+    </div>
+      </div>
     </div>
     <div class="tab-pane fade" id="locationsPanel" role="tabpanel" aria-labelledby="locations-tab" tabindex="0">
       <section class="row g-4 align-items-start">
@@ -1134,6 +1341,11 @@
               </div>
             </div>
             <div class="card-body pt-0">
+              <div class="nav nav-tabs vendor-view-tabs mb-3" role="tablist">
+                <button class="nav-link active" id="location-data-tab" data-bs-toggle="tab" data-bs-target="#locationDataPanel" type="button">{{ 'Location data'|tr }}</button>
+                <button class="nav-link" id="location-analytics-tab" data-bs-toggle="tab" data-bs-target="#locationAnalyticsPanel" type="button">{{ 'Location analytics'|tr }}</button>
+              </div>
+              <div class="tab-content"><div class="tab-pane fade show active" id="locationDataPanel" role="tabpanel">
               <div class="row g-4">
                 <div class="col-lg-4">
                   <form method="post" action="/locations/create" class="vstack gap-3">
@@ -1188,6 +1400,15 @@
                 </div>
                 <div class="col-lg-8">
                   <div class="fw-bold mb-3">{{ 'Saved locations'|tr }}</div>
+                  <div class="rounded-4 border bg-light p-3 mb-3" id="locationFilterPanel">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><div class="fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>{{ 'Filter locations'|tr }}</div><span class="small muted">{{ 'Search any location table field.'|tr }}</span></div>
+                    <div class="row g-2">
+                      <div class="col-md-3"><select class="form-select" id="locationSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="company">{{ 'Company'|tr }}</option><option value="branch">{{ 'Branch name'|tr }}</option><option value="address">{{ 'Full address'|tr }}</option><option value="city">{{ 'City'|tr }}</option><option value="state">{{ 'Province'|tr }}</option><option value="postcode">{{ 'Postal code'|tr }}</option><option value="country">{{ 'Country'|tr }}</option></select></div>
+                      <div class="col-md-5"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="locationTableSearch" placeholder="{{ 'Search locations...'|tr }}"></div></div>
+                      <div class="col-md-3"><select class="form-select" id="locationCompletenessFilter"><option value="">{{ 'All location records'|tr }}</option><option value="complete">{{ 'Complete postal data'|tr }}</option><option value="missing_postcode">{{ 'Missing postal code'|tr }}</option></select></div>
+                      <div class="col-md-1 d-grid"><button class="btn btn-soft" id="locationFilterReset" type="button" title="{{ 'Reset filters'|tr }}"><i class="bi bi-arrow-counterclockwise"></i></button></div>
+                    </div>
+                  </div>
                   <div class="table-responsive">
                     <table class="table align-middle mb-0">
                       <thead>
@@ -1200,7 +1421,7 @@
                       </thead>
                       <tbody>
                         {% for location in company_locations %}
-                        <tr>
+                        <tr class="location-table-row" data-company="{{ location.company_name|lower }}" data-branch="{{ location.branch_name|lower }}" data-address="{{ location.address|lower }}" data-city="{{ (location.city or '')|lower }}" data-state="{{ (location.state or '')|lower }}" data-postcode="{{ (location.postcode or '')|lower }}" data-country="{{ (location.country or '')|lower }}">
                           <td class="fw-semibold">{{ location.company_name }}</td>
                           <td>{{ location.branch_name }}</td>
                           <td class="small">{{ location.address }}{% if location.city %}, {{ location.city }}{% endif %}{% if location.state %}, {{ location.state }}{% endif %}{% if location.country %}, {{ location.country }}{% endif %}</td>
@@ -1215,11 +1436,17 @@
                           </td>
                         </tr>
                         {% endfor %}
+                        <tr class="d-none" id="locationFilterEmpty"><td colspan="4" class="text-center py-4 muted">{{ 'No locations match the selected filters.'|tr }}</td></tr>
                       </tbody>
                     </table>
                   </div>
+                  <div class="small muted mt-2"><span id="locationVisibleCount">{{ company_locations|length }}</span> {{ 'matching locations'|tr }}</div>
                 </div>
               </div>
+              </div><div class="tab-pane fade" id="locationAnalyticsPanel" role="tabpanel"><div class="row g-3">
+                <div class="col-lg-6"><div class="chart-card"><div class="fw-semibold mb-2">{{ 'Top shipment origins'|tr }}</div><div class="chart-frame"><canvas id="locationOriginChart"></canvas></div></div></div>
+                <div class="col-lg-6"><div class="chart-card"><div class="fw-semibold mb-2">{{ 'Top shipment destinations'|tr }}</div><div class="chart-frame"><canvas id="locationDestinationChart"></canvas></div></div></div>
+              </div></div></div>
             </div>
           </div>
         </aside>
@@ -1239,16 +1466,31 @@
           </div>
         </div>
         <div class="card-body pt-0">
+          <div class="nav nav-tabs vendor-view-tabs mb-3" role="tablist">
+            <button class="nav-link active" id="admin-data-tab" data-bs-toggle="tab" data-bs-target="#adminDataPanel" type="button">{{ 'Account data'|tr }}</button>
+            <button class="nav-link" id="admin-analytics-tab" data-bs-toggle="tab" data-bs-target="#adminAnalyticsPanel" type="button">{{ 'Account analytics'|tr }}</button>
+          </div>
+          <div class="tab-content"><div class="tab-pane fade show active" id="adminDataPanel" role="tabpanel">
+          <div class="rounded-4 border bg-light p-3 mb-3" id="adminFilterPanel">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><div class="fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>{{ 'Filter accounts'|tr }}</div><span class="small muted">{{ 'Search any account field.'|tr }}</span></div>
+            <div class="row g-2">
+              <div class="col-xl-2 col-md-4"><select class="form-select" id="adminSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="name">{{ 'Full name'|tr }}</option><option value="username">{{ 'Username'|tr }}</option><option value="company">{{ 'Company'|tr }}</option><option value="role">{{ 'Role'|tr }}</option><option value="status">{{ 'Status'|tr }}</option><option value="location">{{ 'Login location'|tr }}</option></select></div>
+              <div class="col-xl-4 col-md-8"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="adminTableSearch" placeholder="{{ 'Search accounts...'|tr }}"></div></div>
+              <div class="col-xl-2 col-md-5"><select class="form-select" id="adminRoleFilter"><option value="">{{ 'All roles'|tr }}</option><option value="admin">Admin</option><option value="operator">{{ 'Vendor'|tr }}</option><option value="employee">Employee</option></select></div>
+              <div class="col-xl-3 col-md-5"><select class="form-select" id="adminStatusFilter"><option value="">{{ 'All account statuses'|tr }}</option><option value="active">{{ 'Active'|tr }}</option><option value="inactive">{{ 'Inactive'|tr }}</option></select></div>
+              <div class="col-xl-1 col-md-2 d-grid"><button class="btn btn-soft" id="adminFilterReset" type="button" title="{{ 'Reset filters'|tr }}"><i class="bi bi-arrow-counterclockwise"></i></button></div>
+            </div>
+          </div>
           <div class="row g-4">
             <div class="col-lg-4">
           <form method="post" action="/users/create" id="createUserForm" class="vstack gap-3">
             <div>
               <label class="form-label fw-semibold">{{ 'Username'|tr }}</label>
-              <input class="form-control" name="username" required placeholder="new.operator">
+              <input class="form-control" name="username" required placeholder="new.vendor">
             </div>
             <div>
               <label class="form-label fw-semibold">{{ 'Full name'|tr }}</label>
-              <input class="form-control" name="full_name" required placeholder="New Operator">
+              <input class="form-control" name="full_name" required placeholder="New Vendor">
             </div>
             <div>
               <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
@@ -1262,7 +1504,7 @@
               <label class="form-label fw-semibold">{{ 'Role'|tr }}</label>
               <select class="form-select" name="role" id="newUserRole" required>
                 {% for role in user_roles %}
-                <option value="{{ role }}">{{ role|title }}</option>
+                <option value="{{ role }}">{{ ('Vendor' if role == 'operator' else role|title)|tr }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -1271,9 +1513,17 @@
               <select class="form-select" name="employee_id">
                 <option value="">{{ 'Choose employee'|tr }}</option>
                 {% for e in employees %}
-                <option value="{{ e.id }}" {{ 'disabled' if e.id in assigned_employee_ids else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{{ ' (has account)' if e.id in assigned_employee_ids else '' }}</option>
+                <option value="{{ e.id }}" {{ 'disabled' if e.id in assigned_employee_ids else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{% if e.vendor_id and vendors_by_id.get(e.vendor_id) %} · {{ 'Vendor'|tr }}: {{ vendors_by_id[e.vendor_id].full_name }}{% endif %}{{ ' (has account)' if e.id in assigned_employee_ids else '' }}</option>
                 {% endfor %}
               </select>
+            </div>
+            <div id="vendorAllocationGroup" class="d-none rounded-4 border bg-light p-3">
+              <div class="fw-semibold mb-2">{{ 'Employee allocation'|tr }}</div>
+              <div class="row g-2">
+                <div class="col-6"><label class="form-label small fw-semibold">{{ 'Minimum employees'|tr }}</label><input class="form-control" name="min_employee_allocation" type="number" min="1" max="500" value="1"></div>
+                <div class="col-6"><label class="form-label small fw-semibold">{{ 'Maximum employees'|tr }}</label><input class="form-control" name="max_employee_allocation" type="number" min="1" max="500" value="10"></div>
+              </div>
+              <div class="small muted mt-2">{{ 'Available employee slots are created from the minimum allocation.'|tr }}</div>
             </div>
             <div>
               <label class="form-label fw-semibold">{{ 'Temporary password'|tr }}</label>
@@ -1291,52 +1541,32 @@
             </div>
 
             <div class="col-lg-8">
-          <hr class="my-4 d-lg-none">
-          <div class="vstack">
-            {% for account in users %}
-            <div class="user-row">
-              <div class="d-flex align-items-start gap-2">
-                {% if account.avatar_url %}
-                <img class="avatar" src="{{ account.avatar_url }}" alt="{{ account.full_name }}">
-                {% else %}
-                <span class="avatar">{{ account.full_name[:1]|upper }}</span>
-                {% endif %}
-                <div class="min-w-0 flex-grow-1">
-                  <div class="fw-semibold text-truncate">{{ account.full_name }}</div>
-                  <div class="small muted text-truncate">@{{ account.username }}</div>
-                  <div class="small text-secondary text-truncate"><i class="bi bi-building me-1"></i>{{ account.company_name or app_name }}</div>
-                  <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
-                    <span class="role-chip role-{{ account.role }}">{{ account.role }}</span>
-                    <span class="small {{ 'text-success' if account.is_active else 'text-secondary' }}">{{ ('Active' if account.is_active else 'Inactive')|tr }}</span>
-                  </div>
-                  <button type="button" class="btn btn-sm btn-soft mt-3" data-bs-toggle="modal" data-bs-target="#editUserModal{{ account.id }}">
-                    <i class="bi bi-pencil-square me-1"></i>{{ 'Edit account'|tr }}
-                  </button>
-                  {% if account.last_login_latitude is not none and account.last_login_longitude is not none %}
-                  <div class="small mt-2">
-                    <a class="fw-semibold text-decoration-none d-inline-flex align-items-center gap-1" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ account.last_login_latitude }},{{ account.last_login_longitude }}">
-                      <i class="bi bi-geo-alt"></i>{{ account.last_login_road or account.last_login_neighbourhood or account.last_login_city or 'View map' }}
-                    </a>
-                    <div class="muted mt-1">{{ account.last_login_address or ('%.5f, %.5f'|format(account.last_login_latitude, account.last_login_longitude)) }}</div>
-                    {% if account.last_login_city or account.last_login_state or account.last_login_postcode %}
-                    <div class="muted">{{ account.last_login_city or '-' }}{% if account.last_login_state %}, {{ account.last_login_state }}{% endif %}{% if account.last_login_postcode %} {{ account.last_login_postcode }}{% endif %}</div>
-                    {% endif %}
-                  </div>
-                  {% else %}
-                  <div class="small muted mt-2"><i class="bi bi-geo-alt me-1"></i>No login location</div>
-                  {% endif %}
-                </div>
+              <hr class="my-4 d-lg-none">
+              <div class="table-responsive">
+                <table class="table align-middle table-hover mb-0" id="adminAccountsTable">
+                  <thead><tr><th>{{ 'Account'|tr }}</th><th>{{ 'Company'|tr }}</th><th>{{ 'Role'|tr }}</th><th>{{ 'Status'|tr }}</th><th>{{ 'Login location'|tr }}</th><th class="text-end">{{ 'Action'|tr }}</th></tr></thead>
+                  <tbody>
+                    {% for account in users %}
+                    <tr class="admin-account-row" data-name="{{ account.full_name|lower }}" data-username="{{ account.username|lower }}" data-company="{{ (account.company_name or app_name)|lower }}" data-role="{{ account.role }}" data-status="{{ 'active' if account.is_active else 'inactive' }}" data-location="{{ (account.last_login_address or account.last_login_road or account.last_login_city or '')|lower }}">
+                      <td><div class="d-flex align-items-center gap-2">{% if account.avatar_url %}<img class="avatar" src="{{ account.avatar_url }}" alt="{{ account.full_name }}">{% else %}<span class="avatar">{{ account.full_name[:1]|upper }}</span>{% endif %}<div><div class="fw-semibold">{{ account.full_name }}</div><div class="small muted">@{{ account.username }}</div></div></div></td>
+                      <td class="small">{{ account.company_name or app_name }}</td>
+                      <td><span class="role-chip role-{{ account.role }}">{{ ('Vendor' if account.role == 'operator' else account.role|title)|tr }}</span></td>
+                      <td><span class="badge rounded-pill {{ 'text-bg-success' if account.is_active else 'text-bg-secondary' }}">{{ ('Active' if account.is_active else 'Inactive')|tr }}</span></td>
+                      <td class="small">{% if account.last_login_latitude is not none and account.last_login_longitude is not none %}<a class="text-decoration-none d-inline-flex align-items-center gap-1" target="_blank" rel="noopener" href="https://www.google.com/maps?q={{ account.last_login_latitude }},{{ account.last_login_longitude }}"><i class="bi bi-geo-alt"></i>{{ account.last_login_road or account.last_login_city or ('View map'|tr) }}</a>{% else %}<span class="muted"><i class="bi bi-geo-alt me-1"></i>{{ 'No login location'|tr }}</span>{% endif %}</td>
+                      <td class="text-end"><button type="button" class="btn btn-sm btn-soft" data-bs-toggle="modal" data-bs-target="#editUserModal{{ account.id }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
+                    </tr>
+                    {% else %}<tr><td colspan="6" class="text-center empty-state"><i class="bi bi-person display-6 text-secondary"></i><div class="small mt-2">{{ 'No users yet.'|tr }}</div></td></tr>{% endfor %}
+                    <tr class="d-none" id="adminFilterEmpty"><td colspan="6" class="text-center py-4 muted">{{ 'No accounts match the selected filters.'|tr }}</td></tr>
+                  </tbody>
+                </table>
               </div>
-            </div>
-            {% else %}
-            <div class="text-center py-4 muted">
-              <i class="bi bi-person display-6"></i>
-              <div class="small mt-2">{{ 'No users yet.'|tr }}</div>
-            </div>
-            {% endfor %}
-          </div>
+              <div class="small muted mt-2"><span id="adminVisibleCount">{{ users|length }}</span> {{ 'matching accounts'|tr }}</div>
             </div>
           </div>
+          </div><div class="tab-pane fade" id="adminAnalyticsPanel" role="tabpanel"><div class="row g-3">
+            <div class="col-lg-6"><div class="chart-card"><div class="fw-semibold mb-2">{{ 'Accounts by role'|tr }}</div><div class="chart-frame"><canvas id="userRoleChart"></canvas></div></div></div>
+            <div class="col-lg-6"><div class="chart-card"><div class="fw-semibold mb-2">{{ 'Account status'|tr }}</div><div class="chart-frame"><canvas id="userStatusChart"></canvas></div></div></div>
+          </div></div></div>
         </div>
       </div>
     </aside>
@@ -1384,7 +1614,7 @@
               <label class="form-label fw-semibold">{{ 'Role'|tr }}</label>
               <select class="form-select edit-user-role" name="role" required>
                 {% for role in user_roles %}
-                <option value="{{ role }}" {{ 'selected' if account.role == role else '' }}>{{ role|title }}</option>
+                <option value="{{ role }}" {{ 'selected' if account.role == role else '' }}>{{ ('Vendor' if role == 'operator' else role|title)|tr }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -1394,9 +1624,17 @@
                 <option value="">{{ 'Choose employee'|tr }}</option>
                 {% for e in employees %}
                 {% set linked_to_other = e.id in assigned_employee_ids and account.employee_id != e.id %}
-                <option value="{{ e.id }}" {{ 'selected' if account.employee_id == e.id else '' }} {{ 'disabled' if linked_to_other else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{{ ' (has account)' if linked_to_other else '' }}</option>
+                <option value="{{ e.id }}" {{ 'selected' if account.employee_id == e.id else '' }} {{ 'disabled' if linked_to_other else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{% if e.vendor_id and vendors_by_id.get(e.vendor_id) %} · {{ 'Vendor'|tr }}: {{ vendors_by_id[e.vendor_id].full_name }}{% endif %}{{ ' (has account)' if linked_to_other else '' }}</option>
                 {% endfor %}
               </select>
+            </div>
+            <div class="edit-vendor-allocation-group rounded-4 border bg-light p-3">
+              <div class="fw-semibold mb-2">{{ 'Employee allocation'|tr }}</div>
+              <div class="row g-2">
+                <div class="col-6"><label class="form-label small fw-semibold">{{ 'Minimum employees'|tr }}</label><input class="form-control" name="min_employee_allocation" type="number" min="1" max="500" value="{{ account.min_employee_allocation or 1 }}"></div>
+                <div class="col-6"><label class="form-label small fw-semibold">{{ 'Maximum employees'|tr }}</label><input class="form-control" name="max_employee_allocation" type="number" min="1" max="500" value="{{ account.max_employee_allocation or 10 }}"></div>
+              </div>
+              {% if account.role == 'operator' %}<div class="small muted mt-2">{{ 'Increase the minimum to create more available employee slots.'|tr }}</div>{% endif %}
             </div>
             <div>
               <label class="form-label fw-semibold">{{ 'New password'|tr }}</label>
@@ -1443,17 +1681,28 @@
               <input class="form-control" value="{{ 'Auto generated after save'|tr }}" disabled>
               <div class="small muted mt-1">{{ 'Generated from shipment ID'|tr }}</div>
             </div>
-            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Item name'|tr }}</label><input class="form-control" name="title" required placeholder="Laptop, documents, samples"></div>
-            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Item type'|tr }}</label><input class="form-control" name="document_type" value="Item"></div>
+            <div class="col-md-5"><label class="form-label fw-semibold">{{ 'Item name'|tr }}</label><input class="form-control" name="title" id="shipmentTitleInput" required placeholder="{{ 'Filled automatically from a valid AWB'|tr }}"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Item type'|tr }}</label><input class="form-control" name="document_type" id="shipmentTypeInput" value="Item"></div>
             <div class="col-md-5">
               <label class="form-label fw-semibold">{{ 'Employee recipient'|tr }}</label>
-              <select class="form-select" name="recipient_user_id" required>
-                {% for account in recipient_accounts %}
-                <option value="{{ account.id }}">
-                  {{ account.full_name }} — {{ account.company_name or app_name }} · {{ account.role|title }}{% if account.employee %} · {{ account.employee.department }}{% endif %}
-                </option>
-                {% endfor %}
-              </select>
+              <input type="hidden" name="recipient_user_id" id="recipientUserId" value="{{ recipient_accounts[0].id if recipient_accounts else '' }}">
+              <div class="dropdown" id="recipientDropdown">
+                <button class="form-select text-start" type="button" id="recipientDropdownButton" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" {{ 'disabled' if not recipient_accounts else '' }}>
+                  {% if recipient_accounts %}{% set account = recipient_accounts[0] %}{{ account.full_name }} — {{ account.company_name or app_name }} · {{ ('Vendor' if account.role == 'operator' else account.role|title)|tr }}{% if account.employee %} · {{ account.employee.department }}{% endif %}{% else %}{{ 'No available recipients'|tr }}{% endif %}
+                </button>
+                <div class="dropdown-menu recipient-dropdown-menu w-100 p-2" aria-labelledby="recipientDropdownButton">
+                  <div class="recipient-search-wrap pb-2">
+                    <div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="recipientSearchInput" type="search" placeholder="{{ 'Search recipient...'|tr }}" autocomplete="off"></div>
+                  </div>
+                  <div id="recipientOptions">
+                    {% for account in recipient_accounts %}
+                    {% set recipient_label %}{{ account.full_name }} — {{ account.company_name or app_name }} · {{ ('Vendor' if account.role == 'operator' else account.role|title)|tr }}{% if account.employee %} · {{ account.employee.department }}{% endif %}{% endset %}
+                    <button class="dropdown-item rounded-3 recipient-option {{ 'active' if loop.first else '' }}" type="button" data-recipient-id="{{ account.id }}" data-recipient-search="{{ recipient_label|lower }}" data-recipient-label="{{ recipient_label|trim }}">{{ recipient_label }}</button>
+                    {% endfor %}
+                    <div class="dropdown-item-text text-center muted d-none" id="recipientSearchEmpty">{{ 'No recipients match your search.'|tr }}</div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Courier'|tr }}</label><select class="form-select" name="courier" id="courierSelect" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option></select></div>
             <div class="col-md-4">
@@ -1462,10 +1711,10 @@
                 <input class="form-control" name="awb" id="awbInput" required placeholder="Internal courier tracking number">
                 <button class="btn btn-soft" type="button" id="lookupAwbButton"><i class="bi bi-search me-1"></i>{{ 'Lookup'|tr }}</button>
               </div>
-              <div class="small muted mt-1" id="awbLookupStatus">{{ 'Lookup AWB to fill origin, destination, ETA, and shipping cost.'|tr }}</div>
+              <div class="small muted mt-1" id="awbLookupStatus">{{ 'Enter a valid AWB to automatically fill shipment details. All fields remain editable.'|tr }}</div>
             </div>
-            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Ticket number'|tr }}</label><input class="form-control" name="external_awb" placeholder="Ticket number"></div>
-            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'PO number'|tr }}</label><input class="form-control" name="po_number" placeholder="Purchase order number"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Ticket number'|tr }}</label><input class="form-control" name="external_awb" id="shipmentTicketInput" placeholder="Ticket number"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'PO number'|tr }}</label><input class="form-control" name="po_number" id="shipmentPoInput" placeholder="Purchase order number"></div>
             <div class="col-md-3">
               <label class="form-label fw-semibold">{{ 'Sender hashtags'|tr }}</label>
               <input class="form-control" name="sender_tags" value="{{ '#HO' if current_user.role == 'admin' else '#Vendor' }}" placeholder="#HO #Urgent">
@@ -1654,6 +1903,12 @@
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
+  <div id="budgetItemUpdatedToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex">
+      <div class="toast-body"><i class="bi bi-pencil-square me-2"></i>{{ 'Purchase item updated successfully.'|tr }}</div>
+      <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
   <div id="locationSavedToast" class="toast text-bg-success" role="alert">
     <div class="d-flex">
       <div class="toast-body"><i class="bi bi-geo-alt-fill me-2"></i>{{ 'Location saved successfully.'|tr }}</div>
@@ -1678,6 +1933,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
 <script>
   const i18n = {
+    page: {{ ('Page'|tr)|tojson }},
     chooseCourierAwb: {{ ('Choose courier and enter AWB first.'|tr)|tojson }},
     lookupLoading: {{ ('Looking up route from courier tracking...'|tr)|tojson }},
     lookupButton: {{ ('Lookup'|tr)|tojson }},
@@ -1698,14 +1954,49 @@
     searchingAddress: {{ ('Searching address...'|tr)|tojson }},
     noAddressSuggestions: {{ ('No address suggestions found.'|tr)|tojson }},
   };
+  document.querySelectorAll('.budget-edit-modal').forEach((modal) => document.body.appendChild(modal));
   const budgetChartData = {{ budget_chart_data|tojson if current_user.role == 'admin' else 'null' }};
+  const shipmentChartData = {{ shipment_chart_data|tojson if current_user.role == 'admin' else 'null' }};
+  const locationChartData = {{ location_chart_data|tojson if current_user.role == 'admin' else 'null' }};
+  const userChartData = {{ user_chart_data|tojson if current_user.role == 'admin' else 'null' }};
   const searchInput = document.getElementById('shipmentSearch');
   const dateSort = document.getElementById('dateSort');
   const table = document.getElementById('shipmentTable');
   const searchEmpty = document.getElementById('searchEmpty');
+  const budgetSearchField = document.getElementById('budgetSearchField');
+  const budgetTableSearch = document.getElementById('budgetTableSearch');
+  const budgetCategoryFilter = document.getElementById('budgetCategoryFilter');
+  const budgetFilterReset = document.getElementById('budgetFilterReset');
+  const budgetPageSize = document.getElementById('budgetPageSize');
+  const budgetPreviousPage = document.getElementById('budgetPreviousPage');
+  const budgetNextPage = document.getElementById('budgetNextPage');
+  const vendorSearchField = document.getElementById('vendorSearchField');
+  const vendorTableSearch = document.getElementById('vendorTableSearch');
+  const vendorPerformanceFilter = document.getElementById('vendorPerformanceFilter');
+  const vendorFilterReset = document.getElementById('vendorFilterReset');
+  const vendorsSidebarTab = document.getElementById('vendors-tab');
+  const locationsSidebarTab = document.getElementById('locations-tab');
+  const locationSearchField = document.getElementById('locationSearchField');
+  const locationTableSearch = document.getElementById('locationTableSearch');
+  const locationCompletenessFilter = document.getElementById('locationCompletenessFilter');
+  const locationFilterReset = document.getElementById('locationFilterReset');
+  const adminSidebarTab = document.getElementById('admin-tab');
+  const adminSearchField = document.getElementById('adminSearchField');
+  const adminTableSearch = document.getElementById('adminTableSearch');
+  const adminRoleFilter = document.getElementById('adminRoleFilter');
+  const adminStatusFilter = document.getElementById('adminStatusFilter');
+  const adminFilterReset = document.getElementById('adminFilterReset');
   const packageMapModal = document.getElementById('packageMapModal');
   const awbErrorModal = document.getElementById('awbErrorModal');
   const createShipmentModal = document.getElementById('createShipmentModal');
+  const recipientDropdownButton = document.getElementById('recipientDropdownButton');
+  const recipientUserId = document.getElementById('recipientUserId');
+  const recipientSearchInput = document.getElementById('recipientSearchInput');
+  const recipientOptions = [...document.querySelectorAll('.recipient-option')];
+  const shipmentTitleInput = document.getElementById('shipmentTitleInput');
+  const shipmentTypeInput = document.getElementById('shipmentTypeInput');
+  const shipmentTicketInput = document.getElementById('shipmentTicketInput');
+  const shipmentPoInput = document.getElementById('shipmentPoInput');
   const originInput = document.getElementById('originInput');
   const destinationInput = document.getElementById('destinationInput');
   const originSuggestions = document.getElementById('originSuggestions');
@@ -1739,11 +2030,22 @@
   window.addEventListener('DOMContentLoaded', () => {
     {% if current_user.role == 'admin' %}
     if (window.location.hash === '#budgetPanel') showDashboardTab('#budget-tab');
-    if (window.location.hash === '#operatorsPanel') showDashboardTab('#operators-tab');
+    if (window.location.hash === '#vendorsPanel' || window.location.hash === '#operatorsPanel') showDashboardTab('#vendors-tab');
+    if (window.location.hash === '#vendorAnalyticsPanel') {
+      showDashboardTab('#vendors-tab');
+      showDashboardTab('#vendor-analytics-tab');
+    }
     if (window.location.hash === '#locationsPanel') showDashboardTab('#locations-tab');
     if (window.location.hash === '#adminPanel') showDashboardTab('#admin-tab');
     {% endif %}
     initBudgetCharts();
+    initShipmentCharts();
+    initFeatureCharts();
+    ['shipping-analytics-tab','budget-analytics-tab','vendor-analytics-tab','location-analytics-tab','admin-analytics-tab'].forEach((tabId) => {
+      document.getElementById(tabId)?.addEventListener('shown.bs.tab', () => {
+        if (typeof Chart !== 'undefined') Object.values(Chart.instances).forEach((chart) => chart.resize());
+      });
+    });
   });
   let originTouched = false;
   let destinationTouched = false;
@@ -1753,6 +2055,159 @@
     return `Rp ${Number(value || 0).toLocaleString('id-ID', {maximumFractionDigits: 0})}`;
   }
 
+  let budgetCurrentPage = 1;
+  function filterBudgetItems(resetPage = true) {
+    const rows = [...document.querySelectorAll('.budget-item-table-row')];
+    if (!rows.length) return;
+    if (resetPage) budgetCurrentPage = 1;
+    const field = budgetSearchField?.value || 'all';
+    const query = (budgetTableSearch?.value || '').trim().toLowerCase();
+    const category = budgetCategoryFilter?.value || '';
+    const matchingRows = [];
+    rows.forEach((row) => {
+      const values = {
+        item: row.dataset.item || '', category: row.dataset.category || '', amount: row.dataset.amount || '',
+        note: row.dataset.note || '', date: row.dataset.date || ''
+      };
+      const searchable = field === 'all' ? Object.values(values).join(' ') : values[field] || '';
+      const matches = (!query || searchable.includes(query)) && (!category || values.category === category);
+      if (matches) matchingRows.push(row);
+    });
+    const pageSize = Number(budgetPageSize?.value || 10);
+    const totalPages = Math.max(Math.ceil(matchingRows.length / pageSize), 1);
+    budgetCurrentPage = Math.min(Math.max(budgetCurrentPage, 1), totalPages);
+    const pageStart = (budgetCurrentPage - 1) * pageSize;
+    const pageRows = new Set(matchingRows.slice(pageStart, pageStart + pageSize));
+    rows.forEach((row) => row.classList.toggle('d-none', !pageRows.has(row)));
+    document.getElementById('budgetFilterEmpty')?.classList.toggle('d-none', matchingRows.length !== 0);
+    const count = document.getElementById('budgetVisibleCount');
+    if (count) count.textContent = matchingRows.length;
+    const pageInfo = document.getElementById('budgetPageInfo');
+    if (pageInfo) pageInfo.textContent = `${i18n.page} ${budgetCurrentPage} / ${totalPages}`;
+    if (budgetPreviousPage) budgetPreviousPage.disabled = budgetCurrentPage <= 1;
+    if (budgetNextPage) budgetNextPage.disabled = budgetCurrentPage >= totalPages;
+  }
+  [budgetSearchField, budgetTableSearch, budgetCategoryFilter].forEach((control) => {
+    control?.addEventListener(control === budgetTableSearch ? 'input' : 'change', filterBudgetItems);
+  });
+  budgetFilterReset?.addEventListener('click', () => {
+    budgetSearchField.value = 'all'; budgetTableSearch.value = ''; budgetCategoryFilter.value = ''; filterBudgetItems();
+  });
+  budgetPageSize?.addEventListener('change', () => filterBudgetItems());
+  budgetPreviousPage?.addEventListener('click', () => { budgetCurrentPage -= 1; filterBudgetItems(false); });
+  budgetNextPage?.addEventListener('click', () => { budgetCurrentPage += 1; filterBudgetItems(false); });
+  filterBudgetItems();
+
+  recipientSearchInput?.addEventListener('click', (event) => event.stopPropagation());
+  recipientSearchInput?.addEventListener('input', () => {
+    const query = recipientSearchInput.value.trim().toLowerCase();
+    let visible = 0;
+    recipientOptions.forEach((option) => {
+      const matches = !query || (option.dataset.recipientSearch || '').includes(query);
+      option.classList.toggle('d-none', !matches);
+      if (matches) visible += 1;
+    });
+    document.getElementById('recipientSearchEmpty')?.classList.toggle('d-none', visible !== 0);
+  });
+  const selectRecipientOption = (option) => {
+    if (!option || !recipientUserId || !recipientDropdownButton) return;
+    recipientUserId.value = option.dataset.recipientId || '';
+    recipientDropdownButton.textContent = option.dataset.recipientLabel || option.textContent.trim();
+    recipientOptions.forEach((item) => item.classList.toggle('active', item === option));
+  };
+  recipientOptions.forEach((option) => option.addEventListener('click', () => {
+    selectRecipientOption(option);
+    bootstrap.Dropdown.getOrCreateInstance(recipientDropdownButton).hide();
+  }));
+  document.getElementById('recipientDropdown')?.addEventListener('shown.bs.dropdown', () => {
+    recipientSearchInput.value = '';
+    recipientOptions.forEach((option) => option.classList.remove('d-none'));
+    document.getElementById('recipientSearchEmpty')?.classList.add('d-none');
+    recipientSearchInput.focus();
+  });
+  function filterVendors() {
+    const rows = [...document.querySelectorAll('.vendor-table-row')];
+    const field = vendorSearchField?.value || 'all';
+    const query = (vendorTableSearch?.value || '').trim().toLowerCase();
+    const activity = vendorPerformanceFilter?.value || '';
+    let visible = 0;
+    rows.forEach((row) => {
+      const values = {
+        vendor: row.dataset.vendor || '', company: row.dataset.company || '', sent: row.dataset.sent || '',
+        delivered: row.dataset.delivered || '', progress: row.dataset.progress || '', cost: row.dataset.cost || '', date: row.dataset.date || ''
+      };
+      const searchable = field === 'all' ? Object.values(values).join(' ') : values[field] || '';
+      const sent = Number(values.sent); const delivered = Number(values.delivered); const progress = Number(values.progress);
+      const activityMatch = !activity || (activity === 'has_shipments' && sent > 0) || (activity === 'delivered' && delivered > 0) || (activity === 'in_progress' && progress > 0) || (activity === 'no_shipments' && sent === 0);
+      const matches = (!query || searchable.includes(query)) && activityMatch;
+      row.classList.toggle('d-none', !matches);
+      if (matches) visible += 1;
+    });
+    document.getElementById('vendorFilterEmpty')?.classList.toggle('d-none', visible !== 0);
+    const count = document.getElementById('vendorVisibleCount');
+    if (count) count.textContent = visible;
+  }
+  [vendorSearchField, vendorTableSearch, vendorPerformanceFilter].forEach((control) => control?.addEventListener(control === vendorTableSearch ? 'input' : 'change', filterVendors));
+  vendorFilterReset?.addEventListener('click', () => { vendorSearchField.value = 'all'; vendorTableSearch.value = ''; vendorPerformanceFilter.value = ''; filterVendors(); });
+  vendorsSidebarTab?.addEventListener('click', () => {
+    const vendorDataTab = document.getElementById('vendor-data-tab');
+    if (vendorDataTab && typeof bootstrap !== 'undefined') bootstrap.Tab.getOrCreateInstance(vendorDataTab).show();
+  });
+  function filterLocations() {
+    const rows = [...document.querySelectorAll('.location-table-row')];
+    const field = locationSearchField?.value || 'all';
+    const query = (locationTableSearch?.value || '').trim().toLowerCase();
+    const completeness = locationCompletenessFilter?.value || '';
+    let visible = 0;
+    rows.forEach((row) => {
+      const values = {company: row.dataset.company || '', branch: row.dataset.branch || '', address: row.dataset.address || '', city: row.dataset.city || '', state: row.dataset.state || '', postcode: row.dataset.postcode || '', country: row.dataset.country || ''};
+      const searchable = field === 'all' ? Object.values(values).join(' ') : values[field] || '';
+      const completenessMatch = !completeness || (completeness === 'complete' && Boolean(values.postcode)) || (completeness === 'missing_postcode' && !values.postcode);
+      const matches = (!query || searchable.includes(query)) && completenessMatch;
+      row.classList.toggle('d-none', !matches);
+      if (matches) visible += 1;
+    });
+    document.getElementById('locationFilterEmpty')?.classList.toggle('d-none', visible !== 0);
+    const count = document.getElementById('locationVisibleCount'); if (count) count.textContent = visible;
+  }
+  [locationSearchField, locationTableSearch, locationCompletenessFilter].forEach((control) => control?.addEventListener(control === locationTableSearch ? 'input' : 'change', filterLocations));
+  locationFilterReset?.addEventListener('click', () => { locationSearchField.value = 'all'; locationTableSearch.value = ''; locationCompletenessFilter.value = ''; filterLocations(); });
+  locationsSidebarTab?.addEventListener('click', () => { const tab = document.getElementById('location-data-tab'); if (tab && typeof bootstrap !== 'undefined') bootstrap.Tab.getOrCreateInstance(tab).show(); });
+  function filterAdminAccounts() {
+    const rows = [...document.querySelectorAll('.admin-account-row')];
+    const field = adminSearchField?.value || 'all'; const query = (adminTableSearch?.value || '').trim().toLowerCase();
+    const role = adminRoleFilter?.value || ''; const status = adminStatusFilter?.value || ''; let visible = 0;
+    rows.forEach((row) => {
+      const values = {name: row.dataset.name || '', username: row.dataset.username || '', company: row.dataset.company || '', role: row.dataset.role || '', status: row.dataset.status || '', location: row.dataset.location || ''};
+      const searchable = field === 'all' ? Object.values(values).join(' ') : values[field] || '';
+      const matches = (!query || searchable.includes(query)) && (!role || values.role === role) && (!status || values.status === status);
+      row.classList.toggle('d-none', !matches); if (matches) visible += 1;
+    });
+    document.getElementById('adminFilterEmpty')?.classList.toggle('d-none', visible !== 0);
+    const count = document.getElementById('adminVisibleCount'); if (count) count.textContent = visible;
+  }
+  [adminSearchField, adminTableSearch, adminRoleFilter, adminStatusFilter].forEach((control) => control?.addEventListener(control === adminTableSearch ? 'input' : 'change', filterAdminAccounts));
+  adminFilterReset?.addEventListener('click', () => { adminSearchField.value = 'all'; adminTableSearch.value = ''; adminRoleFilter.value = ''; adminStatusFilter.value = ''; filterAdminAccounts(); });
+  adminSidebarTab?.addEventListener('click', () => { const tab = document.getElementById('admin-data-tab'); if (tab && typeof bootstrap !== 'undefined') bootstrap.Tab.getOrCreateInstance(tab).show(); });
+  const budgetDataTab = document.getElementById('budget-data-tab');
+  const budgetAnalyticsTab = document.getElementById('budget-analytics-tab');
+  const budgetDataPanel = document.getElementById('budgetDataPanel');
+  const budgetAnalyticsPanel = document.getElementById('budgetAnalyticsPanel');
+  function showBudgetView(view) {
+    const showAnalytics = view === 'analytics';
+    budgetDataTab?.classList.toggle('active', !showAnalytics);
+    budgetAnalyticsTab?.classList.toggle('active', showAnalytics);
+    budgetDataTab?.setAttribute('aria-selected', String(!showAnalytics));
+    budgetAnalyticsTab?.setAttribute('aria-selected', String(showAnalytics));
+    budgetDataPanel?.classList.toggle('d-none', showAnalytics);
+    budgetAnalyticsPanel?.classList.toggle('d-none', !showAnalytics);
+    if (showAnalytics && typeof Chart !== 'undefined') {
+      requestAnimationFrame(() => Object.values(Chart.instances).forEach((chart) => chart.resize()));
+    }
+  }
+  budgetDataTab?.addEventListener('click', () => showBudgetView('data'));
+  budgetAnalyticsTab?.addEventListener('click', () => showBudgetView('analytics'));
+
   function makeChart(canvasId, config) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || typeof Chart === 'undefined') return null;
@@ -1761,7 +2216,7 @@
 
   function initBudgetCharts() {
     if (!budgetChartData || !budgetChartData.categoryLabels?.length) return;
-    const palette = ['#4f46e5', '#22c55e', '#06b6d4', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
+    const palette = ['#ef174c', '#707174', '#252525', '#f59e0b', '#ff668c', '#b20d36', '#b7b7b9'];
     const commonPlugins = {
       legend: {position: 'bottom', labels: {boxWidth: 10, usePointStyle: true}},
       tooltip: {
@@ -1775,7 +2230,7 @@
       type: 'doughnut',
       data: {
         labels: [{{ ('Spent'|tr)|tojson }}, {{ ('Remaining'|tr)|tojson }}],
-        datasets: [{data: budgetChartData.usageAmounts, backgroundColor: ['#4f46e5', '#dcfce7'], borderWidth: 0}]
+        datasets: [{data: budgetChartData.usageAmounts, backgroundColor: ['#ef174c', '#e2e2e3'], borderWidth: 0}]
       },
       options: {responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: commonPlugins}
     });
@@ -1817,7 +2272,7 @@
       type: 'line',
       data: {
         labels: budgetChartData.timelineLabels,
-        datasets: [{label: {{ ('Daily spending timeline'|tr)|tojson }}, data: budgetChartData.timelineAmounts, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.12)', fill: true, tension: .2, pointRadius: 4}]
+        datasets: [{label: {{ ('Daily spending timeline'|tr)|tojson }}, data: budgetChartData.timelineAmounts, borderColor: '#ef174c', backgroundColor: 'rgba(239,23,76,.12)', fill: true, tension: .2, pointRadius: 4}]
       },
       options: lineOptions
     });
@@ -1830,6 +2285,81 @@
       },
       options: lineOptions
     });
+  }
+
+  function initShipmentCharts() {
+    if (!shipmentChartData) return;
+    const sentLabel = {{ ('Items sent'|tr)|tojson }};
+    const deliveredLabel = {{ ('Delivered items'|tr)|tojson }};
+    const inProgressLabel = {{ ('In-progress items'|tr)|tojson }};
+    const countOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {mode: 'index', intersect: false},
+      plugins: {legend: {position: 'bottom', labels: {boxWidth: 10, usePointStyle: true}}},
+      scales: {
+        y: {beginAtZero: true, ticks: {precision: 0}},
+        x: {grid: {display: false}}
+      }
+    };
+    const timelineDatasets = (sentValues, deliveredValues) => [
+      {label: sentLabel, data: sentValues, borderColor: '#707174', backgroundColor: 'rgba(112,113,116,.12)', fill: true, tension: .32, pointRadius: 4, pointBackgroundColor: '#707174'},
+      {label: deliveredLabel, data: deliveredValues, borderColor: '#ef174c', backgroundColor: 'rgba(239,23,76,.12)', fill: true, tension: .32, pointRadius: 4, pointBackgroundColor: '#ef174c'}
+    ];
+
+    makeChart('shipmentDeliveryPieChart', {
+      type: 'pie',
+      data: {
+        labels: [deliveredLabel, inProgressLabel],
+        datasets: [{data: [shipmentChartData.pieDelivered, shipmentChartData.pieInProgress], backgroundColor: ['#ef174c', '#b7b7b9'], borderWidth: 0}]
+      },
+      options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom', labels: {boxWidth: 10, usePointStyle: true}}}}
+    });
+    makeChart('shipmentMonthlyTimelineChart', {
+      type: 'line',
+      data: {labels: shipmentChartData.monthLabels, datasets: timelineDatasets(shipmentChartData.monthlySent, shipmentChartData.monthlyDelivered)},
+      options: countOptions
+    });
+    makeChart('shipmentYearlyTimelineChart', {
+      type: 'line',
+      data: {labels: shipmentChartData.yearLabels, datasets: timelineDatasets(shipmentChartData.yearlySent, shipmentChartData.yearlyDelivered)},
+      options: countOptions
+    });
+    if (shipmentChartData.vendorLabels?.length) {
+      const vendorPalette = ['#ef174c', '#707174', '#252525', '#ff668c', '#b20d36', '#b7b7b9', '#f59e0b'];
+      makeChart('vendorShipmentPieChart', {
+        type: 'doughnut',
+        data: {
+          labels: shipmentChartData.vendorLabels,
+          datasets: [{data: shipmentChartData.vendorSent, backgroundColor: shipmentChartData.vendorLabels.map((_, index) => vendorPalette[index % vendorPalette.length]), borderWidth: 0}]
+        },
+        options: {responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: {legend: {position: 'bottom', labels: {boxWidth: 10, usePointStyle: true}}}}
+      });
+      makeChart('vendorPerformanceChart', {
+        type: 'bar',
+        data: {
+          labels: shipmentChartData.vendorLabels,
+          datasets: [
+            {label: sentLabel, data: shipmentChartData.vendorSent, backgroundColor: '#707174', borderRadius: 7},
+            {label: deliveredLabel, data: shipmentChartData.vendorDelivered, backgroundColor: '#ef174c', borderRadius: 7}
+          ]
+        },
+        options: countOptions
+      });
+    }
+  }
+
+  function initFeatureCharts() {
+    const legend = {position: 'bottom', labels: {boxWidth: 10, usePointStyle: true}};
+    if (locationChartData) {
+      const barOptions = {responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: {beginAtZero: true, ticks: {precision: 0}}, y: {grid: {display: false}}}};
+      makeChart('locationOriginChart', {type: 'bar', data: {labels: locationChartData.originLabels, datasets: [{data: locationChartData.originCounts, backgroundColor: '#707174', borderRadius: 7}]}, options: barOptions});
+      makeChart('locationDestinationChart', {type: 'bar', data: {labels: locationChartData.destinationLabels, datasets: [{data: locationChartData.destinationCounts, backgroundColor: '#ef174c', borderRadius: 7}]}, options: barOptions});
+    }
+    if (userChartData) {
+      makeChart('userRoleChart', {type: 'doughnut', data: {labels: userChartData.roleLabels, datasets: [{data: userChartData.roleCounts, backgroundColor: ['#252525','#ef174c','#b7b7b9'], borderWidth: 0}]}, options: {responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: {legend}}});
+      makeChart('userStatusChart', {type: 'pie', data: {labels: userChartData.statusLabels, datasets: [{data: userChartData.statusCounts, backgroundColor: ['#ef174c','#d1d5db'], borderWidth: 0}]}, options: {responsive: true, maintainAspectRatio: false, plugins: {legend}}});
+    }
   }
 
   const parseAwbError = (payload) => {
@@ -2230,6 +2760,14 @@
         throw parseAwbError(payload);
       }
       const payload = await response.json();
+      if (payload.title && shipmentTitleInput) shipmentTitleInput.value = payload.title;
+      if (payload.document_type && shipmentTypeInput) shipmentTypeInput.value = payload.document_type;
+      if (payload.ticket_number && shipmentTicketInput) shipmentTicketInput.value = payload.ticket_number;
+      if (payload.po_number && shipmentPoInput) shipmentPoInput.value = payload.po_number;
+      if (payload.recipient_user_id) {
+        const recipientOption = recipientOptions.find((option) => option.dataset.recipientId === String(payload.recipient_user_id));
+        selectRecipientOption(recipientOption);
+      }
       if (payload.origin) {
         originInput.value = payload.origin;
         originDetected = true;
@@ -2261,7 +2799,7 @@
   lookupAwbButton?.addEventListener('click', lookupAwbRoute);
   awbInput?.addEventListener('input', disableManualAwbFallback);
   awbInput?.addEventListener('blur', () => {
-    if (awbInput.value.trim() && !destinationInput?.value.trim()) lookupAwbRoute();
+    if (awbInput.value.trim()) lookupAwbRoute();
   });
 
   createShipmentModal?.addEventListener('shown.bs.modal', function () {
@@ -2302,10 +2840,12 @@
 
   const userRole = document.getElementById('newUserRole');
   const employeeLinkGroup = document.getElementById('employeeLinkGroup');
+  const vendorAllocationGroup = document.getElementById('vendorAllocationGroup');
   const employeeLinkSelect = employeeLinkGroup?.querySelector('select');
   const toggleEmployeeLink = () => {
     const needsEmployee = userRole?.value === 'employee';
     employeeLinkGroup?.classList.toggle('d-none', !needsEmployee);
+    vendorAllocationGroup?.classList.toggle('d-none', userRole?.value !== 'operator');
     if (employeeLinkSelect) {
       employeeLinkSelect.required = needsEmployee;
       if (!needsEmployee) employeeLinkSelect.value = '';
@@ -2326,9 +2866,11 @@
     const roleSelect = form.querySelector('.edit-user-role');
     const employeeGroup = form.querySelector('.edit-employee-link-group');
     const employeeSelect = employeeGroup?.querySelector('select');
+    const vendorAllocationGroup = form.querySelector('.edit-vendor-allocation-group');
     const toggleEditEmployeeLink = () => {
       const needsEmployee = roleSelect?.value === 'employee';
       employeeGroup?.classList.toggle('d-none', !needsEmployee);
+      vendorAllocationGroup?.classList.toggle('d-none', roleSelect?.value !== 'operator');
       if (employeeSelect) {
         employeeSelect.required = needsEmployee;
         if (!needsEmployee) employeeSelect.value = '';
@@ -2403,6 +2945,13 @@
   window.addEventListener('DOMContentLoaded', () => {
     showDashboardTab('#budget-tab');
     bootstrap.Toast.getOrCreateInstance(document.getElementById('budgetItemToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/?budget_month={{ budget_month }}#budgetPanel');
+  });
+  {% endif %}
+  {% if budget_item_updated %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#budget-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('budgetItemUpdatedToast'), {delay: 3500}).show();
     window.history.replaceState({}, document.title, '/?budget_month={{ budget_month }}#budgetPanel');
   });
   {% endif %}

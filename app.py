@@ -16,7 +16,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.templating import Jinja2Templates
 from jwt import InvalidTokenError
 from pwdlib import PasswordHash
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, inspect, select, text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, create_engine, func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
@@ -24,6 +24,7 @@ load_dotenv()
 
 APP_NAME = os.getenv("APP_NAME", "Employee Shipment Tracker")
 USER_ROLES = ("admin", "operator", "employee")
+DEFAULT_SELF_REGISTER_ROLE = "employee"
 DEFAULT_LANGUAGE = "id"
 SUPPORTED_LANGUAGES = {"id": "Bahasa", "en": "English"}
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./employee_shipments.db")
@@ -46,6 +47,9 @@ GEOCODER_COUNTRYCODES = os.getenv("GEOCODER_COUNTRYCODES", "id").strip()
 GEOCODER_USER_AGENT = os.getenv(
     "GEOCODER_USER_AGENT", "employee-shipment-tracker-demo/1.0"
 )
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
 SHIPMENTS_PER_PAGE = 10
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
@@ -67,9 +71,12 @@ class Employee(Base):
     name: Mapped[str] = mapped_column(String(150))
     email: Mapped[str] = mapped_column(String(150), unique=True)
     company_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    vendor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     department: Mapped[str] = mapped_column(String(100), default="-")
     shipments: Mapped[list["Shipment"]] = relationship(back_populates="employee")
-    user: Mapped[Optional["User"]] = relationship(back_populates="employee", uselist=False)
+    user: Mapped[Optional["User"]] = relationship(
+        back_populates="employee", uselist=False, foreign_keys="User.employee_id"
+    )
 
 
 class User(Base):
@@ -82,6 +89,8 @@ class User(Base):
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(30), index=True)
+    min_employee_allocation: Mapped[int] = mapped_column(Integer, default=1)
+    max_employee_allocation: Mapped[int] = mapped_column(Integer, default=10)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     employee_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("employees.id"), unique=True, nullable=True
@@ -98,7 +107,9 @@ class User(Base):
     last_login_country: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     last_login_postcode: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    employee: Mapped[Optional[Employee]] = relationship(back_populates="user")
+    employee: Mapped[Optional[Employee]] = relationship(
+        back_populates="user", foreign_keys=[employee_id]
+    )
 
 
 class Shipment(Base):
@@ -223,6 +234,8 @@ def ensure_optional_columns():
         "last_login_postcode": "VARCHAR(40)",
         "company_name": "VARCHAR(200)",
         "avatar_url": "VARCHAR(500)",
+        "min_employee_allocation": "INTEGER NOT NULL DEFAULT 1",
+        "max_employee_allocation": "INTEGER NOT NULL DEFAULT 10",
     }
     with engine.begin() as connection:
         for column_name, column_type in missing_user_columns.items():
@@ -232,6 +245,9 @@ def ensure_optional_columns():
     if "company_name" not in employee_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE employees ADD COLUMN company_name VARCHAR(200)"))
+    if "vendor_id" not in employee_columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE employees ADD COLUMN vendor_id INTEGER"))
 
 
 ensure_optional_columns()
@@ -278,9 +294,29 @@ TRANSLATIONS = {
         "Create shipment": "Buat pengiriman",
         "Total shipments": "Total pengiriman",
         "Dashboard menu": "Menu dashboard",
+        "Dashboard": "Dashboard",
+        "Welcome": "Selamat datang",
+        "Monitor employee shipment activity in real time.": "Pantau aktivitas pengiriman karyawan secara real-time.",
+        "Need help?": "Perlu bantuan?",
+        "Contact the administrator if you have access or shipment questions.": "Hubungi administrator jika ada pertanyaan akses atau pengiriman.",
         "Shipping": "Pengiriman",
+        "Shipping data": "Data pengiriman",
+        "Shipping analytics": "Analitik pengiriman",
+        "Monthly and yearly shipment delivery performance.": "Kinerja pengiriman bulanan dan tahunan.",
         "Admin": "Admin",
-        "Operators": "Operator",
+        "Vendors": "Vendor",
+        "Analytics": "Analitik",
+        "Vendor data": "Data vendor",
+        "Vendor analytics": "Analitik vendor",
+        "Budget data": "Data anggaran",
+        "Location data": "Data lokasi",
+        "Location analytics": "Analitik lokasi",
+        "Top shipment origins": "Asal pengiriman terbanyak",
+        "Top shipment destinations": "Tujuan pengiriman terbanyak",
+        "Account data": "Data akun",
+        "Account analytics": "Analitik akun",
+        "Accounts by role": "Akun berdasarkan peran",
+        "Account status": "Status akun",
         "Locations": "Lokasi",
         "Company locations": "Lokasi perusahaan",
         "Register company and branch addresses for manual shipment entry.": "Daftarkan alamat perusahaan dan cabang untuk input pengiriman manual.",
@@ -302,15 +338,48 @@ TRANSLATIONS = {
         "Choose a suggested address or open Google Maps before saving.": "Pilih alamat yang disarankan atau buka Google Maps sebelum menyimpan.",
         "Choose a suggested address or validate it in the map preview before saving.": "Pilih alamat yang disarankan atau validasi di pratinjau peta sebelum menyimpan.",
         "Location saved successfully.": "Lokasi berhasil disimpan.",
+        "Filter locations": "Filter lokasi",
+        "Search any location table field.": "Cari berdasarkan kolom apa pun pada tabel lokasi.",
+        "Search locations...": "Cari lokasi...",
+        "All location records": "Semua data lokasi",
+        "Complete postal data": "Data pos lengkap",
+        "Missing postal code": "Kode pos belum ada",
+        "No locations match the selected filters.": "Tidak ada lokasi yang cocok dengan filter.",
+        "matching locations": "lokasi cocok",
         "No company locations yet.": "Belum ada lokasi perusahaan.",
         "Saved locations": "Lokasi tersimpan",
-        "Active operators/vendors": "Operator/vendor aktif",
+        "Active vendors": "Vendor aktif",
         "Monitor active senders and item totals.": "Pantau pengirim aktif dan total item.",
-        "Total active operators": "Total operator aktif",
+        "Total active vendors": "Total vendor aktif",
         "Items sent": "Item terkirim",
         "Delivered items": "Item terkirim selesai",
         "In-progress items": "Item dalam proses",
-        "No active operators yet.": "Belum ada operator aktif.",
+        "Shipment delivery analytics": "Analitik pengiriman dan penerimaan",
+        "Compare items sent and delivered across months and years.": "Bandingkan item yang dikirim dan diterima berdasarkan bulan dan tahun.",
+        "Compare items sent and delivered across months, years, and vendors.": "Bandingkan item yang dikirim dan diterima berdasarkan bulan, tahun, dan vendor.",
+        "Analytics year": "Tahun analitik",
+        "Apply": "Terapkan",
+        "Delivery status": "Status pengiriman",
+        "Delivered versus items still in progress.": "Item terkirim dibandingkan item yang masih diproses.",
+        "Monthly sent and delivered items": "Item dikirim dan diterima per bulan",
+        "Items sent by dispatch month and completed by delivery month.": "Item berdasarkan bulan pengiriman dan bulan penyelesaian penerimaan.",
+        "Yearly sent and delivered items": "Item dikirim dan diterima per tahun",
+        "Long-term shipment volume and delivery completion trend.": "Tren jangka panjang volume pengiriman dan penyelesaian penerimaan.",
+        "Items sent by vendor": "Item dikirim berdasarkan vendor",
+        "Share of shipment volume assigned to each active vendor.": "Proporsi volume pengiriman yang ditangani setiap vendor aktif.",
+        "Vendor delivery performance": "Kinerja pengiriman vendor",
+        "Compare sent and delivered item totals for every active vendor.": "Bandingkan jumlah item yang dikirim dan diterima untuk setiap vendor aktif.",
+        "No active vendors yet.": "Belum ada vendor aktif.",
+        "Search vendors...": "Cari vendor...",
+        "Filter vendors": "Filter vendor",
+        "Search any vendor table field.": "Cari berdasarkan kolom apa pun pada tabel vendor.",
+        "All vendor activity": "Semua aktivitas vendor",
+        "Has shipments": "Memiliki pengiriman",
+        "Has delivered items": "Memiliki item terkirim",
+        "Has in-progress items": "Memiliki item dalam proses",
+        "No shipments": "Tidak ada pengiriman",
+        "No vendors match the selected filters.": "Tidak ada vendor yang cocok dengan filter.",
+        "matching vendors": "vendor cocok",
         "Last sent": "Terakhir kirim",
         "Never sent": "Belum pernah kirim",
         "Vendor sender": "Pengirim vendor",
@@ -350,6 +419,11 @@ TRANSLATIONS = {
         "Role": "Role",
         "Linked employee": "Karyawan terkait",
         "Choose employee": "Pilih karyawan",
+        "Employee allocation": "Alokasi karyawan",
+        "Minimum employees": "Minimum karyawan",
+        "Maximum employees": "Maksimum karyawan",
+        "Available employee slots are created from the minimum allocation.": "Slot karyawan tersedia dibuat berdasarkan alokasi minimum.",
+        "Increase the minimum to create more available employee slots.": "Naikkan minimum untuk membuat lebih banyak slot karyawan tersedia.",
         "Temporary password": "Kata sandi sementara",
         "Profile details": "Detail profil",
         "Company name": "Nama perusahaan",
@@ -370,12 +444,39 @@ TRANSLATIONS = {
         "Active": "Aktif",
         "Inactive": "Tidak aktif",
         "No users yet.": "Belum ada pengguna.",
+        "Filter accounts": "Filter akun",
+        "Account": "Akun",
+        "No login location": "Belum ada lokasi login",
+        "Search any account field.": "Cari berdasarkan kolom akun apa pun.",
+        "Search accounts...": "Cari akun...",
+        "All roles": "Semua peran",
+        "All account statuses": "Semua status akun",
+        "No accounts match the selected filters.": "Tidak ada akun yang cocok dengan filter.",
+        "matching accounts": "akun cocok",
         "User account updated successfully.": "Akun pengguna berhasil diperbarui.",
         "Monthly budget": "Budget bulanan",
         "Track buying needs by category and remaining budget.": "Pantau kebutuhan pembelian per kategori dan sisa budget.",
         "Budget month": "Bulan budget",
         "Set budget": "Atur budget",
         "Admin monthly budget": "Budget bulanan admin",
+        "Monthly budget total": "Total anggaran bulanan",
+        "Enter a new total greater than the current monthly budget.": "Masukkan total baru yang lebih besar dari anggaran bulanan saat ini.",
+        "Increase budget": "Tambah anggaran",
+        "Annual budget summary": "Ringkasan anggaran tahunan",
+        "Calculated automatically from all twelve monthly budgets.": "Dihitung otomatis dari dua belas anggaran bulanan.",
+        "Annual budget": "Anggaran tahunan",
+        "Annual spending": "Pengeluaran tahunan",
+        "Annual remaining": "Sisa tahunan",
+        "View monthly annual breakdown": "Lihat rincian bulanan tahunan",
+        "Month": "Bulan",
+        "Budget": "Anggaran",
+        "Action": "Aksi",
+        "Edit": "Edit",
+        "Edit monthly budget": "Edit anggaran bulanan",
+        "Corrected budget total": "Total anggaran yang diperbaiki",
+        "Editing replaces the existing total without creating a duplicate month.": "Pengeditan mengganti total yang ada tanpa membuat bulan duplikat.",
+        "Cancel": "Batal",
+        "Save changes": "Simpan perubahan",
         "Spent": "Terpakai",
         "Remaining": "Sisa",
         "Add purchase item": "Tambah item pembelian",
@@ -387,9 +488,24 @@ TRANSLATIONS = {
         "Save item": "Simpan item",
         "Category breakdown": "Rincian kategori",
         "Recent items": "Item terbaru",
+        "Purchase items": "Item pembelian",
+        "Monthly purchase items": "Item pembelian bulanan",
+        "Search and filter every saved budget item.": "Cari dan filter semua item anggaran yang tersimpan.",
+        "All fields": "Semua kolom",
+        "All categories": "Semua kategori",
+        "Search budget items...": "Cari item anggaran...",
+        "Reset filters": "Atur ulang filter",
+        "Date": "Tanggal",
+        "No items match the selected filters.": "Tidak ada item yang cocok dengan filter.",
+        "items shown": "item ditampilkan",
+        "matching items": "item cocok",
+        "per page": "per halaman",
+        "Page": "Halaman",
         "No purchase items yet.": "Belum ada item pembelian.",
         "Budget saved successfully.": "Budget berhasil disimpan.",
         "Purchase item added successfully.": "Item pembelian berhasil ditambahkan.",
+        "Edit purchase item": "Edit item pembelian",
+        "Purchase item updated successfully.": "Item pembelian berhasil diperbarui.",
         "Budget analytics": "Analitik budget",
         "Largest category usage, item count, timeline, and spending curve.": "Penggunaan kategori terbesar, jumlah item, timeline, dan kurva pengeluaran.",
         "Budget usage": "Penggunaan budget",
@@ -407,6 +523,11 @@ TRANSLATIONS = {
         "Item name": "Nama item",
         "Item type": "Jenis item",
         "Employee recipient": "Penerima karyawan",
+        "Search recipient...": "Cari penerima...",
+        "No available recipients": "Tidak ada penerima tersedia",
+        "No recipients match your search.": "Tidak ada penerima yang cocok dengan pencarian.",
+        "Filled automatically from a valid AWB": "Terisi otomatis dari AWB yang valid",
+        "Enter a valid AWB to automatically fill shipment details. All fields remain editable.": "Masukkan AWB yang valid untuk mengisi detail pengiriman secara otomatis. Semua kolom tetap dapat diedit.",
         "AWB / waybill": "AWB / waybill",
         "Lookup": "Cari",
         "Lookup AWB to fill origin and destination.": "Cari AWB untuk mengisi origin dan destination.",
@@ -574,10 +695,11 @@ def require_roles(user: User, *allowed_roles: str) -> None:
         )
 
 
-def dashboard_redirect(**params):
+def dashboard_redirect(fragment: Optional[str] = None, **params):
     clean_params = {key: value for key, value in params.items() if value}
     query = f"?{urlencode(clean_params)}" if clean_params else ""
-    return RedirectResponse(url=f"/{query}", status_code=303)
+    anchor = f"#{fragment.lstrip('#')}" if fragment else ""
+    return RedirectResponse(url=f"/{query}{anchor}", status_code=303)
 
 
 def request_prefers_json(request: Request) -> bool:
@@ -593,6 +715,37 @@ def normalize_budget_month(value: Optional[str]) -> str:
         except ValueError:
             pass
     return datetime.utcnow().strftime("%Y-%m")
+
+
+def validate_vendor_allocation(minimum: int, maximum: int) -> Optional[str]:
+    if minimum < 1:
+        return "Minimum employee allocation must be at least 1."
+    if maximum < minimum:
+        return "Maximum employee allocation must be greater than or equal to the minimum."
+    if maximum > 500:
+        return "Maximum employee allocation cannot exceed 500."
+    return None
+
+
+def ensure_vendor_employee_slots(db: Session, vendor: User) -> int:
+    minimum = vendor.min_employee_allocation or 1
+    existing = db.scalars(select(Employee).where(Employee.vendor_id == vendor.id)).all()
+    created = 0
+    slot_number = 1
+    while len(existing) + created < minimum:
+        employee_code = f"VND-{vendor.id:04d}-{slot_number:03d}"
+        if not db.scalar(select(Employee.id).where(Employee.employee_code == employee_code)):
+            db.add(Employee(
+                employee_code=employee_code,
+                name=f"Available employee slot {slot_number}",
+                email=f"vendor-{vendor.id}-slot-{slot_number}@allocation.local",
+                company_name=vendor.company_name or vendor.full_name,
+                department="Vendor allocation",
+                vendor_id=vendor.id,
+            ))
+            created += 1
+        slot_number += 1
+    return created
 
 
 def parse_optional_float(value: Optional[str]) -> Optional[float]:
@@ -1034,6 +1187,48 @@ def extract_awb_route(result: dict) -> dict:
     }
 
 
+def extract_awb_form_metadata(result: dict) -> dict:
+    raw = result.get("raw") or {}
+    return {
+        "title": find_first_value(raw, (
+            "item_name", "goods_name", "goods_description", "package_description",
+            "shipment_description", "content", "commodity", "item",
+        )),
+        "document_type": find_first_value(raw, (
+            "item_type", "goods_type", "package_type", "document_type", "category",
+        )),
+        "recipient_name": find_first_value(raw, (
+            "recipient_name", "receiver_name", "consignee_name", "receiver", "consignee",
+        )),
+        "ticket_number": find_first_value(raw, (
+            "ticket_number", "ticket_no", "external_awb", "external_reference",
+        )),
+        "po_number": find_first_value(raw, (
+            "po_number", "purchase_order", "purchase_order_number", "po_no",
+        )),
+    }
+
+
+def match_awb_recipient_account(
+    db: Session,
+    recipient_name: Optional[str],
+    sender: User,
+) -> Optional[User]:
+    normalized_name = re.sub(r"\s+", " ", (recipient_name or "").strip().lower())
+    if not normalized_name:
+        return None
+    candidates = db.scalars(select(User).where(User.is_active.is_(True))).all()
+    for account in candidates:
+        if sender.role == "operator" and account.id == sender.id:
+            continue
+        account_names = {account.full_name.strip().lower(), account.username.strip().lower()}
+        if account.employee:
+            account_names.add(account.employee.name.strip().lower())
+        if normalized_name in account_names:
+            return account
+    return None
+
+
 def record_login_location(
     user: User,
     db: Session,
@@ -1133,6 +1328,20 @@ def resolve_recipient_employee_id(
     if employee_id and db.get(Employee, employee_id):
         return employee_id
     raise HTTPException(status_code=404, detail="Employee not found")
+
+
+def reject_vendor_self_recipient(
+    sender: User,
+    *,
+    recipient_user_id: Optional[int],
+    employee_id: Optional[int],
+) -> None:
+    if sender.role != "operator":
+        return
+    is_same_account = recipient_user_id == sender.id
+    is_same_employee = bool(sender.employee_id and employee_id == sender.employee_id)
+    if is_same_account or is_same_employee:
+        raise HTTPException(status_code=409, detail="Vendors cannot send shipments to themselves.")
 
 
 def build_reference_number(shipment_id: int) -> str:
@@ -1699,10 +1908,15 @@ async def lookup_awb_route(
     result = await provider.track(awb, courier)
     route = extract_awb_route(result)
     route = await enrich_awb_route_cost(route, result, courier=courier)
+    metadata = extract_awb_form_metadata(result)
+    recipient = match_awb_recipient_account(db, metadata.get("recipient_name"), user)
     return {
         "courier": courier,
         "awb": awb,
         **route,
+        **metadata,
+        "recipient_user_id": recipient.id if recipient else None,
+        "recipient_label": recipient.full_name if recipient else None,
     }
 
 
@@ -1808,6 +2022,11 @@ async def create_shipment(
     db: Session = Depends(get_db),
 ):
     require_roles(current_user, "admin", "operator")
+    reject_vendor_self_recipient(
+        current_user,
+        recipient_user_id=recipient_user_id,
+        employee_id=employee_id,
+    )
     recipient_employee_id = resolve_recipient_employee_id(
         db,
         recipient_user_id=recipient_user_id,
@@ -1888,6 +2107,162 @@ def login_page(request: Request, error: Optional[str] = None):
     )
 
 
+def set_web_auth_cookie(response: RedirectResponse, user: User) -> RedirectResponse:
+    token, _ = create_access_token(user)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=JWT_COOKIE_SECURE,
+        samesite="lax",
+        max_age=JWT_ACCESS_TOKEN_MINUTES * 60,
+    )
+    return response
+
+
+@app.get("/auth/google")
+def google_auth_start(request: Request, mode: str = Query("login")):
+    if mode not in {"login", "register"}:
+        mode = "login"
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        return RedirectResponse(
+            url="/login?error=Google+sign-in+is+not+configured+yet",
+            status_code=303,
+        )
+    redirect_uri = GOOGLE_REDIRECT_URI or str(request.url_for("google_auth_callback"))
+    state = jwt.encode(
+        {
+            "purpose": "google_oauth",
+            "mode": mode,
+            "nonce": uuid.uuid4().hex,
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+        },
+        JWT_SECRET_KEY,
+        algorithm=JWT_ALGORITHM,
+    )
+    query = urlencode({
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+        "prompt": "select_account",
+    })
+    response = RedirectResponse(
+        url=f"https://accounts.google.com/o/oauth2/v2/auth?{query}",
+        status_code=303,
+    )
+    response.set_cookie(
+        "google_oauth_state",
+        state,
+        httponly=True,
+        secure=JWT_COOKIE_SECURE,
+        samesite="lax",
+        max_age=600,
+    )
+    return response
+
+
+@app.get("/auth/google/callback", name="google_auth_callback")
+async def google_auth_callback(
+    request: Request,
+    code: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    failure = "/login?error=Google+authentication+could+not+be+completed"
+    cookie_state = request.cookies.get("google_oauth_state")
+    if error or not code or not state or not cookie_state or state != cookie_state:
+        return RedirectResponse(url=failure, status_code=303)
+    try:
+        state_data = jwt.decode(state, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        if state_data.get("purpose") != "google_oauth":
+            raise InvalidTokenError("Invalid OAuth state")
+    except InvalidTokenError:
+        return RedirectResponse(url=failure, status_code=303)
+
+    redirect_uri = GOOGLE_REDIRECT_URI or str(request.url_for("google_auth_callback"))
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            token_response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": GOOGLE_CLIENT_ID,
+                    "client_secret": GOOGLE_CLIENT_SECRET,
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": redirect_uri,
+                },
+            )
+            token_response.raise_for_status()
+            access_token = token_response.json().get("access_token")
+            if not access_token:
+                raise ValueError("Missing Google access token")
+            profile_response = await client.get(
+                "https://openidconnect.googleapis.com/v1/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            profile_response.raise_for_status()
+            profile = profile_response.json()
+    except (httpx.HTTPError, ValueError):
+        return RedirectResponse(url=failure, status_code=303)
+
+    email = str(profile.get("email") or "").strip().lower()
+    if not email or not profile.get("email_verified"):
+        return RedirectResponse(url="/login?error=Google+email+must+be+verified", status_code=303)
+
+    employee = db.scalar(select(Employee).where(Employee.email == email))
+    user = None
+    if employee:
+        user = db.scalar(select(User).where(User.employee_id == employee.id))
+    if not user:
+        user = db.scalar(select(User).where(User.username == email))
+
+    mode = state_data.get("mode", "login")
+    if not user and mode != "register":
+        return RedirectResponse(
+            url="/login?error=No+account+found.+Please+register+with+Google+first",
+            status_code=303,
+        )
+    if not user:
+        if not employee:
+            employee = Employee(
+                employee_code=f"GGL-{uuid.uuid4().hex[:10].upper()}",
+                name=str(profile.get("name") or email.split("@", 1)[0])[:150],
+                email=email,
+                company_name=APP_NAME,
+                department="Unassigned",
+            )
+            db.add(employee)
+            db.flush()
+        user = User(
+            username=email,
+            full_name=str(profile.get("name") or employee.name)[:150],
+            company_name=employee.company_name or APP_NAME,
+            avatar_url=str(profile.get("picture") or "")[:500] or None,
+            password_hash=password_hash.hash(uuid.uuid4().hex),
+            role=DEFAULT_SELF_REGISTER_ROLE,
+            employee_id=employee.id,
+            is_active=True,
+        )
+        db.add(user)
+    else:
+        if not user.is_active:
+            return RedirectResponse(url="/login?error=This+account+is+inactive", status_code=303)
+        if profile.get("picture"):
+            user.avatar_url = str(profile["picture"])[:500]
+        if profile.get("name"):
+            user.full_name = str(profile["name"])[:150]
+    user.last_login_at = datetime.utcnow()
+    db.commit()
+    db.refresh(user)
+    response = set_web_auth_cookie(RedirectResponse(url="/", status_code=303), user)
+    response.delete_cookie("google_oauth_state")
+    return response
+
+
 @app.get("/language")
 def set_language(request: Request, lang: str = Query(DEFAULT_LANGUAGE), next: str = Query("/")):
     if lang not in SUPPORTED_LANGUAGES:
@@ -1912,17 +2287,8 @@ def login_form(
     if not user or not user.is_active or not password_hash.verify(password, user.password_hash):
         return RedirectResponse(url="/login?error=Incorrect+username+or+password", status_code=303)
     record_login_location(user, db, latitude, longitude, accuracy)
-    token, _ = create_access_token(user)
     response = RedirectResponse(url="/", status_code=303)
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=JWT_COOKIE_SECURE,
-        samesite="lax",
-        max_age=JWT_ACCESS_TOKEN_MINUTES * 60,
-    )
-    return response
+    return set_web_auth_cookie(response, user)
 
 
 @app.post("/logout")
@@ -1941,9 +2307,11 @@ def dashboard(
     user_error: Optional[str] = None,
     budget_updated: Optional[int] = None,
     budget_item_created: Optional[int] = None,
+    budget_item_updated: Optional[int] = None,
     location_created: Optional[int] = None,
     budget_error: Optional[str] = None,
     budget_month: Optional[str] = None,
+    analytics_year: Optional[int] = Query(None),
     sort: str = Query("date_desc"),
     shipping_page: int = Query(1),
     db: Session = Depends(get_db),
@@ -1952,11 +2320,15 @@ def dashboard(
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     employees = db.scalars(select(Employee).order_by(Employee.name)).all() if user.role in {"admin", "operator"} else []
+    recipient_account_stmt = select(User).where(User.is_active.is_(True))
+    if user.role == "operator":
+        recipient_account_stmt = recipient_account_stmt.where(User.id != user.id)
     recipient_accounts = db.scalars(
-        select(User).where(User.is_active.is_(True)).order_by(User.full_name)
+        recipient_account_stmt.order_by(User.full_name)
     ).all() if user.role in {"admin", "operator"} else []
     users = db.scalars(select(User).order_by(User.created_at.desc())).all() if user.role == "admin" else []
     assigned_employee_ids = {account.employee_id for account in users if account.employee_id}
+    vendors_by_id = {account.id: account for account in users if account.role == "operator"}
     sort = sort if sort in {"date_asc", "date_desc"} else "date_desc"
     sort_expression = Shipment.created_at.asc() if sort == "date_asc" else Shipment.created_at.desc()
     stmt = select(Shipment).order_by(sort_expression)
@@ -1988,6 +2360,7 @@ def dashboard(
     budget_amount = 0.0
     budget_spent = 0.0
     budget_remaining = 0.0
+    annual_budget_summary = {"year": budget_month[:4], "budget": 0.0, "spent": 0.0, "remaining": 0.0, "months": []}
     budget_category_totals = []
     budget_chart_data = {
         "categoryLabels": [],
@@ -1999,7 +2372,69 @@ def dashboard(
         "usageLabels": ["Spent", "Remaining"],
         "usageAmounts": [0, 0],
     }
+    shipment_chart_data = {
+        "selectedYear": datetime.utcnow().year,
+        "availableYears": [datetime.utcnow().year],
+        "monthLabels": [datetime(2000, month, 1).strftime("%b") for month in range(1, 13)],
+        "monthlySent": [0] * 12,
+        "monthlyDelivered": [0] * 12,
+        "yearLabels": [str(datetime.utcnow().year)],
+        "yearlySent": [0],
+        "yearlyDelivered": [0],
+        "pieDelivered": 0,
+        "pieInProgress": 0,
+        "vendorLabels": [],
+        "vendorSent": [],
+        "vendorDelivered": [],
+        "vendorInProgress": [],
+    }
+    location_chart_data = {"originLabels": [], "originCounts": [], "destinationLabels": [], "destinationCounts": []}
+    user_chart_data = {"roleLabels": [], "roleCounts": [], "statusLabels": ["Active", "Inactive"], "statusCounts": [0, 0]}
     if user.role == "admin":
+        delivery_dates = [
+            shipment.delivered_at or shipment.updated_at
+            for shipment in all_shipments
+            if shipment.status in {"DELIVERED", "RECEIVED"}
+        ]
+        available_years = sorted({
+            *[shipment.created_at.year for shipment in all_shipments],
+            *[delivery_date.year for delivery_date in delivery_dates],
+        }) or [datetime.utcnow().year]
+        selected_year = analytics_year if analytics_year in available_years else available_years[-1]
+        monthly_sent = [0] * 12
+        monthly_delivered = [0] * 12
+        yearly_sent = {year: 0 for year in available_years}
+        yearly_delivered = {year: 0 for year in available_years}
+        selected_year_shipments = []
+        for shipment in all_shipments:
+            created_at = shipment.created_at
+            if created_at.year in yearly_sent:
+                yearly_sent[created_at.year] += 1
+            if created_at.year == selected_year:
+                monthly_sent[created_at.month - 1] += 1
+                selected_year_shipments.append(shipment)
+            if shipment.status in {"DELIVERED", "RECEIVED"}:
+                delivered_at = shipment.delivered_at or shipment.updated_at
+                if delivered_at.year in yearly_delivered:
+                    yearly_delivered[delivered_at.year] += 1
+                if delivered_at.year == selected_year:
+                    monthly_delivered[delivered_at.month - 1] += 1
+        delivered_cohort = sum(
+            shipment.status in {"DELIVERED", "RECEIVED"}
+            for shipment in selected_year_shipments
+        )
+        shipment_chart_data = {
+            "selectedYear": selected_year,
+            "availableYears": available_years,
+            "monthLabels": [datetime(2000, month, 1).strftime("%b") for month in range(1, 13)],
+            "monthlySent": monthly_sent,
+            "monthlyDelivered": monthly_delivered,
+            "yearLabels": [str(year) for year in available_years],
+            "yearlySent": [yearly_sent[year] for year in available_years],
+            "yearlyDelivered": [yearly_delivered[year] for year in available_years],
+            "pieDelivered": delivered_cohort,
+            "pieInProgress": len(selected_year_shipments) - delivered_cohort,
+        }
         company_locations = db.scalars(
             select(CompanyLocation).order_by(CompanyLocation.company_name, CompanyLocation.branch_name)
         ).all()
@@ -2027,6 +2462,51 @@ def dashboard(
             "delivered": sum(row["delivered"] for row in operator_analytics),
             "in_progress": sum(row["in_progress"] for row in operator_analytics),
         }
+        vendor_year_rows = []
+        for account in active_operators:
+            vendor_shipments = [
+                shipment for shipment in all_shipments
+                if shipment.created_by_id == account.id and shipment.created_at.year == selected_year
+            ]
+            vendor_delivered = sum(
+                shipment.status in {"DELIVERED", "RECEIVED"}
+                for shipment in vendor_shipments
+            )
+            vendor_year_rows.append({
+                "label": account.full_name,
+                "sent": len(vendor_shipments),
+                "delivered": vendor_delivered,
+                "in_progress": len(vendor_shipments) - vendor_delivered,
+            })
+        vendor_year_rows.sort(key=lambda row: (-row["sent"], row["label"].lower()))
+        shipment_chart_data.update({
+            "vendorLabels": [row["label"] for row in vendor_year_rows],
+            "vendorSent": [row["sent"] for row in vendor_year_rows],
+            "vendorDelivered": [row["delivered"] for row in vendor_year_rows],
+            "vendorInProgress": [row["in_progress"] for row in vendor_year_rows],
+        })
+        origin_counts: dict[str, int] = {}
+        destination_counts: dict[str, int] = {}
+        for shipment in all_shipments:
+            origin_counts[shipment.origin or "-"] = origin_counts.get(shipment.origin or "-", 0) + 1
+            destination_counts[shipment.destination or "-"] = destination_counts.get(shipment.destination or "-", 0) + 1
+        top_origins = sorted(origin_counts.items(), key=lambda row: (-row[1], row[0].lower()))[:8]
+        top_destinations = sorted(destination_counts.items(), key=lambda row: (-row[1], row[0].lower()))[:8]
+        location_chart_data = {
+            "originLabels": [label for label, _ in top_origins],
+            "originCounts": [count for _, count in top_origins],
+            "destinationLabels": [label for label, _ in top_destinations],
+            "destinationCounts": [count for _, count in top_destinations],
+        }
+        role_counts = {role: 0 for role in USER_ROLES}
+        for account in users:
+            role_counts[account.role] = role_counts.get(account.role, 0) + 1
+        user_chart_data = {
+            "roleLabels": ["Admin", "Vendor", "Employee"],
+            "roleCounts": [role_counts.get("admin", 0), role_counts.get("operator", 0), role_counts.get("employee", 0)],
+            "statusLabels": ["Active", "Inactive"],
+            "statusCounts": [sum(account.is_active for account in users), sum(not account.is_active for account in users)],
+        }
         monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == budget_month))
         purchase_items = db.scalars(
             select(PurchaseItem)
@@ -2036,6 +2516,38 @@ def dashboard(
         budget_amount = monthly_budget.amount if monthly_budget else 0.0
         budget_spent = sum(item.amount for item in purchase_items)
         budget_remaining = budget_amount - budget_spent
+        budget_year = budget_month[:4]
+        yearly_budgets = db.scalars(
+            select(MonthlyBudget).where(MonthlyBudget.month.like(f"{budget_year}-%")).order_by(MonthlyBudget.month)
+        ).all()
+        yearly_items = db.scalars(
+            select(PurchaseItem).where(PurchaseItem.month.like(f"{budget_year}-%"))
+        ).all()
+        yearly_budget_map = {entry.month: entry.amount for entry in yearly_budgets}
+        yearly_spent_map: dict[str, float] = {}
+        for item in yearly_items:
+            yearly_spent_map[item.month] = yearly_spent_map.get(item.month, 0.0) + item.amount
+        annual_months = []
+        for month_number in range(1, 13):
+            month_key = f"{budget_year}-{month_number:02d}"
+            month_budget_amount = yearly_budget_map.get(month_key, 0.0)
+            month_spent_amount = yearly_spent_map.get(month_key, 0.0)
+            annual_months.append({
+                "month": month_key,
+                "label": datetime.strptime(month_key, "%Y-%m").strftime("%B"),
+                "budget": month_budget_amount,
+                "spent": month_spent_amount,
+                "remaining": month_budget_amount - month_spent_amount,
+            })
+        annual_budget_total = sum(row["budget"] for row in annual_months)
+        annual_spent_total = sum(row["spent"] for row in annual_months)
+        annual_budget_summary = {
+            "year": budget_year,
+            "budget": annual_budget_total,
+            "spent": annual_spent_total,
+            "remaining": annual_budget_total - annual_spent_total,
+            "months": annual_months,
+        }
         category_totals: dict[str, float] = {}
         category_counts: dict[str, int] = {}
         daily_totals: dict[str, float] = {}
@@ -2078,6 +2590,7 @@ def dashboard(
             recipient_accounts=recipient_accounts,
             users=users,
             assigned_employee_ids=assigned_employee_ids,
+            vendors_by_id=vendors_by_id,
             user_roles=USER_ROLES,
             shipments=shipments,
             shipment_pagination={
@@ -2104,12 +2617,17 @@ def dashboard(
             budget_amount=budget_amount,
             budget_spent=budget_spent,
             budget_remaining=budget_remaining,
+            annual_budget_summary=annual_budget_summary,
             budget_category_totals=budget_category_totals,
             budget_chart_data=budget_chart_data,
+            shipment_chart_data=shipment_chart_data,
+            location_chart_data=location_chart_data,
+            user_chart_data=user_chart_data,
             operator_analytics=operator_analytics,
             operator_counts=operator_counts,
             budget_updated=bool(budget_updated),
             budget_item_created=bool(budget_item_created),
+            budget_item_updated=bool(budget_item_updated),
             location_created=bool(location_created),
             budget_error=budget_error,
             sort=sort,
@@ -2128,6 +2646,8 @@ def create_user_form(
     role: str = Form(...),
     password: str = Form(...),
     employee_id: Optional[str] = Form(None),
+    min_employee_allocation: int = Form(1),
+    max_employee_allocation: int = Form(10),
     is_active: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
@@ -2149,6 +2669,10 @@ def create_user_form(
         return dashboard_redirect(user_error="Password must be at least 8 characters.")
     if db.scalar(select(User.id).where(User.username == username)):
         return dashboard_redirect(user_error="Username already exists.")
+    if role == "operator":
+        allocation_error = validate_vendor_allocation(min_employee_allocation, max_employee_allocation)
+        if allocation_error:
+            return dashboard_redirect(user_error=allocation_error)
 
     selected_employee_id = int(employee_id) if employee_id and employee_id.isdigit() else None
     if role == "employee":
@@ -2161,7 +2685,7 @@ def create_user_form(
     else:
         selected_employee_id = None
 
-    db.add(User(
+    account = User(
         username=username,
         full_name=full_name,
         company_name=company_name,
@@ -2170,7 +2694,18 @@ def create_user_form(
         password_hash=password_hash.hash(password),
         employee_id=selected_employee_id,
         is_active=is_active == "on",
-    ))
+        min_employee_allocation=min_employee_allocation if role == "operator" else 1,
+        max_employee_allocation=max_employee_allocation if role == "operator" else 10,
+    )
+    db.add(account)
+    db.flush()
+    if role == "operator":
+        ensure_vendor_employee_slots(db, account)
+    elif selected_employee_id:
+        selected_employee = db.get(Employee, selected_employee_id)
+        selected_employee.name = full_name
+        selected_employee.company_name = company_name or selected_employee.company_name
+        selected_employee.department = "Employee"
     db.commit()
     return dashboard_redirect(user_created=1)
 
@@ -2186,6 +2721,8 @@ def update_user_form(
     role: str = Form(...),
     password: Optional[str] = Form(None),
     employee_id: Optional[str] = Form(None),
+    min_employee_allocation: int = Form(1),
+    max_employee_allocation: int = Form(10),
     is_active: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
@@ -2217,6 +2754,13 @@ def update_user_form(
         return dashboard_redirect(user_error="Password must be at least 8 characters.")
     if account.id == user.id and (role != "admin" or not active):
         return dashboard_redirect(user_error="You cannot remove admin access from your own account.")
+    if role == "operator":
+        allocation_error = validate_vendor_allocation(min_employee_allocation, max_employee_allocation)
+        if allocation_error:
+            return dashboard_redirect(user_error=allocation_error)
+        allocated_count = db.scalar(select(func.count(Employee.id)).where(Employee.vendor_id == account.id)) or 0
+        if max_employee_allocation < allocated_count:
+            return dashboard_redirect(user_error=f"Maximum allocation cannot be lower than the current {allocated_count} employee slots.")
 
     selected_employee_id = int(employee_id) if employee_id and employee_id.isdigit() else None
     if role == "employee":
@@ -2237,8 +2781,17 @@ def update_user_form(
     account.role = role
     account.employee_id = selected_employee_id
     account.is_active = active
+    account.min_employee_allocation = min_employee_allocation if role == "operator" else 1
+    account.max_employee_allocation = max_employee_allocation if role == "operator" else 10
     if password:
         account.password_hash = password_hash.hash(password)
+    if role == "operator":
+        ensure_vendor_employee_slots(db, account)
+    elif selected_employee_id:
+        selected_employee = db.get(Employee, selected_employee_id)
+        selected_employee.name = full_name
+        selected_employee.company_name = company_name or selected_employee.company_name
+        selected_employee.department = "Employee"
 
     db.commit()
     return dashboard_redirect(user_updated=1)
@@ -2257,17 +2810,47 @@ def set_monthly_budget_form(
     require_roles(user, "admin")
 
     month = normalize_budget_month(month)
-    if amount < 0:
-        return dashboard_redirect(budget_error="Budget amount cannot be negative.", budget_month=month)
+    if amount <= 0:
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Budget amount must be greater than zero.", budget_month=month)
 
     monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == month))
     if not monthly_budget:
-        monthly_budget = MonthlyBudget(month=month, created_by_id=user.id)
+        monthly_budget = MonthlyBudget(month=month, amount=amount, created_by_id=user.id)
         db.add(monthly_budget)
+    elif amount <= monthly_budget.amount:
+        return dashboard_redirect(
+            fragment="budgetPanel",
+            budget_error=f"New budget total must be greater than the existing budget of Rp {monthly_budget.amount:,.0f}.",
+            budget_month=month,
+        )
+    else:
+        monthly_budget.amount = amount
+    monthly_budget.updated_at = datetime.utcnow()
+    db.commit()
+    return dashboard_redirect(fragment="budgetPanel", budget_updated=1, budget_month=month)
+
+
+@app.post("/budgets/edit")
+def edit_monthly_budget_form(
+    request: Request,
+    month: str = Form(...),
+    amount: float = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+    month = normalize_budget_month(month)
+    if amount <= 0:
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Budget amount must be greater than zero.", budget_month=month)
+    monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == month))
+    if not monthly_budget:
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Monthly budget does not exist yet.", budget_month=month)
     monthly_budget.amount = amount
     monthly_budget.updated_at = datetime.utcnow()
     db.commit()
-    return dashboard_redirect(budget_updated=1, budget_month=month)
+    return dashboard_redirect(fragment="budgetPanel", budget_updated=1, budget_month=month)
 
 
 @app.post("/budget-items/create")
@@ -2291,11 +2874,11 @@ def create_purchase_item_form(
     note = note.strip() if note else None
 
     if not item_name:
-        return dashboard_redirect(budget_error="Item name is required.", budget_month=month)
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Item name is required.", budget_month=month)
     if not category:
-        return dashboard_redirect(budget_error="Category is required.", budget_month=month)
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Category is required.", budget_month=month)
     if amount <= 0:
-        return dashboard_redirect(budget_error="Item amount must be greater than 0.", budget_month=month)
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Item amount must be greater than 0.", budget_month=month)
 
     db.add(PurchaseItem(
         month=month,
@@ -2306,7 +2889,44 @@ def create_purchase_item_form(
         created_by_id=user.id,
     ))
     db.commit()
-    return dashboard_redirect(budget_item_created=1, budget_month=month)
+    return dashboard_redirect(fragment="budgetPanel", budget_item_created=1, budget_month=month)
+
+
+@app.post("/budget-items/{item_id}/edit")
+def edit_purchase_item_form(
+    item_id: int,
+    request: Request,
+    item_name: str = Form(...),
+    category: str = Form(...),
+    amount: float = Form(...),
+    note: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    purchase_item = db.get(PurchaseItem, item_id)
+    if not purchase_item:
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Purchase item was not found.")
+
+    item_name = item_name.strip()
+    category = category.strip()
+    note = note.strip() if note else None
+    if not item_name:
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Item name is required.", budget_month=purchase_item.month)
+    if not category:
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Category is required.", budget_month=purchase_item.month)
+    if amount <= 0:
+        return dashboard_redirect(fragment="budgetPanel", budget_error="Item amount must be greater than 0.", budget_month=purchase_item.month)
+
+    purchase_item.item_name = item_name
+    purchase_item.category = category
+    purchase_item.amount = amount
+    purchase_item.note = note
+    db.commit()
+    return dashboard_redirect(fragment="budgetPanel", budget_item_updated=1, budget_month=purchase_item.month)
 
 
 @app.post("/locations/create")
@@ -2403,6 +3023,11 @@ async def create_shipment_form(
         return RedirectResponse(url="/login", status_code=303)
     require_roles(user, "admin", "operator")
     try:
+        reject_vendor_self_recipient(
+            user,
+            recipient_user_id=recipient_user_id,
+            employee_id=employee_id,
+        )
         recipient_employee_id = resolve_recipient_employee_id(
             db,
             recipient_user_id=recipient_user_id,

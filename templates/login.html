@@ -6,76 +6,98 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <style>
-    :root{--ink:#132033;--muted:#68758a;--line:#dfe6ef;--blue:#2457d6;--green:#0f8f69;--amber:#f59e0b}
+    :root{--ink:#252525;--muted:#707174;--line:#e2e2e3;--blue:#ef174c;--green:#707174;--amber:#f59e0b}
     *{box-sizing:border-box}
-    body{min-height:100vh;margin:0;background:#eef3f8;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
-    .auth-page{min-height:100vh;display:grid;place-items:center;padding:28px}
-    .auth-shell{width:min(1120px,100%);display:grid;grid-template-columns:minmax(0,1.05fr) minmax(390px,.82fr);border-radius:28px;overflow:hidden;background:#fff;box-shadow:0 26px 80px rgba(15,23,42,.16)}
-    .story-panel{position:relative;min-height:680px;padding:42px;background:linear-gradient(145deg,#11213a 0%,#173358 58%,#0f766e 100%);color:#fff;overflow:hidden}
-    .story-panel:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:44px 44px;opacity:.35}
-    .story-panel:after{content:"";position:absolute;left:10%;right:10%;bottom:-120px;height:260px;background:radial-gradient(circle,rgba(34,197,94,.26),transparent 66%)}
-    .story-content{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;justify-content:space-between;gap:36px}
-    .brand-lockup{display:flex;align-items:center;gap:14px}
-    .brand-mark{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:#fff;color:var(--blue);box-shadow:0 16px 38px rgba(0,0,0,.18)}
-    .eyebrow{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:.42rem .75rem;border:1px solid rgba(255,255,255,.22);border-radius:999px;background:rgba(255,255,255,.11);font-size:.78rem;font-weight:750;text-transform:uppercase;letter-spacing:.06em}
-    .story-title{max-width:560px;font-size:clamp(2.45rem,4vw,4.35rem);line-height:.98;font-weight:850;letter-spacing:0;margin:18px 0 16px}
-    .story-copy{max-width:500px;color:rgba(255,255,255,.78);font-size:1.05rem;line-height:1.65}
-    .route-board{position:relative;margin-top:22px;max-width:560px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:rgba(255,255,255,.11);backdrop-filter:blur(14px);padding:22px}
-    .route-line{position:absolute;left:46px;top:78px;bottom:78px;width:2px;background:linear-gradient(#60a5fa,#34d399)}
-    .route-stop{position:relative;display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0}
-    .stop-icon{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:#fff;color:var(--blue);box-shadow:0 10px 24px rgba(0,0,0,.16)}
+    body{min-height:100vh;margin:0;background:#fff;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    .site-header{background:#fff;border-bottom:1px solid #edf1f5;box-shadow:0 5px 18px rgba(15,23,42,.04)}
+    .header-main{width:min(1320px,calc(100% - 40px));margin:auto;min-height:92px;display:flex;align-items:center;gap:28px}
+    .brand-lockup{display:flex;align-items:center;gap:12px;min-width:max-content;color:var(--ink);text-decoration:none}
+    .brand-mark{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#ef174c,#c50f3d);color:#fff;box-shadow:0 10px 24px rgba(239,23,76,.22)}
+    .brand-name{font-size:1.05rem;font-weight:850;line-height:1.1}.brand-sub{font-size:.72rem;color:var(--muted);margin-top:3px}
+    .search-bar{height:52px;flex:1;max-width:560px;margin-left:auto;border:1.5px solid var(--blue);border-radius:999px;display:flex;align-items:center;padding:0 2px 0 22px;color:#8792a3;background:#fff;text-align:left;cursor:pointer}
+    .search-bar i{margin-left:auto;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--blue);color:#fff;font-size:1.15rem}
+    .header-status{height:52px;border:0;border-radius:14px;background:#fff0f4;display:flex;align-items:center;gap:18px;padding:0 20px;font-weight:750;color:var(--ink);cursor:pointer}
+    .header-status span{display:flex;align-items:center;gap:8px}.header-status i{color:var(--blue)}
+    .language-switch{display:flex;gap:7px}.language-switch .btn{border-radius:999px;font-weight:700}
+    .category-bar{width:min(1320px,calc(100% - 40px));margin:0 auto 0;padding:10px 18px 14px;border-radius:14px 14px 0 0;background:#f7f9fb;display:flex;justify-content:center;gap:8px;overflow:auto}
+    .category-chip{white-space:nowrap;border:1px solid #cfd8e5;border-radius:999px;padding:.38rem .95rem;color:#536174;background:#fff;font-size:.9rem;cursor:pointer}.category-chip:first-child{border-color:var(--blue);color:var(--blue)}
+    .auth-page{width:min(1320px,calc(100% - 40px));margin:auto;padding:54px 0 34px}
+    .auth-shell{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(370px,.72fr);gap:34px;align-items:stretch}
+    .story-panel{position:relative;min-height:590px;padding:52px;border-radius:26px;background:linear-gradient(135deg,#252525 0%,#707174 56%,#ef174c 145%);color:#fff;overflow:hidden;box-shadow:0 22px 55px rgba(37,37,37,.2)}
+    .story-panel:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-size:46px 46px;opacity:.4}
+    .story-panel:after{content:"";position:absolute;width:430px;height:430px;border:80px solid rgba(255,255,255,.07);border-radius:50%;right:-110px;bottom:-150px}
+    .story-content{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:.45rem .8rem;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:rgba(255,255,255,.1);font-size:.78rem;font-weight:750;text-transform:uppercase;letter-spacing:.06em}
+    .story-title{max-width:680px;font-size:clamp(2.6rem,4vw,4.7rem);line-height:1.02;font-weight:850;letter-spacing:-.035em;margin:22px 0 16px}
+    .story-copy{max-width:620px;color:rgba(255,255,255,.8);font-size:1.08rem;line-height:1.65}
+    .route-board{margin-top:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding-top:34px}
+    .route-stop{min-width:0;border:1px solid rgba(255,255,255,.17);border-radius:18px;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);padding:16px}
+    .stop-icon{width:43px;height:43px;border-radius:13px;display:grid;place-items:center;background:#fff;color:var(--blue);margin-bottom:12px}
     .route-stop:last-child .stop-icon{color:var(--green)}
-    .stop-label{font-size:.78rem;color:rgba(255,255,255,.62);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-    .stop-value{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .status-pill{border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.16);padding:.35rem .65rem;font-size:.78rem;font-weight:750;color:#d1fae5}
-    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .metric{border:1px solid rgba(255,255,255,.16);border-radius:18px;background:rgba(255,255,255,.1);padding:16px}
-    .metric strong{display:block;font-size:1.35rem}.metric span{color:rgba(255,255,255,.68);font-size:.82rem}
-    .signin-panel{padding:36px 48px 42px;display:flex;flex-direction:column;justify-content:center}
-    .language-switch{display:flex;justify-content:flex-end;gap:8px;margin-bottom:34px}
+    .stop-label{font-size:.7rem;color:rgba(255,255,255,.65);font-weight:700;text-transform:uppercase;letter-spacing:.05em}.stop-value{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .status-pill{display:inline-block;margin-top:8px;border-radius:999px;background:rgba(255,255,255,.12);padding:.28rem .55rem;font-size:.72rem;font-weight:750;color:#d1fae5}
+    .signin-panel{padding:28px 30px 30px;border:1px solid #eef1f5;border-radius:26px;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.12);display:flex;flex-direction:column;justify-content:center}
+    .access-panel{text-align:center}.access-icon{width:76px;height:76px;margin:0 auto 20px;border-radius:24px;display:grid;place-items:center;background:linear-gradient(135deg,#252525,#ef174c);color:#fff;font-size:1.8rem;box-shadow:0 16px 32px rgba(239,23,76,.2)}
+    .auth-trigger{cursor:pointer}.auth-trigger:focus-visible{outline:3px solid rgba(239,23,76,.28);outline-offset:3px}
+    .auth-modal .modal-dialog{max-width:480px}.auth-modal .modal-content{border:0;border-radius:26px;box-shadow:0 30px 90px rgba(37,37,37,.28);overflow:hidden}.auth-modal .modal-header{border:0;padding:24px 26px 0}.auth-modal .modal-body{padding:12px 30px 30px}
+    .auth-divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.78rem;margin:20px 0}.auth-divider:before,.auth-divider:after{content:"";height:1px;flex:1;background:var(--line)}
+    .google-btn{border:1px solid var(--line);border-radius:14px;padding:.78rem 1rem;background:#fff;color:var(--ink);font-weight:750}.google-btn:hover{border-color:#b7b7b9;background:#f8f8f8}.google-mark{font-size:1.1rem;font-weight:900;color:#4285f4}
+    .signin-panel .language-switch{justify-content:flex-end;margin-bottom:18px}
     .language-switch .btn{border-radius:999px;font-weight:700}
     .panel-kicker{color:var(--green);font-size:.8rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
     .signin-title{font-size:2.15rem;font-weight:850;letter-spacing:0;margin:.45rem 0 .65rem}
     .signin-copy{color:var(--muted);line-height:1.6;margin-bottom:1.7rem}
     .form-label{font-weight:760;color:#1f2937}
     .input-group{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
-    .input-group:focus-within{border-color:#7aa2ff;box-shadow:0 0 0 .22rem rgba(36,87,214,.12)}
+    .input-group:focus-within{border-color:#ef174c;box-shadow:0 0 0 .22rem rgba(239,23,76,.12)}
     .input-group-text,.form-control,.password-toggle{border:0;background:#fff}
     .form-control{padding:.9rem .9rem}.form-control:focus{box-shadow:none}
     .password-toggle{color:#64748b;padding:0 1rem}
-    .btn-primary{--bs-btn-bg:var(--blue);--bs-btn-border-color:var(--blue);--bs-btn-hover-bg:#1d45aa;--bs-btn-hover-border-color:#1d45aa;border-radius:14px;font-weight:800}
-    .location-note{border:1px solid #dce8f5;border-radius:16px;background:#f7fbff;color:var(--muted)}
+    .btn-primary{--bs-btn-bg:var(--blue);--bs-btn-border-color:var(--blue);--bs-btn-hover-bg:#c50f3d;--bs-btn-hover-border-color:#c50f3d;border-radius:14px;font-weight:800}
+    .location-note{border:1px solid #ffd5df;border-radius:16px;background:#fff7f9;color:var(--muted)}
     .location-note i{color:var(--blue)}
     .demo-box{background:#f8fafc;border:1px solid #e5eaf1;border-radius:18px}
     .demo-account{padding:.55rem .65rem;border-radius:12px;background:#fff;border:1px solid #edf1f6}
-    @media (max-width: 960px){
-      .auth-page{padding:18px}.auth-shell{grid-template-columns:1fr}.story-panel{min-height:auto;padding:28px}.metric-row{grid-template-columns:1fr 1fr 1fr}.signin-panel{padding:28px}.language-switch{margin-bottom:24px}
+    .trust-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}.trust-item{display:flex;align-items:center;gap:12px;padding:18px 20px;border:1px solid #e2e2e3;border-radius:18px;background:#fff;text-align:left}.trust-item i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#fff0f4;color:var(--blue);font-size:1.15rem}.trust-item strong{display:block}.trust-item small{color:var(--muted)}
+    @media (max-width: 1040px){
+      .header-status{display:none}.auth-shell{grid-template-columns:1fr}.story-panel{min-height:500px}.signin-panel{padding:32px}.route-board{grid-template-columns:repeat(3,1fr)}
     }
-    @media (max-width: 576px){
-      .auth-page{padding:0}.auth-shell{border-radius:0;min-height:100vh}.story-panel{display:none}.signin-panel{padding:24px 18px}.signin-title{font-size:1.85rem}
+    @media (max-width: 680px){
+      .header-main{width:calc(100% - 28px);min-height:76px;gap:12px}.brand-sub,.search-bar{display:none}.category-bar{width:100%;justify-content:flex-start;border-radius:0}.language-switch{margin-left:auto}.auth-page{width:calc(100% - 28px);padding:24px 0}.story-panel{min-height:auto;padding:30px 24px}.story-title{font-size:2.35rem}.story-copy{font-size:.96rem}.route-board{grid-template-columns:1fr}.route-stop:nth-child(n+2){display:none}.signin-panel{padding:26px 20px}.signin-title{font-size:1.85rem}.trust-strip{grid-template-columns:1fr}.demo-box{display:none}
     }
   </style>
 </head>
 <body>
+<header class="site-header">
+  <div class="header-main">
+    <a class="brand-lockup" href="/login">
+      <div class="brand-mark"><i class="bi bi-box-seam fs-4"></i></div>
+      <div><div class="brand-name">{{ app_name }}</div><div class="brand-sub">{{ 'Employee delivery operations'|tr }}</div></div>
+    </a>
+    <button class="search-bar auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal"><span>{{ 'Search AWB, employee, or destination'|tr }}</span><i class="bi bi-search"></i></button>
+    <button class="header-status auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal"><span><i class="bi bi-box-seam"></i>{{ 'Shipments'|tr }}</span><span><i class="bi bi-truck"></i>{{ 'Tracking'|tr }}</span></button>
+    <div class="language-switch">
+      {% for code, label in languages.items() %}
+      <a class="btn btn-sm {{ 'btn-primary' if code == lang else 'btn-outline-secondary' }}" href="/language?lang={{ code }}&next=/login">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  <nav class="category-bar" aria-label="Portal features">
+    <button class="category-chip auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal"><i class="bi bi-sliders me-1"></i>{{ 'Operations'|tr }}</button>
+    {% for item in ['AWB Tracking', 'Employees', 'Couriers', 'Destinations', 'Delivery Status'] %}<button class="category-chip auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal">{{ item|tr }}</button>{% endfor %}
+  </nav>
+</header>
 <main class="auth-page">
   <section class="auth-shell">
     <aside class="story-panel" aria-label="{{ 'Shipping operations overview'|tr }}">
       <div class="story-content">
         <div>
-          <div class="brand-lockup">
-            <div class="brand-mark"><i class="bi bi-box-seam fs-3"></i></div>
-            <div>
-              <div class="fw-bold fs-5">{{ app_name }}</div>
-              <div class="text-white-50 small">{{ 'Employee delivery operations'|tr }}</div>
-            </div>
-          </div>
-          <div class="mt-5">
+          <div>
             <span class="eyebrow"><i class="bi bi-truck"></i>{{ 'Shipping business portal'|tr }}</span>
             <h1 class="story-title">{{ 'Track every employee package from origin to arrival.'|tr }}</h1>
             <p class="story-copy">{{ 'Monitor AWB status, origin, destination, courier movement, and employee handoff from one operational dashboard.'|tr }}</p>
           </div>
           <div class="route-board">
-            <div class="route-line"></div>
             <div class="route-stop">
               <div class="stop-icon"><i class="bi bi-building"></i></div>
               <div>
@@ -102,23 +124,34 @@
             </div>
           </div>
         </div>
-        <div class="metric-row">
-          <div class="metric"><strong>24/7</strong><span>{{ 'Tracking visibility'|tr }}</span></div>
-          <div class="metric"><strong>AWB</strong><span>{{ 'Courier lookup'|tr }}</span></div>
-          <div class="metric"><strong>GPS</strong><span>{{ 'Login location'|tr }}</span></div>
-        </div>
       </div>
     </aside>
 
-    <section class="signin-panel">
-      <div class="language-switch">
-        {% for code, label in languages.items() %}
-        <a class="btn btn-sm {{ 'btn-primary' if code == lang else 'btn-outline-secondary' }}" href="/language?lang={{ code }}&next=/login">{{ label }}</a>
-        {% endfor %}
-      </div>
+    <section class="signin-panel access-panel">
+      <div class="access-icon"><i class="bi bi-person-lock"></i></div>
       <div class="panel-kicker">{{ 'Secure shipment access'|tr }}</div>
-      <h2 class="signin-title">{{ 'Welcome back'|tr }}</h2>
-      <p class="signin-copy">{{ 'Sign in to {app_name} using your assigned account.'|tr|replace('{app_name}', app_name) }}</p>
+      <h2 class="signin-title">{{ 'Access the shipment portal'|tr }}</h2>
+      <p class="signin-copy">{{ 'Sign in or create an employee account with Google to use tracking and shipment tools.'|tr }}</p>
+      <button class="btn btn-primary py-3 auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal"><i class="bi bi-box-arrow-in-right me-2"></i>{{ 'Sign in or register'|tr }}</button>
+      <div class="small text-secondary mt-3"><i class="bi bi-shield-check me-1"></i>{{ 'Protected employee access'|tr }}</div>
+    </section>
+  </section>
+  <section class="trust-strip" aria-label="Portal benefits">
+    <button class="trust-item auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal"><i class="bi bi-clock-history"></i><span><strong>24/7 {{ 'Visibility'|tr }}</strong><small>{{ 'Live shipment progress'|tr }}</small></span></button>
+    <button class="trust-item auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal"><i class="bi bi-upc-scan"></i><span><strong>{{ 'AWB Lookup'|tr }}</strong><small>{{ 'Multiple courier tracking'|tr }}</small></span></button>
+    <button class="trust-item auth-trigger" type="button" data-bs-toggle="modal" data-bs-target="#authModal"><i class="bi bi-shield-check"></i><span><strong>{{ 'Secure Access'|tr }}</strong><small>{{ 'Role-based operations'|tr }}</small></span></button>
+  </section>
+</main>
+
+<div class="modal fade auth-modal" id="authModal" tabindex="-1" aria-labelledby="authModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div><div class="panel-kicker">{{ 'Secure shipment access'|tr }}</div><h2 class="signin-title mb-0" id="authModalTitle">{{ 'Welcome back'|tr }}</h2></div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+      <p class="signin-copy mb-3">{{ 'Sign in to {app_name} using your assigned account.'|tr|replace('{app_name}', app_name) }}</p>
       {% if error %}<div class="alert alert-danger rounded-3"><i class="bi bi-exclamation-circle me-2"></i>{{ error }}</div>{% endif %}
       <form method="post" action="/login" id="loginForm">
         <input type="hidden" name="latitude" id="latitude">
@@ -148,7 +181,12 @@
           <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Detecting location...'|tr }}</span>
         </button>
       </form>
-      <div class="demo-box p-3 mt-4">
+      <div class="auth-divider">{{ 'or continue with Google'|tr }}</div>
+      <div class="d-grid gap-2">
+        <a class="google-btn text-decoration-none text-center" href="/auth/google?mode=login"><span class="google-mark me-2">G</span>{{ 'Sign in with Google'|tr }}</a>
+        <a class="google-btn text-decoration-none text-center" href="/auth/google?mode=register"><i class="bi bi-person-plus me-2 text-secondary"></i>{{ 'Register with Google'|tr }}</a>
+      </div>
+      <!-- <div class="demo-box p-3 mt-3">
         <div class="small fw-bold mb-2"><i class="bi bi-key me-1"></i>{{ 'Demo accounts'|tr }}</div>
         <div class="row g-2 small text-secondary">
           <div class="col-6"><div class="demo-account"><strong class="text-dark">admin</strong><br>Admin123!</div></div>
@@ -156,10 +194,12 @@
           <div class="col-6"><div class="demo-account"><strong class="text-dark">andriana</strong><br>Employee123!</div></div>
           <div class="col-6"><div class="demo-account"><strong class="text-dark">siti</strong><br>Employee123!</div></div>
         </div>
+      </div> -->
       </div>
-    </section>
-  </section>
-</main>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   const i18n = {
     signingIn: {{ ('Signing in...'|tr)|tojson }},
@@ -177,6 +217,10 @@
   const loginForm = document.getElementById('loginForm');
   const locationStatus = document.getElementById('locationStatus');
   let submittingWithLocation = false;
+
+  {% if error %}
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('authModal')).show();
+  {% endif %}
 
   function setLoading(label) {
     const button = document.getElementById('loginButton');
