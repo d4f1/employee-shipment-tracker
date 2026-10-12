@@ -528,6 +528,8 @@ TRANSLATIONS = {
         "No recipients match your search.": "Tidak ada penerima yang cocok dengan pencarian.",
         "Filled automatically from a valid AWB": "Terisi otomatis dari AWB yang valid",
         "Enter a valid AWB to automatically fill shipment details. All fields remain editable.": "Masukkan AWB yang valid untuk mengisi detail pengiriman secara otomatis. Semua kolom tetap dapat diedit.",
+        "AWB verified. {count} shipment fields were filled automatically and remain editable.": "AWB terverifikasi. {count} kolom pengiriman diisi otomatis dan tetap dapat diedit.",
+        "NCS is available for shipment entry and domestic cost, but this provider does not currently support NCS AWB tracking. Enter details manually if lookup fails.": "NCS tersedia untuk input pengiriman dan ongkir domestik, tetapi penyedia ini saat ini belum mendukung pelacakan AWB NCS. Isi detail secara manual jika pencarian gagal.",
         "AWB / waybill": "AWB / waybill",
         "Lookup": "Cari",
         "Lookup AWB to fill origin and destination.": "Cari AWB untuk mengisi origin dan destination.",
@@ -1582,6 +1584,9 @@ class RajaOngkirProvider:
                     "mock": True,
                     "awb": awb,
                     "courier": courier,
+                    "goods_description": f"Courier package {awb}",
+                    "goods_type": "Package",
+                    "ticket_number": f"TCK-{awb}",
                     "origin_city": "Jakarta",
                     "origin_area": "Distribution Center",
                     "origin_postal_code": "10110",
@@ -1910,6 +1915,30 @@ async def lookup_awb_route(
     route = await enrich_awb_route_cost(route, result, courier=courier)
     metadata = extract_awb_form_metadata(result)
     recipient = match_awb_recipient_account(db, metadata.get("recipient_name"), user)
+    if RAJAONGKIR_MOCK and not recipient:
+        mock_recipient_stmt = select(User).where(
+            User.is_active.is_(True),
+            User.role == "employee",
+            User.id != user.id,
+        ).order_by(User.full_name)
+        recipient = db.scalar(mock_recipient_stmt)
+        if recipient:
+            metadata["recipient_name"] = recipient.full_name
+    filled_fields = [
+        field_name
+        for field_name, value in {
+            "recipient": recipient.id if recipient else None,
+            "item": metadata.get("title"),
+            "item_type": metadata.get("document_type"),
+            "ticket": metadata.get("ticket_number"),
+            "po": metadata.get("po_number"),
+            "origin": route.get("origin"),
+            "destination": route.get("destination"),
+            "eta": route.get("eta_days"),
+            "cost": route.get("shipping_cost"),
+        }.items()
+        if value not in (None, "")
+    ]
     return {
         "courier": courier,
         "awb": awb,
@@ -1917,6 +1946,7 @@ async def lookup_awb_route(
         **metadata,
         "recipient_user_id": recipient.id if recipient else None,
         "recipient_label": recipient.full_name if recipient else None,
+        "autofilled_fields": filled_fields,
     }
 
 
@@ -2309,6 +2339,7 @@ def dashboard(
     budget_item_created: Optional[int] = None,
     budget_item_updated: Optional[int] = None,
     location_created: Optional[int] = None,
+    location_updated: Optional[int] = None,
     budget_error: Optional[str] = None,
     budget_month: Optional[str] = None,
     analytics_year: Optional[int] = Query(None),
@@ -2629,6 +2660,7 @@ def dashboard(
             budget_item_created=bool(budget_item_created),
             budget_item_updated=bool(budget_item_updated),
             location_created=bool(location_created),
+            location_updated=bool(location_updated),
             budget_error=budget_error,
             sort=sort,
             company_locations=company_locations,
@@ -2966,6 +2998,47 @@ def create_company_location_form(
     ))
     db.commit()
     return dashboard_redirect(location_created=1)
+
+
+@app.post("/locations/{location_id}/edit")
+def edit_company_location_form(
+    location_id: int,
+    request: Request,
+    company_name: str = Form(...),
+    branch_name: str = Form(...),
+    address: str = Form(...),
+    road: Optional[str] = Form(None),
+    city: Optional[str] = Form(None),
+    state: Optional[str] = Form(None),
+    postcode: Optional[str] = Form(None),
+    country: Optional[str] = Form("Indonesia"),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    location = db.get(CompanyLocation, location_id)
+    if not location:
+        raise HTTPException(status_code=404, detail="Company location not found")
+
+    company_name = company_name.strip()
+    branch_name = branch_name.strip()
+    address = address.strip()
+    if not company_name or not branch_name or not address:
+        return dashboard_redirect(fragment="locationsPanel", user_error="Company, branch, and address are required.")
+
+    location.company_name = company_name
+    location.branch_name = branch_name
+    location.address = address
+    location.road = road.strip() if road else None
+    location.city = city.strip() if city else None
+    location.state = state.strip() if state else None
+    location.postcode = postcode.strip() if postcode else None
+    location.country = country.strip() if country else None
+    db.commit()
+    return dashboard_redirect(fragment="locationsPanel", location_updated=1)
 
 
 @app.get("/shipments/{shipment_id}", response_class=HTMLResponse)

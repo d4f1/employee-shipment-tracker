@@ -685,33 +685,6 @@
 </nav>
 
 <main class="container-fluid page-shell p-3 p-lg-4">
-  {% if current_user.role != 'admin' %}
-  <section class="hero-panel p-4 p-lg-5 mb-4">
-    <div class="row align-items-center g-4">
-      <div class="col-lg-8">
-        <span class="badge rounded-pill bg-white bg-opacity-25 mb-3">
-          <i class="bi bi-shield-check me-1"></i>{{ ('Vendor' if current_user.role == 'operator' else current_user.role|title)|tr }} {{ 'access'|tr }}
-        </span>
-        <h1 class="display-6 fw-bold mb-2">{{ 'GA Dashboard'|tr }}</h1>
-        <div class="hero-ticker" role="marquee" aria-label="{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}">
-          <div class="hero-ticker-track">
-            <span>{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}</span>
-            <span aria-hidden="true">{{ 'Monitor company items and packages from dispatch until employee receipt.'|tr }}</span>
-          </div>
-        </div>
-      </div>
-      {% if current_user.role in ['admin','operator'] %}
-      <div class="col-lg-4 text-lg-end">
-        <button class="btn btn-light btn-lg rounded-4 px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#createShipmentModal">
-          <i class="bi bi-plus-circle me-2"></i>{{ 'Create shipment'|tr }}
-        </button>
-      </div>
-      {% endif %}
-    </div>
-  </section>
-  {% endif %}
-
-  {% if current_user.role == 'admin' %}
   <section class="dashboard-layout mb-4">
     <aside class="dashboard-sidebar">
       <div class="sidebar-lockup d-flex align-items-center gap-3">
@@ -725,6 +698,7 @@
         <button class="nav-link active" id="shipping-tab" data-bs-toggle="pill" data-bs-target="#shippingPanel" type="button" role="tab" aria-controls="shippingPanel" aria-selected="true">
           <i class="bi bi-grid-fill"></i><span>{{ 'Dashboard'|tr }}</span>
         </button>
+        {% if current_user.role == 'admin' %}
         <button class="nav-link" id="budget-tab" data-bs-toggle="pill" data-bs-target="#budgetPanel" type="button" role="tab" aria-controls="budgetPanel" aria-selected="false">
           <i class="bi bi-wallet2"></i><span>{{ 'Monthly budget'|tr }}</span>
         </button>
@@ -737,6 +711,7 @@
         <button class="nav-link" id="admin-tab" data-bs-toggle="pill" data-bs-target="#adminPanel" type="button" role="tab" aria-controls="adminPanel" aria-selected="false">
           <i class="bi bi-people"></i><span>{{ 'Admin'|tr }}</span>
         </button>
+        {% endif %}
       </div>
       <div class="sidebar-help">
         <div class="fw-bold mb-1"><i class="bi bi-headset me-2"></i>{{ 'Need help?'|tr }}</div>
@@ -747,13 +722,14 @@
     <div class="dashboard-content min-w-0">
   <div class="tab-content" id="adminDashboardTabContent">
     <div class="tab-pane fade show active" id="shippingPanel" role="tabpanel" aria-labelledby="shipping-tab" tabindex="0">
-  {% endif %}
 
-  {% if current_user.role == 'admin' %}
   <div class="dashboard-welcome d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
     <div><h3 class="fw-bold mb-1">{{ 'Welcome'|tr }}, {{ current_user.full_name }} 👋</h3><div class="muted">{{ 'Monitor employee shipment activity in real time.'|tr }}</div></div>
+    {% if current_user.role in ['admin', 'operator'] %}
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createShipmentModal"><i class="bi bi-plus-circle me-2"></i>{{ 'Create shipment'|tr }}</button>
+    {% endif %}
   </div>
+  {% if current_user.role == 'admin' %}
   <div class="nav nav-tabs vendor-view-tabs mb-3" role="tablist">
     <button class="nav-link active" id="shipping-data-tab" data-bs-toggle="tab" data-bs-target="#shippingDataPanel" type="button" role="tab"><i class="bi bi-table me-2"></i>{{ 'Shipping data'|tr }}</button>
     <button class="nav-link" id="shipping-analytics-tab" data-bs-toggle="tab" data-bs-target="#shippingAnalyticsPanel" type="button" role="tab"><i class="bi bi-graph-up-arrow me-2"></i>{{ 'Shipping analytics'|tr }}</button>
@@ -1417,6 +1393,7 @@
                           <th>{{ 'Branch name'|tr }}</th>
                           <th>{{ 'Full address'|tr }}</th>
                           <th>{{ 'Postal code'|tr }}</th>
+                          <th class="text-end">{{ 'Action'|tr }}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1426,17 +1403,18 @@
                           <td>{{ location.branch_name }}</td>
                           <td class="small">{{ location.address }}{% if location.city %}, {{ location.city }}{% endif %}{% if location.state %}, {{ location.state }}{% endif %}{% if location.country %}, {{ location.country }}{% endif %}</td>
                           <td class="fw-semibold">{{ location.postcode or '-' }}</td>
+                          <td class="text-end"><button class="btn btn-sm btn-soft edit-location-button" type="button" data-bs-toggle="modal" data-bs-target="#editLocationModal" data-location-id="{{ location.id }}" data-company="{{ location.company_name }}" data-branch="{{ location.branch_name }}" data-address="{{ location.address }}" data-road="{{ location.road or '' }}" data-city="{{ location.city or '' }}" data-state="{{ location.state or '' }}" data-postcode="{{ location.postcode or '' }}" data-country="{{ location.country or 'Indonesia' }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
                         </tr>
                         {% else %}
                         <tr>
-                          <td colspan="4" class="text-center empty-state">
+                          <td colspan="5" class="text-center empty-state">
                             <i class="bi bi-geo-alt display-5 text-secondary"></i>
                             <h5 class="mt-3">{{ 'No company locations yet.'|tr }}</h5>
                             <p class="muted mb-0">{{ 'Register company and branch addresses for manual shipment entry.'|tr }}</p>
                           </td>
                         </tr>
                         {% endfor %}
-                        <tr class="d-none" id="locationFilterEmpty"><td colspan="4" class="text-center py-4 muted">{{ 'No locations match the selected filters.'|tr }}</td></tr>
+                        <tr class="d-none" id="locationFilterEmpty"><td colspan="5" class="text-center py-4 muted">{{ 'No locations match the selected filters.'|tr }}</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -1575,6 +1553,11 @@
   </div>
     </div>
   </section>
+    {% else %}
+    </div>
+  </div>
+    </div>
+  </section>
     {% endif %}
 </main>
 
@@ -1704,7 +1687,7 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Courier'|tr }}</label><select class="form-select" name="courier" id="courierSelect" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option></select></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Courier'|tr }}</label><select class="form-select" name="courier" id="courierSelect" required><option value="jne">JNE</option><option value="jnt">J&T</option><option value="sicepat">SiCepat</option><option value="anteraja">AnterAja</option><option value="pos">POS Indonesia</option><option value="tiki">TIKI</option><option value="ncs">NCS</option></select></div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'AWB / waybill'|tr }}</label>
               <div class="input-group">
@@ -1802,6 +1785,36 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editLocationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 rounded-4">
+      <form method="post" id="editLocationForm">
+        <div class="modal-header border-0 px-4 pt-4">
+          <div><div class="panel-kicker">{{ 'Company location'|tr }}</div><h4 class="modal-title fw-bold">{{ 'Edit location'|tr }}</h4><p class="muted mb-0">{{ 'Correct the address, then validate the pointer before saving.'|tr }}</p></div>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body px-4">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Company name'|tr }}</label><input class="form-control" id="editLocationCompany" name="company_name" required></div>
+            <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Branch name'|tr }}</label><input class="form-control" id="editLocationBranch" name="branch_name" required></div>
+            <div class="col-12"><label class="form-label fw-semibold">{{ 'Full address'|tr }}</label><div class="address-suggest-field"><textarea class="form-control" id="editLocationAddress" name="address" rows="3" required autocomplete="off"></textarea><div class="address-suggestions d-none" id="editLocationAddressSuggestions"></div></div></div>
+            <div class="col-12"><label class="form-label fw-semibold">{{ 'Road'|tr }}</label><input class="form-control" id="editLocationRoad" name="road"></div>
+            <div class="col-md-6"><label class="form-label fw-semibold">{{ 'City'|tr }}</label><input class="form-control" id="editLocationCity" name="city"></div>
+            <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Province'|tr }}</label><input class="form-control" id="editLocationState" name="state"></div>
+            <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Postal code'|tr }}</label><input class="form-control" id="editLocationPostcode" name="postcode"></div>
+            <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Country'|tr }}</label><input class="form-control" id="editLocationCountry" name="country"></div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4">
+          <button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button>
+          <button class="btn btn-soft" id="editLocationValidateButton" type="button"><i class="bi bi-crosshair me-2"></i>{{ 'Validate pointer'|tr }}</button>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save changes'|tr }}</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -1915,6 +1928,9 @@
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
+  <div id="locationUpdatedToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex"><div class="toast-body"><i class="bi bi-geo-alt-fill me-2"></i>{{ 'Location updated successfully.'|tr }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+  </div>
   <div id="budgetErrorToast" class="toast text-bg-danger" role="alert">
     <div class="d-flex">
       <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ budget_error }}</div>
@@ -1938,6 +1954,8 @@
     lookupLoading: {{ ('Looking up route from courier tracking...'|tr)|tojson }},
     lookupButton: {{ ('Lookup'|tr)|tojson }},
     routeFilledTemplate: {{ ('Route filled from {source}. Last status: {status}.'|tr)|tojson }},
+    awbFieldsFilledTemplate: {{ ('AWB verified. {count} shipment fields were filled automatically and remain editable.'|tr)|tojson }},
+    ncsTrackingNotice: {{ ('NCS is available for shipment entry and domestic cost, but this provider does not currently support NCS AWB tracking. Enter details manually if lookup fails.'|tr)|tojson }},
     courierData: {{ ('courier data'|tr)|tojson }},
     trackingTimeline: {{ ('tracking timeline'|tr)|tojson }},
     awbLookupFailed: {{ ('AWB lookup failed'|tr)|tojson }},
@@ -2015,6 +2033,11 @@
   const companyStateInput = document.getElementById('companyStateInput');
   const companyPostcodeInput = document.getElementById('companyPostcodeInput');
   const companyCountryInput = document.getElementById('companyCountryInput');
+  const editLocationModal = document.getElementById('editLocationModal');
+  const editLocationForm = document.getElementById('editLocationForm');
+  const editLocationAddress = document.getElementById('editLocationAddress');
+  const editLocationAddressSuggestions = document.getElementById('editLocationAddressSuggestions');
+  const editLocationValidateButton = document.getElementById('editLocationValidateButton');
   const etaDaysInput = document.getElementById('etaDaysInput');
   const shippingCostInput = document.getElementById('shippingCostInput');
   const allowManualAwbInput = document.getElementById('allowManualAwbInput');
@@ -2617,25 +2640,40 @@
   });
 
   let selectedCompanyAddressSuggestion = null;
+  let companyAddressTarget = 'create';
 
-  const getCompanyAddressQuery = () => [
-    companyAddressInput?.value.trim(),
-    companyCityInput?.value.trim(),
-    companyStateInput?.value.trim(),
-    companyPostcodeInput?.value.trim(),
-    companyCountryInput?.value.trim(),
-  ].filter(Boolean).join(', ');
+  const getCompanyAddressFields = () => companyAddressTarget === 'edit' ? {
+    address: editLocationAddress,
+    road: document.getElementById('editLocationRoad'),
+    city: document.getElementById('editLocationCity'),
+    state: document.getElementById('editLocationState'),
+    postcode: document.getElementById('editLocationPostcode'),
+    country: document.getElementById('editLocationCountry'),
+  } : {
+    address: companyAddressInput,
+    road: companyRoadInput,
+    city: companyCityInput,
+    state: companyStateInput,
+    postcode: companyPostcodeInput,
+    country: companyCountryInput,
+  };
+
+  const getCompanyAddressQuery = () => {
+    const fields = getCompanyAddressFields();
+    return [fields.address?.value.trim(), fields.city?.value.trim(), fields.state?.value.trim(), fields.postcode?.value.trim(), fields.country?.value.trim()].filter(Boolean).join(', ');
+  };
 
   const getMapsEmbedUrl = (query) => `https://maps.google.com/maps?q=${encodeURIComponent(query || 'Indonesia')}&output=embed`;
 
   const applyCompanyAddressSuggestion = (suggestion) => {
     if (!suggestion) return;
-    if (suggestion.label && companyAddressInput) companyAddressInput.value = suggestion.label;
-    if (suggestion.road && companyRoadInput) companyRoadInput.value = suggestion.road;
-    if (suggestion.city && companyCityInput) companyCityInput.value = suggestion.city;
-    if (suggestion.state && companyStateInput) companyStateInput.value = suggestion.state;
-    if (suggestion.postcode && companyPostcodeInput) companyPostcodeInput.value = suggestion.postcode;
-    if (suggestion.country && companyCountryInput) companyCountryInput.value = suggestion.country;
+    const fields = getCompanyAddressFields();
+    if (suggestion.label && fields.address) fields.address.value = suggestion.label;
+    if (suggestion.road && fields.road) fields.road.value = suggestion.road;
+    if (suggestion.city && fields.city) fields.city.value = suggestion.city;
+    if (suggestion.state && fields.state) fields.state.value = suggestion.state;
+    if (suggestion.postcode && fields.postcode) fields.postcode.value = suggestion.postcode;
+    if (suggestion.country && fields.country) fields.country.value = suggestion.country;
   };
 
   const setCompanyAddressMapSelection = (suggestion) => {
@@ -2685,17 +2723,18 @@
 
   const lookupCompanyAddressForModal = async () => {
     const query = getCompanyAddressQuery();
+    const fields = getCompanyAddressFields();
     setCompanyAddressMapSelection({ label: query || '-', secondary: i18n.searchingAddress });
     if (!companyAddressModalSuggestions) return;
     companyAddressModalSuggestions.innerHTML = `<div class="small muted rounded-3 border p-3"><span class="spinner-border spinner-border-sm me-2"></span>${i18n.searchingAddress}</div>`;
 
-    if (!companyAddressInput?.value.trim() || companyAddressInput.value.trim().length < 3) {
+    if (!fields.address?.value.trim() || fields.address.value.trim().length < 3) {
       renderCompanyAddressModalSuggestions([]);
       return;
     }
 
     try {
-      const params = new URLSearchParams({ query: companyAddressInput.value.trim() });
+      const params = new URLSearchParams({ query: fields.address.value.trim() });
       const response = await fetch(`/api/location/search?${params.toString()}`, {
         headers: { Accept: 'application/json' },
       });
@@ -2716,10 +2755,27 @@
     setCompanyAddressMapSelection(suggestion);
   });
 
+  setupAddressLookup(editLocationAddress, editLocationAddressSuggestions, (suggestion) => {
+    if (!suggestion) return;
+    companyAddressTarget = 'edit';
+    applyCompanyAddressSuggestion(suggestion);
+    setCompanyAddressMapSelection(suggestion);
+  });
+
   companyAddressValidateButton?.addEventListener('click', () => {
+    companyAddressTarget = 'create';
     const modal = bootstrap.Modal.getOrCreateInstance(companyAddressMapModal);
     modal.show();
     lookupCompanyAddressForModal();
+  });
+
+  editLocationValidateButton?.addEventListener('click', () => {
+    companyAddressTarget = 'edit';
+    editLocationModal.addEventListener('hidden.bs.modal', () => {
+      bootstrap.Modal.getOrCreateInstance(companyAddressMapModal).show();
+      lookupCompanyAddressForModal();
+    }, { once: true });
+    bootstrap.Modal.getOrCreateInstance(editLocationModal).hide();
   });
 
   useCompanyAddressButton?.addEventListener('click', () => {
@@ -2731,6 +2787,22 @@
 
   companyAddressMapModal?.addEventListener('hidden.bs.modal', () => {
     if (companyAddressMapFrame) companyAddressMapFrame.src = '';
+    if (companyAddressTarget === 'edit') bootstrap.Modal.getOrCreateInstance(editLocationModal).show();
+  });
+
+  document.querySelectorAll('.edit-location-button').forEach((button) => {
+    button.addEventListener('click', () => {
+      companyAddressTarget = 'edit';
+      editLocationForm.action = `/locations/${button.dataset.locationId}/edit`;
+      document.getElementById('editLocationCompany').value = button.dataset.company || '';
+      document.getElementById('editLocationBranch').value = button.dataset.branch || '';
+      editLocationAddress.value = button.dataset.address || '';
+      document.getElementById('editLocationRoad').value = button.dataset.road || '';
+      document.getElementById('editLocationCity').value = button.dataset.city || '';
+      document.getElementById('editLocationState').value = button.dataset.state || '';
+      document.getElementById('editLocationPostcode').value = button.dataset.postcode || '';
+      document.getElementById('editLocationCountry').value = button.dataset.country || 'Indonesia';
+    });
   });
 
   const lookupAwbRoute = async () => {
@@ -2784,8 +2856,12 @@
         shippingCostInput.value = Math.round(Number(payload.shipping_cost) || 0);
       }
       disableManualAwbFallback();
-      const sourceLabel = payload.source === 'courier_payload' ? i18n.courierData : i18n.trackingTimeline;
-      if (awbLookupStatus) awbLookupStatus.textContent = i18n.routeFilledTemplate.replace('{source}', sourceLabel).replace('{status}', payload.status || '-');
+      if (awbLookupStatus) {
+        const filledCount = Array.isArray(payload.autofilled_fields) ? payload.autofilled_fields.length : 0;
+        awbLookupStatus.textContent = filledCount
+          ? i18n.awbFieldsFilledTemplate.replace('{count}', filledCount)
+          : i18n.routeFilledTemplate.replace('{source}', payload.source === 'courier_payload' ? i18n.courierData : i18n.trackingTimeline).replace('{status}', payload.status || '-');
+      }
     } catch (error) {
       enableManualAwbFallback();
       showAwbErrorModal(courier, awb, error);
@@ -2797,6 +2873,10 @@
   };
 
   lookupAwbButton?.addEventListener('click', lookupAwbRoute);
+  courierSelect?.addEventListener('change', () => {
+    disableManualAwbFallback();
+    if (courierSelect.value === 'ncs' && awbLookupStatus) awbLookupStatus.textContent = i18n.ncsTrackingNotice;
+  });
   awbInput?.addEventListener('input', disableManualAwbFallback);
   awbInput?.addEventListener('blur', () => {
     if (awbInput.value.trim()) lookupAwbRoute();
@@ -2959,6 +3039,13 @@
   window.addEventListener('DOMContentLoaded', () => {
     showDashboardTab('#locations-tab');
     bootstrap.Toast.getOrCreateInstance(document.getElementById('locationSavedToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/#locationsPanel');
+  });
+  {% endif %}
+  {% if location_updated %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#locations-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('locationUpdatedToast'), {delay: 3500}).show();
     window.history.replaceState({}, document.title, '/#locationsPanel');
   });
   {% endif %}
