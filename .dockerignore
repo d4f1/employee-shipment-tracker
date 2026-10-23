@@ -6,3 +6,5 @@ __pycache__
 *.pyc
 employee_shipments.db
 .DS_Store
+secrets.properties
+.backup/

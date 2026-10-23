@@ -94,6 +94,19 @@
       border: 1px solid #ffd5df; border-radius: 12px;
     }
     .btn-soft:hover { background: #ffd5df; color: var(--app-primary-dark); }
+    .password-input-group .form-control { border-right: 0; }
+    .password-input-group .password-toggle {
+      border-color: var(--bs-border-color);
+      border-left: 0;
+      color: #64748b;
+    }
+    .password-input-group:focus-within .form-control,
+    .password-input-group:focus-within .password-toggle {
+      border-color: var(--app-primary);
+      box-shadow: 0 0 0 .22rem rgba(239,23,76,.12);
+    }
+    .password-input-group:focus-within .form-control { box-shadow: none; }
+    .password-input-group .password-toggle:hover { color: var(--app-primary-dark); }
     .table-card { overflow: hidden; }
     .table thead th {
       padding: 1rem;
@@ -1535,7 +1548,10 @@
             </div>
             <div>
               <label class="form-label fw-semibold">{{ 'Temporary password'|tr }}</label>
-              <input class="form-control" name="password" type="password" required minlength="8" placeholder="At least 8 characters">
+              <div class="input-group password-input-group">
+                <input class="form-control" id="newUserPassword" name="password" type="password" required minlength="8" placeholder="At least 8 characters">
+                <button class="btn btn-outline-secondary password-toggle" type="button" data-password-toggle="newUserPassword" aria-label="{{ 'Show password'|tr }}" aria-pressed="false" title="{{ 'Show password'|tr }}"><i class="bi bi-eye" aria-hidden="true"></i></button>
+              </div>
             </div>
             <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="newUserActive" checked>
@@ -1651,7 +1667,10 @@
             </div>
             <div>
               <label class="form-label fw-semibold">{{ 'New password'|tr }}</label>
-              <input class="form-control" name="password" type="password" minlength="8" placeholder="{{ 'Leave blank to keep current password.'|tr }}">
+              <div class="input-group password-input-group">
+                <input class="form-control" id="editUserPassword{{ account.id }}" name="password" type="password" minlength="8" placeholder="{{ 'Leave blank to keep current password.'|tr }}">
+                <button class="btn btn-outline-secondary password-toggle" type="button" data-password-toggle="editUserPassword{{ account.id }}" aria-label="{{ 'Show password'|tr }}" aria-pressed="false" title="{{ 'Show password'|tr }}"><i class="bi bi-eye" aria-hidden="true"></i></button>
+              </div>
             </div>
             <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="editUserActive{{ account.id }}" {{ 'checked' if account.is_active else '' }}>
@@ -2010,7 +2029,22 @@
     unknownLookupError: {{ ('Unknown lookup error.'|tr)|tojson }},
     searchingAddress: {{ ('Searching address...'|tr)|tojson }},
     noAddressSuggestions: {{ ('No address suggestions found.'|tr)|tojson }},
+    showPassword: {{ ('Show password'|tr)|tojson }},
+    hidePassword: {{ ('Hide password'|tr)|tojson }},
   };
+  document.querySelectorAll('[data-password-toggle]').forEach((toggle) => {
+    const passwordInput = document.getElementById(toggle.dataset.passwordToggle);
+    if (!passwordInput) return;
+    toggle.addEventListener('click', () => {
+      const show = passwordInput.type === 'password';
+      passwordInput.type = show ? 'text' : 'password';
+      const label = show ? i18n.hidePassword : i18n.showPassword;
+      toggle.innerHTML = `<i class="bi bi-eye${show ? '-slash' : ''}" aria-hidden="true"></i>`;
+      toggle.setAttribute('aria-pressed', String(show));
+      toggle.setAttribute('aria-label', label);
+      toggle.title = label;
+    });
+  });
   document.querySelectorAll('.budget-edit-modal').forEach((modal) => document.body.appendChild(modal));
   const budgetChartData = {{ budget_chart_data|tojson if current_user.role == 'admin' else 'null' }};
   const shipmentChartData = {{ shipment_chart_data|tojson if current_user.role == 'admin' else 'null' }};

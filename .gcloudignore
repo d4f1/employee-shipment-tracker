@@ -1,0 +1,7 @@
+# Files never to upload as Cloud Build source.
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+secrets.properties
+.backup/

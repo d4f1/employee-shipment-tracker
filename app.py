@@ -32,7 +32,23 @@ USER_ROLES = ("admin", "operator", "employee")
 DEFAULT_SELF_REGISTER_ROLE = "employee"
 DEFAULT_LANGUAGE = "id"
 SUPPORTED_LANGUAGES = {"id": "Bahasa", "en": "English"}
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./employee_shipments.db")
+APPLICATION_DIRECTORY = Path(__file__).resolve().parent
+
+
+def resolve_database_url(database_url: str) -> str:
+    """Keep relative SQLite databases attached to the application, not the launch cwd."""
+    sqlite_file_prefix = "sqlite:///"
+    if not database_url.startswith(sqlite_file_prefix):
+        return database_url
+
+    sqlite_path = database_url.removeprefix(sqlite_file_prefix)
+    if not sqlite_path or sqlite_path == ":memory:" or sqlite_path.startswith(("/", "file:")):
+        return database_url
+
+    return f"{sqlite_file_prefix}{APPLICATION_DIRECTORY / sqlite_path}"
+
+
+DATABASE_URL = resolve_database_url(os.getenv("DATABASE_URL", "sqlite:///./employee_shipments.db"))
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-development-secret")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_ACCESS_TOKEN_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_MINUTES", "60"))
@@ -290,6 +306,8 @@ TRANSLATIONS = {
         "Sign in to {app_name} using your assigned account.": "Masuk ke {app_name} menggunakan akun yang diberikan.",
         "Username": "Nama pengguna",
         "Password": "Kata sandi",
+        "Show password": "Tampilkan kata sandi",
+        "Hide password": "Sembunyikan kata sandi",
         "Current location detection": "Deteksi lokasi saat ini",
         "Location will be detected automatically when you sign in.": "Lokasi akan dideteksi otomatis saat Anda masuk.",
         "Sign in": "Masuk",

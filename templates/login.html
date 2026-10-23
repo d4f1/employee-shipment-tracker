@@ -166,7 +166,7 @@
           <div class="input-group">
             <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
             <input class="form-control" id="password" type="password" name="password" autocomplete="current-password" required>
-            <button class="password-toggle" type="button" id="togglePassword" aria-label="{{ 'Password'|tr }}"><i class="bi bi-eye"></i></button>
+            <button class="password-toggle" type="button" id="togglePassword" aria-label="{{ 'Show password'|tr }}" aria-pressed="false" title="{{ 'Show password'|tr }}"><i class="bi bi-eye" aria-hidden="true"></i></button>
           </div>
         </div>
         <div class="location-note d-flex align-items-start gap-3 p-3 mb-3 small">
@@ -208,11 +208,19 @@
     locationDetected: {{ ('Location detected. Signing in...'|tr)|tojson }},
     locationSkipped: {{ ('Location permission was skipped. Signing in without location.'|tr)|tojson }},
   };
+  const passwordToggleLabels = {
+    show: {{ ('Show password'|tr)|tojson }},
+    hide: {{ ('Hide password'|tr)|tojson }},
+  };
   document.getElementById('togglePassword').addEventListener('click', function () {
     const password = document.getElementById('password');
     const show = password.type === 'password';
     password.type = show ? 'text' : 'password';
-    this.innerHTML = `<i class="bi bi-eye${show ? '-slash' : ''}"></i>`;
+    const label = show ? passwordToggleLabels.hide : passwordToggleLabels.show;
+    this.innerHTML = `<i class="bi bi-eye${show ? '-slash' : ''}" aria-hidden="true"></i>`;
+    this.setAttribute('aria-pressed', String(show));
+    this.setAttribute('aria-label', label);
+    this.title = label;
   });
   const loginForm = document.getElementById('loginForm');
   const locationStatus = document.getElementById('locationStatus');
