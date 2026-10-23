@@ -6,3 +6,8 @@ __pycache__/
 employee_shipments.db
 .DS_Store
 outputs/
+.backup/
+.private-build/
+assets/
+docs/
+output/
