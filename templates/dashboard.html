@@ -239,6 +239,61 @@
       box-shadow: 0 28px 80px rgba(15,23,42,.20);
       overflow: hidden;
     }
+    .modal-dialog.modal-dialog-scrollable {
+      height: calc(100vh - 2rem);
+      height: calc(100dvh - 2rem);
+      max-height: calc(100vh - 2rem);
+      max-height: calc(100dvh - 2rem);
+      margin: 1rem auto;
+    }
+    .modal-dialog-scrollable .modal-content { max-height: 100%; }
+    .modal-dialog-scrollable .modal-body {
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-dialog-scrollable .modal-content > form {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0;
+      max-height: 100%;
+    }
+    .modal-dialog-scrollable .modal-content > form > .modal-header,
+    .modal-dialog-scrollable .modal-content > form > .modal-footer { flex-shrink: 0; }
+    .modal-dialog-scrollable .modal-content > form > .modal-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .modal-dialog-scrollable .modal-content { position: relative; }
+    .modal-scroll-hint {
+      align-items: center;
+      background: #fff0f4;
+      border: 1px solid #ffc9d7;
+      border-radius: 999px;
+      box-shadow: 0 8px 18px rgba(239,23,76,.16);
+      color: #c50f3d;
+      display: inline-flex;
+      font-size: .78rem;
+      font-weight: 800;
+      gap: .35rem;
+      opacity: 0;
+      padding: .42rem .7rem;
+      pointer-events: none;
+      position: absolute;
+      right: 1rem;
+      transform: translateY(.35rem);
+      transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+      visibility: hidden;
+      z-index: 5;
+    }
+    .modal-scroll-hint.is-visible { animation: modal-scroll-nudge 1.35s ease-in-out infinite; opacity: 1; transform: translateY(0); visibility: visible; }
+    @keyframes modal-scroll-nudge { 50% { transform: translateY(.22rem); } }
+    @media (prefers-reduced-motion: reduce) { .modal-scroll-hint.is-visible { animation: none; } }
     .create-shipment-dialog {
       max-height: calc(100vh - 3rem);
     }
@@ -661,7 +716,7 @@
       <span class="badge rounded-pill {{ 'text-bg-warning' if mock_mode else 'text-bg-success' }}">
         <i class="bi bi-plug-fill me-1"></i>{{ ('Mock API' if mock_mode else 'Live API')|tr }}
       </span>
-      <div class="btn-group btn-group-sm" role="group" aria-label="Language">
+      <div class="btn-group btn-group-sm" role="group" aria-label="{{ 'Language'|tr }}">
         {% for code, label in languages.items() %}
         <a class="btn {{ 'btn-light' if code == lang else 'btn-outline-light' }}" href="/language?lang={{ code }}&next=/">{{ label }}</a>
         {% endfor %}
@@ -676,7 +731,7 @@
       </a>
       {% endif %}
       <div class="dropdown">
-        <button class="btn btn-outline-light border-0 rounded-circle" data-bs-toggle="dropdown" aria-label="User menu">
+        <button class="btn btn-outline-light border-0 rounded-circle" data-bs-toggle="dropdown" aria-label="{{ 'User menu'|tr }}">
           {% if current_user.avatar_url %}
           <img class="navbar-avatar" src="{{ current_user.avatar_url }}" alt="{{ current_user.full_name }}">
           {% else %}
@@ -821,7 +876,7 @@
               <tr>
                 <td>
                   <a class="fw-semibold text-decoration-none" href="/shipments/{{ s.id }}">{{ s.reference_no }}</a>
-                  <div class="small muted">{{ s.created_at.strftime('%d %b %Y') }}</div>
+                  <div class="small muted">{{ s.created_at|local_date }}</div>
                 </td>
                 <td><div class="fw-semibold">{{ s.title }}</div><div class="small muted">{{ s.document_type }}</div></td>
                 <td>
@@ -855,12 +910,12 @@
                 <td><span class="fw-semibold">{{ s.courier|upper }}</span><div class="small muted">{{ s.awb }}</div></td>
                 <td><span class="small {{ 'muted' if not s.external_awb else 'fw-semibold' }}">{{ s.external_awb or '-' }}</span></td>
                 <td><span class="small {{ 'muted' if not s.po_number else 'fw-semibold' }}">{{ s.po_number or '-' }}</span></td>
-                <td><div>{{ s.origin }} <i class="bi bi-arrow-right text-secondary mx-1"></i> {{ s.destination }}</div><div class="small muted">ETA {{ s.eta_days }} day(s)</div></td>
+                <td><div>{{ s.origin }} <i class="bi bi-arrow-right text-secondary mx-1"></i> {{ s.destination }}</div><div class="small muted">ETA {{ s.eta_days }} {{ 'day(s)'|tr }}</div></td>
                 <td class="fw-semibold">Rp {{ "{:,.0f}".format(s.shipping_cost) }}</td>
                 <td>
                   {% set normalized = s.status|upper %}
                   <span class="status-badge {{ 'status-delivered' if normalized in ['DELIVERED','RECEIVED'] else ('status-created' if normalized == 'CREATED' else 'status-progress') }}">
-                    <i class="bi {{ 'bi-check-circle' if normalized in ['DELIVERED','RECEIVED'] else ('bi-circle' if normalized == 'CREATED' else 'bi-arrow-repeat') }} me-1"></i>{{ s.status }}
+                    <i class="bi {{ 'bi-check-circle' if normalized in ['DELIVERED','RECEIVED'] else ('bi-circle' if normalized == 'CREATED' else 'bi-arrow-repeat') }} me-1"></i>{{ s.status|shipment_status }}
                   </span>
                 </td>
                 <td>
@@ -878,9 +933,9 @@
                     data-po-number="{{ s.po_number or '-' }}"
                     data-origin="{{ s.origin }}"
                     data-destination="{{ s.destination }}"
-                    data-status="{{ s.status }}"
+                    data-status="{{ s.status|shipment_status }}"
                     data-location="{{ s.last_location }}"
-                    data-updated="{{ s.updated_at.strftime('%d %b %Y, %H:%M') }}"
+                    data-updated="{{ s.updated_at|local_date(True) }}"
                   >
                     <i class="bi bi-geo-alt me-1"></i>{{ s.last_location }}
                   </button>
@@ -906,7 +961,7 @@
             {{ 'Showing'|tr }} {{ shipment_pagination.start }} {{ 'to'|tr }} {{ shipment_pagination.end }} {{ 'of'|tr }} {{ shipment_pagination.total }} {{ 'rows'|tr }}
           </div>
           {% if shipment_pagination.total_pages > 1 %}
-          <nav aria-label="Shipment pagination">
+          <nav aria-label="{{ 'Shipment pagination'|tr }}">
             <ul class="pagination pagination-sm mb-0">
               <li class="page-item {{ 'disabled' if not shipment_pagination.has_previous else '' }}">
                 <a class="page-link" href="/?sort={{ sort }}&shipping_page={{ shipment_pagination.previous_page }}{% if current_user.role == 'admin' %}&budget_month={{ budget_month }}{% endif %}#shippingPanel">{{ 'Previous'|tr }}</a>
@@ -947,7 +1002,11 @@
               <h5 class="fw-bold mb-1">{{ 'Monthly budget'|tr }}</h5>
               <div class="muted small">{{ 'Track buying needs by category and remaining budget.'|tr }}</div>
             </div>
-            <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></span>
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+              <button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#setBudgetModal"><i class="bi bi-wallet2 me-1"></i>{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</button>
+              <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createBudgetItemModal"><i class="bi bi-bag-plus me-1"></i>{{ 'Add purchase item'|tr }}</button>
+              <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></span>
+            </div>
           </div>
           <div class="nav nav-tabs vendor-view-tabs mt-3" role="tablist">
             <button class="nav-link active" id="budget-data-tab" type="button" aria-selected="true">{{ 'Budget data'|tr }}</button>
@@ -956,95 +1015,28 @@
         </div>
         <div class="card-body pt-0">
           <div id="budgetDataPanel" role="tabpanel">
-          <div class="row g-4">
-            <div class="col-lg-4">
-          <form method="get" action="/" class="mb-3">
-            <input type="hidden" name="sort" value="{{ sort }}">
-            <label class="form-label fw-semibold">{{ 'Budget month'|tr }}</label>
-            <div class="input-group">
-              <input class="form-control" name="budget_month" type="month" value="{{ budget_month }}">
-              <button class="btn btn-soft" type="submit"><i class="bi bi-calendar3"></i></button>
-            </div>
-          </form>
-
-          <form method="post" action="/budgets/set" class="vstack gap-2 mb-3">
-            <input type="hidden" name="month" value="{{ budget_month }}">
-            <label class="form-label fw-semibold">{{ 'Monthly budget total'|tr }}</label>
-            <div class="input-group">
-              <span class="input-group-text">Rp</span>
-              <input class="form-control" name="amount" type="number" min="1" step="1000" value="{{ '{:.0f}'.format(budget_amount) }}">
-            </div>
-            {% if monthly_budget %}<div class="small muted">{{ 'Enter a new total greater than the current monthly budget.'|tr }}</div>{% endif %}
-            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-2"></i>{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</button>
-          </form>
-
-          <div class="row g-2 mb-3">
-            <div class="col-6">
-              <div class="budget-stat">
-                <span class="small muted">{{ 'Spent'|tr }}</span>
-                <strong>Rp {{ "{:,.0f}".format(budget_spent) }}</strong>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="budget-stat">
-                <span class="small muted">{{ 'Remaining'|tr }}</span>
-                <strong class="{{ 'text-danger' if budget_remaining < 0 else 'text-success' }}">Rp {{ "{:,.0f}".format(budget_remaining) }}</strong>
-              </div>
-            </div>
+          <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+            <form method="get" action="/" class="d-flex align-items-end gap-2">
+              <input type="hidden" name="sort" value="{{ sort }}">
+              <div><label class="form-label fw-semibold mb-1">{{ 'Budget month'|tr }}</label><input class="form-control" name="budget_month" type="month" value="{{ budget_month }}"></div>
+              <button class="btn btn-soft" type="submit" aria-label="{{ 'Budget month'|tr }}"><i class="bi bi-calendar3"></i></button>
+            </form>
+            <span class="category-pill"><i class="bi bi-calendar3"></i>{{ budget_month }}</span>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-4"><div class="budget-stat h-100"><span class="small muted">{{ 'Monthly budget total'|tr }}</span><strong>Rp {{ "{:,.0f}".format(budget_amount) }}</strong></div></div>
+            <div class="col-md-4"><div class="budget-stat h-100"><span class="small muted">{{ 'Spent'|tr }}</span><strong>Rp {{ "{:,.0f}".format(budget_spent) }}</strong></div></div>
+            <div class="col-md-4"><div class="budget-stat h-100"><span class="small muted">{{ 'Remaining'|tr }}</span><strong class="{{ 'text-danger' if budget_remaining < 0 else 'text-success' }}">Rp {{ "{:,.0f}".format(budget_remaining) }}</strong></div></div>
           </div>
           {% set used_percent = (budget_spent / budget_amount * 100) if budget_amount else 0 %}
           <div class="budget-meter mb-4" style="--budget-used: {{ used_percent if used_percent < 100 else 100 }}%"><span></span></div>
-            </div>
-
-            <div class="col-lg-4">
-          <form method="post" action="/budget-items/create" class="vstack gap-3">
-            <input type="hidden" name="month" value="{{ budget_month }}">
-            <div class="fw-bold"><i class="bi bi-bag-plus me-1"></i>{{ 'Add purchase item'|tr }}</div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Item name'|tr }}</label>
-              <input class="form-control" name="item_name" required placeholder="Laptop charger">
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Category'|tr }}</label>
-              <input class="form-control" name="category" required list="budgetCategories" placeholder="Office supplies">
-              <datalist id="budgetCategories">
-                <option value="Office supplies">
-                <option value="IT equipment">
-                <option value="Courier supplies">
-                <option value="Packaging">
-                <option value="Operations">
-              </datalist>
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Amount'|tr }}</label>
-              <div class="input-group">
-                <span class="input-group-text">Rp</span>
-                <input class="form-control" name="amount" type="number" min="1" step="1" required>
-              </div>
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Note'|tr }}</label>
-              <input class="form-control" name="note" placeholder="{{ 'Optional note'|tr }}">
-            </div>
-            <button class="btn btn-primary w-100" type="submit"><i class="bi bi-plus-circle me-2"></i>{{ 'Save item'|tr }}</button>
-          </form>
-            </div>
-
-            <div class="col-lg-4">
-          <div class="mb-3">
+          <div class="rounded-4 border bg-light p-3 mb-3">
             <div class="fw-bold mb-2">{{ 'Category breakdown'|tr }}</div>
             {% for row in budget_category_totals %}
-            <div class="d-flex justify-content-between align-items-center small py-1">
-              <span class="category-pill"><i class="bi bi-tag"></i>{{ row.category }}</span>
-              <strong>Rp {{ "{:,.0f}".format(row.amount) }}</strong>
-            </div>
+            <div class="d-flex justify-content-between align-items-center small py-1"><span class="category-pill"><i class="bi bi-tag"></i>{{ row.category }}</span><strong>Rp {{ "{:,.0f}".format(row.amount) }}</strong></div>
             {% else %}
             <div class="small muted">{{ 'No purchase items yet.'|tr }}</div>
             {% endfor %}
-          </div>
-
-          <div class="budget-stat"><span class="small muted">{{ 'Purchase items'|tr }}</span><strong>{{ purchase_items|length }}</strong></div>
-            </div>
           </div>
           <div class="border-top pt-4 mt-4">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3"><div><div class="fw-bold">{{ 'Annual budget summary'|tr }} · {{ annual_budget_summary.year }}</div><div class="small muted">{{ 'Calculated automatically from all twelve monthly budgets.'|tr }}</div></div><span class="category-pill"><i class="bi bi-calendar-range"></i>{{ annual_budget_summary.year }}</span></div>
@@ -1055,12 +1047,16 @@
             </div>
             <details>
               <summary class="fw-semibold text-primary">{{ 'View monthly annual breakdown'|tr }}</summary>
-              <div class="table-responsive mt-3"><table class="table table-sm align-middle"><thead><tr><th>{{ 'Month'|tr }}</th><th>{{ 'Budget'|tr }}</th><th>{{ 'Spent'|tr }}</th><th>{{ 'Remaining'|tr }}</th><th class="text-end">{{ 'Action'|tr }}</th></tr></thead><tbody>
-                {% for row in annual_budget_summary.months %}<tr><td>{{ row.label }}</td><td>Rp {{ "{:,.0f}".format(row.budget) }}</td><td>Rp {{ "{:,.0f}".format(row.spent) }}</td><td class="{{ 'text-danger' if row.remaining < 0 else '' }}">Rp {{ "{:,.0f}".format(row.remaining) }}</td><td class="text-end">{% if row.budget > 0 %}<button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#editBudget{{ row.month }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button>{% else %}<span class="muted">-</span>{% endif %}</td></tr>{% endfor %}
+              <div class="table-responsive mt-3"><table class="table table-sm align-middle" id="annualBudgetTable"><thead><tr><th>{{ 'Month'|tr }}</th><th>{{ 'Budget'|tr }}</th><th>{{ 'Spent'|tr }}</th><th>{{ 'Remaining'|tr }}</th><th class="text-end">{{ 'Action'|tr }}</th></tr></thead><tbody>
+                {% for row in annual_budget_summary.months %}<tr class="annual-budget-table-row"><td>{{ row.label }}</td><td>Rp {{ "{:,.0f}".format(row.budget) }}</td><td>Rp {{ "{:,.0f}".format(row.spent) }}</td><td class="{{ 'text-danger' if row.remaining < 0 else '' }}">Rp {{ "{:,.0f}".format(row.remaining) }}</td><td class="text-end">{% if row.budget > 0 %}<button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#editBudget{{ row.month }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button>{% else %}<span class="muted">-</span>{% endif %}</td></tr>{% endfor %}
               </tbody></table></div>
+              <div class="pagination-shell d-none mt-3 px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2" id="annualBudgetPagination">
+                <span class="small muted" id="annualBudgetPaginationSummary"></span>
+                <div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-soft" id="annualBudgetPreviousPage" type="button"><i class="bi bi-chevron-left me-1"></i>{{ 'Previous'|tr }}</button><span class="small fw-semibold" id="annualBudgetPageInfo"></span><button class="btn btn-sm btn-soft" id="annualBudgetNextPage" type="button">{{ 'Next'|tr }}<i class="bi bi-chevron-right ms-1"></i></button></div>
+              </div>
             </details>
             {% for row in annual_budget_summary.months %}{% if row.budget > 0 %}
-            <div class="modal fade budget-edit-modal" id="editBudget{{ row.month }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4"><form method="post" action="/budgets/edit"><div class="modal-header border-0"><div><div class="panel-kicker">{{ 'Edit monthly budget'|tr }}</div><h5 class="modal-title">{{ row.label }} {{ annual_budget_summary.year }}</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body pt-2"><input type="hidden" name="month" value="{{ row.month }}"><label class="form-label fw-semibold">{{ 'Corrected budget total'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required value="{{ '{:.0f}'.format(row.budget) }}"></div><div class="small muted mt-2">{{ 'Editing replaces the existing total without creating a duplicate month.'|tr }}</div></div><div class="modal-footer border-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save changes'|tr }}</button></div></form></div></div></div>
+            <div class="modal fade budget-edit-modal" id="editBudget{{ row.month }}" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 rounded-4"><form method="post" action="/budgets/edit"><div class="modal-header border-0"><div><div class="panel-kicker">{{ 'Edit monthly budget'|tr }}</div><h5 class="modal-title">{{ row.label }} {{ annual_budget_summary.year }}</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body pt-2"><input type="hidden" name="month" value="{{ row.month }}"><label class="form-label fw-semibold">{{ 'Corrected budget total'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required value="{{ '{:.0f}'.format(row.budget) }}"></div><div class="small muted mt-2">{{ 'Editing replaces the existing total without creating a duplicate month.'|tr }}</div></div><div class="modal-footer border-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save changes'|tr }}</button></div></form></div></div></div>
             {% endif %}{% endfor %}
           </div>
           <div class="border-top pt-4 mt-4">
@@ -1080,7 +1076,7 @@
                 <tbody>
                   {% for item in purchase_items %}
                   <tr class="budget-item-table-row" data-item="{{ item.item_name|lower }}" data-category="{{ item.category|lower }}" data-amount="{{ item.amount }}" data-note="{{ (item.note or '')|lower }}" data-date="{{ item.created_at.strftime('%Y-%m-%d') }}">
-                    <td class="fw-semibold">{{ item.item_name }}</td><td><span class="category-pill"><i class="bi bi-tag"></i>{{ item.category }}</span></td><td class="fw-semibold">Rp {{ "{:,.0f}".format(item.amount) }}</td><td class="small muted">{{ item.note or '-' }}</td><td class="small">{{ item.created_at.strftime('%d %b %Y') }}</td><td class="text-end"><button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#editBudgetItem{{ item.id }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
+                    <td class="fw-semibold">{{ item.item_name }}</td><td><span class="category-pill"><i class="bi bi-tag"></i>{{ item.category }}</span></td><td class="fw-semibold">Rp {{ "{:,.0f}".format(item.amount) }}</td><td class="small muted">{{ item.note or '-' }}</td><td class="small">{{ item.created_at|local_date }}</td><td class="text-end"><button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#editBudgetItem{{ item.id }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
                   </tr>
                   {% else %}
                   <tr><td colspan="6" class="text-center empty-state"><i class="bi bi-bag display-6 text-secondary"></i><div class="small mt-2">{{ 'No purchase items yet.'|tr }}</div></td></tr>
@@ -1091,7 +1087,7 @@
             </div>
             {% for item in purchase_items %}
             <div class="modal fade budget-edit-modal" id="editBudgetItem{{ item.id }}" tabindex="-1" aria-hidden="true">
-              <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 rounded-4">
+              <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 rounded-4">
                 <form method="post" action="/budget-items/{{ item.id }}/edit">
                   <div class="modal-header border-0"><div><div class="panel-kicker">{{ 'Edit purchase item'|tr }}</div><h5 class="modal-title">{{ item.item_name }}</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
                   <div class="modal-body pt-2 vstack gap-3">
@@ -1105,8 +1101,9 @@
               </div></div>
             </div>
             {% endfor %}
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
-              <div class="d-flex align-items-center gap-2 small muted"><span id="budgetVisibleCount">{{ purchase_items|length }}</span> {{ 'matching items'|tr }}<select class="form-select form-select-sm" id="budgetPageSize" style="width:auto"><option value="5">5</option><option value="10" selected>10</option><option value="25">25</option></select><span>{{ 'per page'|tr }}</span></div>
+            <div class="small muted mt-2"><span id="budgetVisibleCount">{{ purchase_items|length }}</span> {{ 'matching items'|tr }}</div>
+            <div class="pagination-shell d-none mt-3 px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2" id="budgetPagination">
+              <div class="small muted" id="budgetPaginationSummary"></div>
               <div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-soft" id="budgetPreviousPage" type="button"><i class="bi bi-chevron-left me-1"></i>{{ 'Previous'|tr }}</button><span class="small fw-semibold" id="budgetPageInfo">{{ 'Page'|tr }} 1 / 1</span><button class="btn btn-sm btn-soft" id="budgetNextPage" type="button">{{ 'Next'|tr }}<i class="bi bi-chevron-right ms-1"></i></button></div>
             </div>
           </div>
@@ -1222,7 +1219,7 @@
               </div>
               </div>
               <div class="table-responsive">
-                <table class="table align-middle mb-0">
+                <table class="table align-middle mb-0" id="vendorTable">
                   <thead>
                     <tr>
                       <th>{{ 'Vendor sender'|tr }}</th>
@@ -1258,7 +1255,7 @@
                       <td class="text-success fw-semibold">{{ row.delivered }}</td>
                       <td class="text-warning fw-semibold">{{ row.in_progress }}</td>
                       <td class="fw-semibold">Rp {{ "{:,.0f}".format(row.shipping_cost) }}</td>
-                      <td class="small muted">{{ row.last_sent.strftime('%d %b %Y, %H:%M') if row.last_sent else ('Never sent'|tr) }}</td>
+                      <td class="small muted">{{ row.last_sent|local_date(True) if row.last_sent else ('Never sent'|tr) }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -1274,6 +1271,10 @@
                 </table>
               </div>
               <div class="small muted mt-2"><span id="vendorVisibleCount">{{ operator_analytics|length }}</span> {{ 'matching vendors'|tr }}</div>
+              <div class="pagination-shell d-none mt-3 px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2" id="vendorPagination">
+                <div class="small muted" id="vendorPaginationSummary"></div>
+                <div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-soft" id="vendorPreviousPage" type="button"><i class="bi bi-chevron-left me-1"></i>{{ 'Previous'|tr }}</button><span class="small fw-semibold" id="vendorPageInfo"></span><button class="btn btn-sm btn-soft" id="vendorNextPage" type="button">{{ 'Next'|tr }}<i class="bi bi-chevron-right ms-1"></i></button></div>
+              </div>
             </div>
           </div>
         </aside>
@@ -1326,7 +1327,11 @@
                   <h5 class="fw-bold mb-1">{{ 'Company locations'|tr }}</h5>
                   <div class="muted small">{{ 'Register company and branch addresses for manual shipment entry.'|tr }}</div>
                 </div>
-                <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-geo-alt"></i></span>
+                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                  <button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#importLocationsModal"><i class="bi bi-upload me-1"></i>{{ 'Import branches'|tr }}</button>
+                  <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createLocationModal"><i class="bi bi-building-add me-1"></i>{{ 'Add branch location'|tr }}</button>
+                  <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-geo-alt"></i></span>
+                </div>
               </div>
             </div>
             <div class="card-body pt-0">
@@ -1336,84 +1341,7 @@
               </div>
               <div class="tab-content"><div class="tab-pane fade show active" id="locationDataPanel" role="tabpanel">
               <div class="row g-4">
-                <div class="col-lg-4">
-                  <form method="post" action="/locations/create" class="vstack gap-3">
-                    <div class="fw-bold"><i class="bi bi-building-add me-1"></i>{{ 'Add branch location'|tr }}</div>
-                    <div>
-                      <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
-                      <input class="form-control" name="company_name" required placeholder="Acme Logistics">
-                    </div>
-                    <div>
-                      <label class="form-label fw-semibold">{{ 'Branch name'|tr }}</label>
-                      <input class="form-control" name="branch_name" required placeholder="Head Office">
-                    </div>
-                    <div>
-                      <label class="form-label fw-semibold">{{ 'Full address'|tr }}</label>
-                      <div class="address-suggest-field">
-                        <textarea class="form-control" name="address" id="companyAddressInput" rows="3" required autocomplete="off" placeholder="Street, building, district"></textarea>
-                        <div class="address-suggestions d-none" id="companyAddressSuggestions"></div>
-                      </div>
-                      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
-                        <div class="small muted">{{ 'Choose a suggested address or validate it in the map preview before saving.'|tr }}</div>
-                        <button class="btn btn-sm btn-soft" id="companyAddressValidateButton" type="button">
-                          <i class="bi bi-map me-1"></i>{{ 'Validate address'|tr }}
-                        </button>
-                      </div>
-                    </div>
-                    <div class="row g-2">
-                      <div class="col-4"><label class="form-label fw-semibold">{{ 'Category'|tr }}</label><input class="form-control" name="category" placeholder="Branch"></div>
-                      <div class="col-4"><label class="form-label fw-semibold">{{ 'Phone'|tr }}</label><input class="form-control" name="phone" placeholder="0211234567"></div>
-                      <div class="col-4"><label class="form-label fw-semibold">{{ 'Fax'|tr }}</label><input class="form-control" name="fax" placeholder="0211234568"></div>
-                    </div>
-                    <div>
-                      <label class="form-label fw-semibold">{{ 'Road'|tr }}</label>
-                      <input class="form-control" name="road" id="companyRoadInput" placeholder="Jalan Kedoya Raya">
-                    </div>
-                    <div class="row g-2">
-                      <div class="col-6">
-                        <label class="form-label fw-semibold">{{ 'City'|tr }}</label>
-                        <input class="form-control" name="city" id="companyCityInput" placeholder="Jakarta Barat">
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label fw-semibold">{{ 'Province'|tr }}</label>
-                        <input class="form-control" name="state" id="companyStateInput" placeholder="DKI Jakarta">
-                      </div>
-                    </div>
-                    <div class="row g-2">
-                      <div class="col-6">
-                        <label class="form-label fw-semibold">{{ 'Postal code'|tr }}</label>
-                        <input class="form-control" name="postcode" id="companyPostcodeInput" placeholder="11520">
-                      </div>
-                      <div class="col-6">
-                        <label class="form-label fw-semibold">{{ 'Country'|tr }}</label>
-                        <input class="form-control" name="country" id="companyCountryInput" value="Indonesia">
-                      </div>
-                    </div>
-                    <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save location'|tr }}</button>
-                  </form>
-                  <hr class="my-4">
-                  <form method="post" action="/locations/import" enctype="multipart/form-data" class="vstack gap-3">
-                    <div>
-                      <div class="fw-bold"><i class="bi bi-file-earmark-spreadsheet me-1"></i>{{ 'Import branch sheet'|tr }}</div>
-                      <div class="small muted mt-1">{{ 'Upload CSV or XLSX with Location and Address. Category, Phone, and Fax are optional; No. is ignored.'|tr }}</div>
-                    </div>
-                    <div>
-                      <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
-                      <input class="form-control" name="company_name" required placeholder="Dipo Star Finance">
-                    </div>
-                    <div>
-                      <label class="form-label fw-semibold">{{ 'Spreadsheet file'|tr }}</label>
-                      <input class="form-control" type="file" name="location_file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
-                    </div>
-                    <div>
-                      <label class="form-label fw-semibold">{{ 'Country'|tr }}</label>
-                      <input class="form-control" name="country" value="Indonesia">
-                    </div>
-                    <div class="small muted">{{ 'Matching Company name and Location rows are updated. New rows are added; the import is cancelled if any row is invalid.'|tr }}</div>
-                    <button class="btn btn-soft w-100" type="submit"><i class="bi bi-upload me-2"></i>{{ 'Import branches'|tr }}</button>
-                  </form>
-                </div>
-                <div class="col-lg-8">
+                <div class="col-12">
                   <div class="fw-bold mb-3">{{ 'Saved locations'|tr }}</div>
                   <div class="rounded-4 border bg-light p-3 mb-3" id="locationFilterPanel">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><div class="fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>{{ 'Filter locations'|tr }}</div><span class="small muted">{{ 'Search any location table field.'|tr }}</span></div>
@@ -1425,7 +1353,7 @@
                     </div>
                   </div>
                   <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                    <table class="table align-middle mb-0" id="locationTable">
                       <thead>
                         <tr>
                           <th>{{ 'Company'|tr }}</th>
@@ -1462,6 +1390,10 @@
                     </table>
                   </div>
                   <div class="small muted mt-2"><span id="locationVisibleCount">{{ company_locations|length }}</span> {{ 'matching locations'|tr }}</div>
+                  <div class="pagination-shell d-none mt-3 px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2" id="locationPagination">
+                    <div class="small muted" id="locationPaginationSummary"></div>
+                    <div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-soft" id="locationPreviousPage" type="button"><i class="bi bi-chevron-left me-1"></i>{{ 'Previous'|tr }}</button><span class="small fw-semibold" id="locationPageInfo"></span><button class="btn btn-sm btn-soft" id="locationNextPage" type="button">{{ 'Next'|tr }}<i class="bi bi-chevron-right ms-1"></i></button></div>
+                  </div>
                 </div>
               </div>
               </div><div class="tab-pane fade" id="locationAnalyticsPanel" role="tabpanel"><div class="row g-3">
@@ -1483,7 +1415,10 @@
               <h5 class="fw-bold mb-1">{{ 'Users'|tr }}</h5>
               <div class="muted small">{{ 'Create accounts with existing roles.'|tr }}</div>
             </div>
-            <span class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-people"></i></span>
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createUserModal"><i class="bi bi-person-plus me-1"></i>{{ 'Add account'|tr }}</button>
+              <span class="metric-icon bg-primary-subtle text-primary"><i class="bi bi-people"></i></span>
+            </div>
           </div>
         </div>
         <div class="card-body pt-0">
@@ -1497,75 +1432,13 @@
             <div class="row g-2">
               <div class="col-xl-2 col-md-4"><select class="form-select" id="adminSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="name">{{ 'Full name'|tr }}</option><option value="username">{{ 'Username'|tr }}</option><option value="company">{{ 'Company'|tr }}</option><option value="role">{{ 'Role'|tr }}</option><option value="status">{{ 'Status'|tr }}</option><option value="location">{{ 'Login location'|tr }}</option></select></div>
               <div class="col-xl-4 col-md-8"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="adminTableSearch" placeholder="{{ 'Search accounts...'|tr }}"></div></div>
-              <div class="col-xl-2 col-md-5"><select class="form-select" id="adminRoleFilter"><option value="">{{ 'All roles'|tr }}</option><option value="admin">Admin</option><option value="operator">{{ 'Vendor'|tr }}</option><option value="employee">Employee</option></select></div>
+              <div class="col-xl-2 col-md-5"><select class="form-select" id="adminRoleFilter"><option value="">{{ 'All roles'|tr }}</option><option value="admin">{{ 'Admin'|tr }}</option><option value="operator">{{ 'Vendor'|tr }}</option><option value="employee">{{ 'Employee'|tr }}</option></select></div>
               <div class="col-xl-3 col-md-5"><select class="form-select" id="adminStatusFilter"><option value="">{{ 'All account statuses'|tr }}</option><option value="active">{{ 'Active'|tr }}</option><option value="inactive">{{ 'Inactive'|tr }}</option></select></div>
               <div class="col-xl-1 col-md-2 d-grid"><button class="btn btn-soft" id="adminFilterReset" type="button" title="{{ 'Reset filters'|tr }}"><i class="bi bi-arrow-counterclockwise"></i></button></div>
             </div>
           </div>
           <div class="row g-4">
-            <div class="col-lg-4">
-          <form method="post" action="/users/create" id="createUserForm" class="vstack gap-3">
-            <div>
-              <label class="form-label fw-semibold">{{ 'Username'|tr }}</label>
-              <input class="form-control" name="username" required placeholder="new.vendor">
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Full name'|tr }}</label>
-              <input class="form-control" name="full_name" required placeholder="New Vendor">
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
-              <input class="form-control" name="company_name" placeholder="{{ app_name }}">
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Avatar URL'|tr }}</label>
-              <input class="form-control" name="avatar_url" type="url" placeholder="https://example.com/avatar.jpg">
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Role'|tr }}</label>
-              <select class="form-select" name="role" id="newUserRole" required>
-                {% for role in user_roles %}
-                <option value="{{ role }}">{{ ('Vendor' if role == 'operator' else role|title)|tr }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div id="employeeLinkGroup" class="d-none">
-              <label class="form-label fw-semibold">{{ 'Linked employee'|tr }}</label>
-              <select class="form-select" name="employee_id">
-                <option value="">{{ 'Choose employee'|tr }}</option>
-                {% for e in employees %}
-                <option value="{{ e.id }}" {{ 'disabled' if e.id in assigned_employee_ids else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{% if e.vendor_id and vendors_by_id.get(e.vendor_id) %} · {{ 'Vendor'|tr }}: {{ vendors_by_id[e.vendor_id].full_name }}{% endif %}{{ ' (has account)' if e.id in assigned_employee_ids else '' }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div id="vendorAllocationGroup" class="d-none rounded-4 border bg-light p-3">
-              <div class="fw-semibold mb-2">{{ 'Employee allocation'|tr }}</div>
-              <div class="row g-2">
-                <div class="col-6"><label class="form-label small fw-semibold">{{ 'Minimum employees'|tr }}</label><input class="form-control" name="min_employee_allocation" type="number" min="1" max="500" value="1"></div>
-                <div class="col-6"><label class="form-label small fw-semibold">{{ 'Maximum employees'|tr }}</label><input class="form-control" name="max_employee_allocation" type="number" min="1" max="500" value="10"></div>
-              </div>
-              <div class="small muted mt-2">{{ 'Available employee slots are created from the minimum allocation.'|tr }}</div>
-            </div>
-            <div>
-              <label class="form-label fw-semibold">{{ 'Temporary password'|tr }}</label>
-              <div class="input-group password-input-group">
-                <input class="form-control" id="newUserPassword" name="password" type="password" required minlength="8" placeholder="At least 8 characters">
-                <button class="btn btn-outline-secondary password-toggle" type="button" data-password-toggle="newUserPassword" aria-label="{{ 'Show password'|tr }}" aria-pressed="false" title="{{ 'Show password'|tr }}"><i class="bi bi-eye" aria-hidden="true"></i></button>
-              </div>
-            </div>
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="newUserActive" checked>
-              <label class="form-check-label" for="newUserActive">{{ 'Active account'|tr }}</label>
-            </div>
-            <button class="btn btn-primary w-100" id="createUserButton">
-              <span class="button-label"><i class="bi bi-person-plus me-2"></i>{{ 'Add account'|tr }}</span>
-              <span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Adding...'|tr }}</span>
-            </button>
-          </form>
-            </div>
-
-            <div class="col-lg-8">
-              <hr class="my-4 d-lg-none">
+            <div class="col-12">
               <div class="table-responsive">
                 <table class="table align-middle table-hover mb-0" id="adminAccountsTable">
                   <thead><tr><th>{{ 'Account'|tr }}</th><th>{{ 'Company'|tr }}</th><th>{{ 'Role'|tr }}</th><th>{{ 'Status'|tr }}</th><th>{{ 'Login location'|tr }}</th><th class="text-end">{{ 'Action'|tr }}</th></tr></thead>
@@ -1585,6 +1458,10 @@
                 </table>
               </div>
               <div class="small muted mt-2"><span id="adminVisibleCount">{{ users|length }}</span> {{ 'matching accounts'|tr }}</div>
+              <div class="pagination-shell d-none mt-3 px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2" id="adminPagination">
+                <div class="small muted" id="adminPaginationSummary"></div>
+                <div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-soft" id="adminPreviousPage" type="button"><i class="bi bi-chevron-left me-1"></i>{{ 'Previous'|tr }}</button><span class="small fw-semibold" id="adminPageInfo"></span><button class="btn btn-sm btn-soft" id="adminNextPage" type="button">{{ 'Next'|tr }}<i class="bi bi-chevron-right ms-1"></i></button></div>
+              </div>
             </div>
           </div>
           </div><div class="tab-pane fade" id="adminAnalyticsPanel" role="tabpanel"><div class="row g-3">
@@ -1608,6 +1485,99 @@
 </main>
 
 {% if current_user.role == 'admin' %}
+<div class="modal fade" id="setBudgetModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/budgets/set">
+        <div class="modal-header border-0 px-4 pt-4 pb-2">
+          <div><div class="panel-kicker">{{ 'Monthly budget'|tr }}</div><h4 class="modal-title fw-bold">{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</h4><p class="muted mb-0">{{ budget_month }}</p></div>
+          <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body px-4 py-4"><input type="hidden" name="month" value="{{ budget_month }}"><label class="form-label fw-semibold">{{ 'Monthly budget total'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1000" required value="{{ '{:.0f}'.format(budget_amount) }}"></div>{% if monthly_budget %}<div class="small muted mt-2">{{ 'Enter a new total greater than the current monthly budget.'|tr }}</div>{% endif %}</div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="createBudgetItemModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/budget-items/create">
+        <div class="modal-header border-0 px-4 pt-4 pb-2"><div><div class="panel-kicker">{{ 'Monthly budget'|tr }}</div><h4 class="modal-title fw-bold">{{ 'Add purchase item'|tr }}</h4><p class="muted mb-0">{{ budget_month }}</p></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body px-4 py-4 vstack gap-3">
+          <input type="hidden" name="month" value="{{ budget_month }}">
+          <datalist id="budgetCategories"><option value="{{ 'Office supplies'|tr }}"><option value="{{ 'IT equipment'|tr }}"><option value="{{ 'Courier supplies'|tr }}"><option value="{{ 'Packaging'|tr }}"><option value="{{ 'Operations'|tr }}"></datalist>
+          <div><label class="form-label fw-semibold">{{ 'Item name'|tr }}</label><input class="form-control" name="item_name" required placeholder="{{ 'Laptop charger'|tr }}"></div>
+          <div><label class="form-label fw-semibold">{{ 'Category'|tr }}</label><input class="form-control" name="category" required list="budgetCategories" placeholder="{{ 'Office supplies'|tr }}"></div>
+          <div><label class="form-label fw-semibold">{{ 'Amount'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required></div></div>
+          <div><label class="form-label fw-semibold">{{ 'Note'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="note" placeholder="{{ 'Optional note'|tr }}"></div>
+        </div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-plus-circle me-2"></i>{{ 'Save item'|tr }}</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="createLocationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/locations/create">
+        <div class="modal-header border-0 px-4 pt-4 pb-2"><div><div class="panel-kicker">{{ 'Company locations'|tr }}</div><h4 class="modal-title fw-bold">{{ 'Add branch location'|tr }}</h4><p class="muted mb-0">{{ 'Register company and branch addresses for manual shipment entry.'|tr }}</p></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body px-4 py-4"><div class="row g-3">
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Company name'|tr }}</label><input class="form-control" name="company_name" required placeholder="Acme Logistics"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Branch name'|tr }}</label><input class="form-control" name="branch_name" required placeholder="{{ 'Head Office'|tr }}"></div>
+          <div class="col-12"><label class="form-label fw-semibold">{{ 'Full address'|tr }}</label><div class="address-suggest-field"><textarea class="form-control" name="address" id="companyAddressInput" rows="3" required autocomplete="off" placeholder="{{ 'Street, building, district'|tr }}"></textarea><div class="address-suggestions d-none" id="companyAddressSuggestions"></div></div><div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2"><div class="small muted">{{ 'Choose a suggested address or validate it in the map preview before saving.'|tr }}</div><button class="btn btn-sm btn-soft" id="companyAddressValidateButton" type="button"><i class="bi bi-map me-1"></i>{{ 'Validate address'|tr }}</button></div></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Category'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="category" placeholder="{{ 'Branch'|tr }}"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Phone'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="phone" placeholder="0211234567"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Fax'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="fax" placeholder="0211234568"></div>
+          <div class="col-12"><label class="form-label fw-semibold">{{ 'Road'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="road" id="companyRoadInput" placeholder="Jalan Kedoya Raya"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ 'City'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="city" id="companyCityInput" placeholder="Jakarta Barat"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Province'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="state" id="companyStateInput" placeholder="DKI Jakarta"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Postal code'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="postcode" id="companyPostcodeInput" placeholder="11520"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Country'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="country" id="companyCountryInput" value="Indonesia"></div>
+        </div></div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save location'|tr }}</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="importLocationsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/locations/import" enctype="multipart/form-data">
+        <div class="modal-header border-0 px-4 pt-4 pb-2"><div><div class="panel-kicker">{{ 'Company locations'|tr }}</div><h4 class="modal-title fw-bold">{{ 'Import branch sheet'|tr }}</h4><p class="muted mb-0">{{ 'Upload CSV or XLSX with Location and Address. Category, Phone, and Fax are optional; No. is ignored.'|tr }}</p></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body px-4 py-4 vstack gap-3"><div><label class="form-label fw-semibold">{{ 'Company name'|tr }}</label><input class="form-control" name="company_name" required placeholder="Dipo Star Finance"></div><div><label class="form-label fw-semibold">{{ 'Spreadsheet file'|tr }}</label><input class="form-control" type="file" name="location_file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required></div><div><label class="form-label fw-semibold">{{ 'Country'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="country" value="Indonesia"></div><div class="small muted">{{ 'Matching Company name and Location rows are updated. New rows are added; the import is cancelled if any row is invalid.'|tr }}</div></div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-upload me-2"></i>{{ 'Import branches'|tr }}</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="/users/create" id="createUserForm">
+        <div class="modal-header border-0 px-4 pt-4 pb-2"><div><div class="panel-kicker">{{ 'Users'|tr }}</div><h4 class="modal-title fw-bold">{{ 'Add account'|tr }}</h4><p class="muted mb-0">{{ 'Create accounts with existing roles.'|tr }}</p></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body px-4 py-4"><div class="vstack gap-3">
+          <datalist id="companyNameSuggestions">{% for company_name in company_suggestions %}<option value="{{ company_name }}"></option>{% endfor %}</datalist>
+          <div><label class="form-label fw-semibold">{{ 'Username'|tr }}</label><input class="form-control" name="username" required placeholder="{{ 'Example: dwi.santoso'|tr }}"></div>
+          <div><label class="form-label fw-semibold">{{ 'Full name'|tr }}</label><input class="form-control" name="full_name" required placeholder="{{ 'Example: Dwi Santoso'|tr }}"></div>
+          <div><label class="form-label fw-semibold">{{ 'Company name'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="company_name" list="companyNameSuggestions" autocomplete="organization" placeholder="{{ 'Example: Dipo Star Finance'|tr }}"></div>
+          <div><label class="form-label fw-semibold">{{ 'Avatar URL'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="avatar_url" type="url" placeholder="https://example.com/avatar.jpg"></div>
+          <div><label class="form-label fw-semibold">{{ 'Role'|tr }}</label><select class="form-select" name="role" id="newUserRole" required>{% for role in user_roles %}<option value="{{ role }}">{{ ('Vendor' if role == 'operator' else role|title)|tr }}</option>{% endfor %}</select></div>
+          <div id="employeeLinkGroup" class="d-none"><label class="form-label fw-semibold">{{ 'Linked employee'|tr }}</label><select class="form-select" name="employee_id"><option value="">{{ 'Choose employee'|tr }}</option>{% for e in employees %}<option value="{{ e.id }}" {{ 'disabled' if e.id in assigned_employee_ids else '' }}>{{ e.name }} — {{ e.company_name or app_name }} · {{ e.department }}{% if e.vendor_id and vendors_by_id.get(e.vendor_id) %} · {{ 'Vendor'|tr }}: {{ vendors_by_id[e.vendor_id].full_name }}{% endif %}{{ ' (has account)' if e.id in assigned_employee_ids else '' }}</option>{% endfor %}</select></div>
+          <div id="vendorAllocationGroup" class="d-none rounded-4 border bg-light p-3"><div class="fw-semibold mb-2">{{ 'Employee allocation'|tr }}</div><div class="row g-2"><div class="col-6"><label class="form-label small fw-semibold">{{ 'Minimum employees'|tr }}</label><input class="form-control" name="min_employee_allocation" type="number" min="1" max="500" value="1"></div><div class="col-6"><label class="form-label small fw-semibold">{{ 'Maximum employees'|tr }}</label><input class="form-control" name="max_employee_allocation" type="number" min="1" max="500" value="10"></div></div><div class="small muted mt-2">{{ 'Available employee slots are created from the minimum allocation.'|tr }}</div></div>
+          <div><label class="form-label fw-semibold">{{ 'Temporary password'|tr }}</label><div class="input-group password-input-group"><input class="form-control" id="newUserPassword" name="password" type="password" required minlength="8" placeholder="{{ 'Minimum 8 characters'|tr }}"><button class="btn btn-outline-secondary password-toggle" type="button" data-password-toggle="newUserPassword" aria-label="{{ 'Show password'|tr }}" aria-pressed="false" title="{{ 'Show password'|tr }}"><i class="bi bi-eye" aria-hidden="true"></i></button></div></div>
+          <div class="form-check form-switch"><input class="form-check-input" type="checkbox" role="switch" name="is_active" id="newUserActive" checked><label class="form-check-label" for="newUserActive">{{ 'Active account'|tr }}</label></div>
+        </div></div>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" id="createUserButton" type="submit"><span class="button-label"><i class="bi bi-person-plus me-2"></i>{{ 'Add account'|tr }}</span><span class="button-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>{{ 'Adding...'|tr }}</span></button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% for account in users %}
 <div class="modal fade" id="editUserModal{{ account.id }}" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -1625,18 +1595,18 @@
           <div class="vstack gap-3">
             <div>
               <label class="form-label fw-semibold">{{ 'Username'|tr }}</label>
-              <input class="form-control" name="username" required value="{{ account.username }}">
+              <input class="form-control" name="username" required value="{{ account.username }}" placeholder="{{ 'Example: dwi.santoso'|tr }}">
             </div>
             <div>
               <label class="form-label fw-semibold">{{ 'Full name'|tr }}</label>
-              <input class="form-control" name="full_name" required value="{{ account.full_name }}">
+              <input class="form-control" name="full_name" required value="{{ account.full_name }}" placeholder="{{ 'Example: Dwi Santoso'|tr }}">
             </div>
             <div>
-              <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
-              <input class="form-control" name="company_name" value="{{ account.company_name or '' }}" placeholder="{{ app_name }}">
+              <label class="form-label fw-semibold">{{ 'Company name'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label>
+              <input class="form-control" name="company_name" value="{{ account.company_name or '' }}" list="companyNameSuggestions" autocomplete="organization" placeholder="{{ 'Example: Dipo Star Finance'|tr }}">
             </div>
             <div>
-              <label class="form-label fw-semibold">{{ 'Avatar URL'|tr }}</label>
+              <label class="form-label fw-semibold">{{ 'Avatar URL'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label>
               <input class="form-control" name="avatar_url" type="url" value="{{ account.avatar_url or '' }}" placeholder="https://example.com/avatar.jpg">
             </div>
             <div>
@@ -1666,7 +1636,7 @@
               {% if account.role == 'operator' %}<div class="small muted mt-2">{{ 'Increase the minimum to create more available employee slots.'|tr }}</div>{% endif %}
             </div>
             <div>
-              <label class="form-label fw-semibold">{{ 'New password'|tr }}</label>
+              <label class="form-label fw-semibold">{{ 'New password'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label>
               <div class="input-group password-input-group">
                 <input class="form-control" id="editUserPassword{{ account.id }}" name="password" type="password" minlength="8" placeholder="{{ 'Leave blank to keep current password.'|tr }}">
                 <button class="btn btn-outline-secondary password-toggle" type="button" data-password-toggle="editUserPassword{{ account.id }}" aria-label="{{ 'Show password'|tr }}" aria-pressed="false" title="{{ 'Show password'|tr }}"><i class="bi bi-eye" aria-hidden="true"></i></button>
@@ -1694,7 +1664,7 @@
 
 {% if current_user.role in ['admin','operator'] %}
 <div class="modal fade" id="createShipmentModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered create-shipment-dialog">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable create-shipment-dialog">
     <div class="modal-content create-shipment-content">
       <form method="post" action="/shipments/create" id="createShipmentForm" class="create-shipment-form">
         <input type="hidden" name="allow_manual_awb" id="allowManualAwbInput" value="0">
@@ -1740,13 +1710,13 @@
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'AWB / waybill'|tr }}</label>
               <div class="input-group">
-                <input class="form-control" name="awb" id="awbInput" required placeholder="Internal courier tracking number">
+                <input class="form-control" name="awb" id="awbInput" required placeholder="{{ 'Internal courier tracking number'|tr }}">
                 <button class="btn btn-soft" type="button" id="lookupAwbButton"><i class="bi bi-search me-1"></i>{{ 'Lookup'|tr }}</button>
               </div>
               <div class="small muted mt-1" id="awbLookupStatus">{{ 'Enter a valid AWB to automatically fill shipment details. All fields remain editable.'|tr }}</div>
             </div>
-            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Ticket number'|tr }}</label><input class="form-control" name="external_awb" id="shipmentTicketInput" placeholder="Ticket number"></div>
-            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'PO number'|tr }}</label><input class="form-control" name="po_number" id="shipmentPoInput" placeholder="Purchase order number"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'Ticket number'|tr }}</label><input class="form-control" name="external_awb" id="shipmentTicketInput" placeholder="{{ 'Ticket number'|tr }}"></div>
+            <div class="col-md-3"><label class="form-label fw-semibold">{{ 'PO number'|tr }}</label><input class="form-control" name="po_number" id="shipmentPoInput" placeholder="{{ 'Purchase order number'|tr }}"></div>
             <div class="col-md-3">
               <label class="form-label fw-semibold">{{ 'Sender hashtags'|tr }}</label>
               <input class="form-control" name="sender_tags" value="{{ '#HO' if current_user.role == 'admin' else '#Vendor' }}" placeholder="#HO #Urgent">
@@ -1905,7 +1875,7 @@
 </div>
 
 <div class="modal fade error-modal" id="awbErrorModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="error-hero">
         <div class="d-flex align-items-start gap-3">
@@ -1984,20 +1954,20 @@
     <div class="d-flex"><div class="toast-body"><i class="bi bi-geo-alt-fill me-2"></i>{{ 'Location updated successfully.'|tr }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
   </div>
   <div id="locationImportedToast" class="toast text-bg-success" role="alert">
-    <div class="d-flex"><div class="toast-body"><i class="bi bi-file-earmark-check-fill me-2"></i>{{ location_imported }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+      <div class="d-flex"><div class="toast-body"><i class="bi bi-file-earmark-check-fill me-2"></i>{{ location_imported|tr }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
   </div>
   <div id="locationImportErrorToast" class="toast text-bg-danger" role="alert">
-    <div class="d-flex"><div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ location_import_error }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+    <div class="d-flex"><div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ location_import_error|tr }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
   </div>
   <div id="budgetErrorToast" class="toast text-bg-danger" role="alert">
     <div class="d-flex">
-      <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ budget_error }}</div>
+      <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ budget_error|tr }}</div>
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
   <div id="userErrorToast" class="toast text-bg-danger" role="alert">
     <div class="d-flex">
-      <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ user_error }}</div>
+      <div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ user_error|tr }}</div>
       <button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
     </div>
   </div>
@@ -2008,6 +1978,10 @@
 <script>
   const i18n = {
     page: {{ ('Page'|tr)|tojson }},
+    showing: {{ ('Showing'|tr)|tojson }},
+    to: {{ ('to'|tr)|tojson }},
+    of: {{ ('of'|tr)|tojson }},
+    rows: {{ ('rows'|tr)|tojson }},
     chooseCourierAwb: {{ ('Choose courier and enter AWB first.'|tr)|tojson }},
     lookupLoading: {{ ('Looking up route from courier tracking...'|tr)|tojson }},
     lookupButton: {{ ('Lookup'|tr)|tojson }},
@@ -2046,6 +2020,38 @@
     });
   });
   document.querySelectorAll('.budget-edit-modal').forEach((modal) => document.body.appendChild(modal));
+  const installModalScrollHints = (label) => {
+    const refreshHint = (modal) => {
+      const body = modal.querySelector('.modal-body');
+      const hint = modal.querySelector('.modal-scroll-hint');
+      if (!body || !hint) return;
+      const footer = modal.querySelector('.modal-footer');
+      const footerHeight = footer?.getBoundingClientRect().height || 0;
+      const canScroll = body.scrollHeight - body.clientHeight > 2;
+      const isAtBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 2;
+      hint.style.bottom = `${footerHeight + 12}px`;
+      hint.classList.toggle('is-visible', canScroll && !isAtBottom);
+    };
+
+    document.querySelectorAll('.modal').forEach((modal) => {
+      const content = modal.querySelector('.modal-content');
+      const body = modal.querySelector('.modal-body');
+      if (!content || !body) return;
+      const hint = document.createElement('div');
+      hint.className = 'modal-scroll-hint';
+      hint.setAttribute('aria-hidden', 'true');
+      hint.innerHTML = '<i class="bi bi-arrow-down-short fs-5 lh-1"></i><span></span>';
+      hint.querySelector('span').textContent = label;
+      content.appendChild(hint);
+      const update = () => refreshHint(modal);
+      body.addEventListener('scroll', update, { passive: true });
+      modal.addEventListener('shown.bs.modal', () => requestAnimationFrame(update));
+      modal.addEventListener('hidden.bs.modal', () => hint.classList.remove('is-visible'));
+      if ('ResizeObserver' in window) new ResizeObserver(update).observe(body);
+    });
+    window.addEventListener('resize', () => document.querySelectorAll('.modal.show').forEach(refreshHint));
+  };
+  installModalScrollHints({{ ('Scroll down'|tr)|tojson }});
   const budgetChartData = {{ budget_chart_data|tojson if current_user.role == 'admin' else 'null' }};
   const shipmentChartData = {{ shipment_chart_data|tojson if current_user.role == 'admin' else 'null' }};
   const locationChartData = {{ location_chart_data|tojson if current_user.role == 'admin' else 'null' }};
@@ -2058,25 +2064,32 @@
   const budgetTableSearch = document.getElementById('budgetTableSearch');
   const budgetCategoryFilter = document.getElementById('budgetCategoryFilter');
   const budgetFilterReset = document.getElementById('budgetFilterReset');
-  const budgetPageSize = document.getElementById('budgetPageSize');
   const budgetPreviousPage = document.getElementById('budgetPreviousPage');
   const budgetNextPage = document.getElementById('budgetNextPage');
+  const annualBudgetPreviousPage = document.getElementById('annualBudgetPreviousPage');
+  const annualBudgetNextPage = document.getElementById('annualBudgetNextPage');
   const vendorSearchField = document.getElementById('vendorSearchField');
   const vendorTableSearch = document.getElementById('vendorTableSearch');
   const vendorPerformanceFilter = document.getElementById('vendorPerformanceFilter');
   const vendorFilterReset = document.getElementById('vendorFilterReset');
+  const vendorPreviousPage = document.getElementById('vendorPreviousPage');
+  const vendorNextPage = document.getElementById('vendorNextPage');
   const vendorsSidebarTab = document.getElementById('vendors-tab');
   const locationsSidebarTab = document.getElementById('locations-tab');
   const locationSearchField = document.getElementById('locationSearchField');
   const locationTableSearch = document.getElementById('locationTableSearch');
   const locationCompletenessFilter = document.getElementById('locationCompletenessFilter');
   const locationFilterReset = document.getElementById('locationFilterReset');
+  const locationPreviousPage = document.getElementById('locationPreviousPage');
+  const locationNextPage = document.getElementById('locationNextPage');
   const adminSidebarTab = document.getElementById('admin-tab');
   const adminSearchField = document.getElementById('adminSearchField');
   const adminTableSearch = document.getElementById('adminTableSearch');
   const adminRoleFilter = document.getElementById('adminRoleFilter');
   const adminStatusFilter = document.getElementById('adminStatusFilter');
   const adminFilterReset = document.getElementById('adminFilterReset');
+  const adminPreviousPage = document.getElementById('adminPreviousPage');
+  const adminNextPage = document.getElementById('adminNextPage');
   const packageMapModal = document.getElementById('packageMapModal');
   const awbErrorModal = document.getElementById('awbErrorModal');
   const createShipmentModal = document.getElementById('createShipmentModal');
@@ -2151,11 +2164,78 @@
     return `Rp ${Number(value || 0).toLocaleString('id-ID', {maximumFractionDigits: 0})}`;
   }
 
-  let budgetCurrentPage = 1;
+  const TABLE_ROWS_PER_PAGE = 10;
+  function createTablePaginator({ rowSelector, emptyId, countId, paginationId, summaryId, pageInfoId, previousButton, nextButton }) {
+    let currentPage = 1;
+    let currentMatches = [];
+    const shell = document.getElementById(paginationId);
+    const summary = document.getElementById(summaryId);
+    const pageInfo = document.getElementById(pageInfoId);
+    const empty = document.getElementById(emptyId);
+    const count = document.getElementById(countId);
+
+    const render = (matchingRows, resetPage = true) => {
+      const allRows = [...document.querySelectorAll(rowSelector)];
+      if (!allRows.length) {
+        shell?.classList.add('d-none');
+        if (count) count.textContent = '0';
+        return;
+      }
+      currentMatches = matchingRows;
+      if (resetPage) currentPage = 1;
+      const totalPages = Math.max(Math.ceil(currentMatches.length / TABLE_ROWS_PER_PAGE), 1);
+      currentPage = Math.min(Math.max(currentPage, 1), totalPages);
+      const firstRowIndex = (currentPage - 1) * TABLE_ROWS_PER_PAGE;
+      const pageRows = new Set(currentMatches.slice(firstRowIndex, firstRowIndex + TABLE_ROWS_PER_PAGE));
+      allRows.forEach((row) => row.classList.toggle('d-none', !pageRows.has(row)));
+      empty?.classList.toggle('d-none', currentMatches.length !== 0);
+      if (count) count.textContent = currentMatches.length;
+      if (summary) {
+        const start = currentMatches.length ? firstRowIndex + 1 : 0;
+        const end = Math.min(firstRowIndex + TABLE_ROWS_PER_PAGE, currentMatches.length);
+        summary.textContent = `${i18n.showing} ${start} ${i18n.to} ${end} ${i18n.of} ${currentMatches.length} ${i18n.rows}`;
+      }
+      if (pageInfo) pageInfo.textContent = `${i18n.page} ${currentPage} / ${totalPages}`;
+      if (previousButton) previousButton.disabled = currentPage <= 1;
+      if (nextButton) nextButton.disabled = currentPage >= totalPages;
+      shell?.classList.toggle('d-none', currentMatches.length <= TABLE_ROWS_PER_PAGE);
+    };
+
+    previousButton?.addEventListener('click', () => {
+      currentPage -= 1;
+      render(currentMatches, false);
+    });
+    nextButton?.addEventListener('click', () => {
+      currentPage += 1;
+      render(currentMatches, false);
+    });
+    return { render };
+  }
+
+  const annualBudgetPaginator = createTablePaginator({
+    rowSelector: '.annual-budget-table-row', paginationId: 'annualBudgetPagination', summaryId: 'annualBudgetPaginationSummary',
+    pageInfoId: 'annualBudgetPageInfo', previousButton: annualBudgetPreviousPage, nextButton: annualBudgetNextPage,
+  });
+  const budgetPaginator = createTablePaginator({
+    rowSelector: '.budget-item-table-row', emptyId: 'budgetFilterEmpty', countId: 'budgetVisibleCount', paginationId: 'budgetPagination',
+    summaryId: 'budgetPaginationSummary', pageInfoId: 'budgetPageInfo', previousButton: budgetPreviousPage, nextButton: budgetNextPage,
+  });
+  const vendorPaginator = createTablePaginator({
+    rowSelector: '.vendor-table-row', emptyId: 'vendorFilterEmpty', countId: 'vendorVisibleCount', paginationId: 'vendorPagination',
+    summaryId: 'vendorPaginationSummary', pageInfoId: 'vendorPageInfo', previousButton: vendorPreviousPage, nextButton: vendorNextPage,
+  });
+  const locationPaginator = createTablePaginator({
+    rowSelector: '.location-table-row', emptyId: 'locationFilterEmpty', countId: 'locationVisibleCount', paginationId: 'locationPagination',
+    summaryId: 'locationPaginationSummary', pageInfoId: 'locationPageInfo', previousButton: locationPreviousPage, nextButton: locationNextPage,
+  });
+  const adminPaginator = createTablePaginator({
+    rowSelector: '.admin-account-row', emptyId: 'adminFilterEmpty', countId: 'adminVisibleCount', paginationId: 'adminPagination',
+    summaryId: 'adminPaginationSummary', pageInfoId: 'adminPageInfo', previousButton: adminPreviousPage, nextButton: adminNextPage,
+  });
+
   function filterBudgetItems(resetPage = true) {
     const rows = [...document.querySelectorAll('.budget-item-table-row')];
     if (!rows.length) return;
-    if (resetPage) budgetCurrentPage = 1;
     const field = budgetSearchField?.value || 'all';
     const query = (budgetTableSearch?.value || '').trim().toLowerCase();
     const category = budgetCategoryFilter?.value || '';
@@ -2169,19 +2249,7 @@
       const matches = (!query || searchable.includes(query)) && (!category || values.category === category);
       if (matches) matchingRows.push(row);
     });
-    const pageSize = Number(budgetPageSize?.value || 10);
-    const totalPages = Math.max(Math.ceil(matchingRows.length / pageSize), 1);
-    budgetCurrentPage = Math.min(Math.max(budgetCurrentPage, 1), totalPages);
-    const pageStart = (budgetCurrentPage - 1) * pageSize;
-    const pageRows = new Set(matchingRows.slice(pageStart, pageStart + pageSize));
-    rows.forEach((row) => row.classList.toggle('d-none', !pageRows.has(row)));
-    document.getElementById('budgetFilterEmpty')?.classList.toggle('d-none', matchingRows.length !== 0);
-    const count = document.getElementById('budgetVisibleCount');
-    if (count) count.textContent = matchingRows.length;
-    const pageInfo = document.getElementById('budgetPageInfo');
-    if (pageInfo) pageInfo.textContent = `${i18n.page} ${budgetCurrentPage} / ${totalPages}`;
-    if (budgetPreviousPage) budgetPreviousPage.disabled = budgetCurrentPage <= 1;
-    if (budgetNextPage) budgetNextPage.disabled = budgetCurrentPage >= totalPages;
+    budgetPaginator.render(matchingRows, resetPage);
   }
   [budgetSearchField, budgetTableSearch, budgetCategoryFilter].forEach((control) => {
     control?.addEventListener(control === budgetTableSearch ? 'input' : 'change', filterBudgetItems);
@@ -2189,10 +2257,8 @@
   budgetFilterReset?.addEventListener('click', () => {
     budgetSearchField.value = 'all'; budgetTableSearch.value = ''; budgetCategoryFilter.value = ''; filterBudgetItems();
   });
-  budgetPageSize?.addEventListener('change', () => filterBudgetItems());
-  budgetPreviousPage?.addEventListener('click', () => { budgetCurrentPage -= 1; filterBudgetItems(false); });
-  budgetNextPage?.addEventListener('click', () => { budgetCurrentPage += 1; filterBudgetItems(false); });
   filterBudgetItems();
+  annualBudgetPaginator.render([...document.querySelectorAll('.annual-budget-table-row')]);
 
   recipientSearchInput?.addEventListener('click', (event) => event.stopPropagation());
   recipientSearchInput?.addEventListener('input', () => {
@@ -2221,12 +2287,13 @@
     document.getElementById('recipientSearchEmpty')?.classList.add('d-none');
     recipientSearchInput.focus();
   });
-  function filterVendors() {
+  function filterVendors(resetPage = true) {
     const rows = [...document.querySelectorAll('.vendor-table-row')];
+    if (!rows.length) return;
     const field = vendorSearchField?.value || 'all';
     const query = (vendorTableSearch?.value || '').trim().toLowerCase();
     const activity = vendorPerformanceFilter?.value || '';
-    let visible = 0;
+    const matchingRows = [];
     rows.forEach((row) => {
       const values = {
         vendor: row.dataset.vendor || '', company: row.dataset.company || '', sent: row.dataset.sent || '',
@@ -2236,54 +2303,53 @@
       const sent = Number(values.sent); const delivered = Number(values.delivered); const progress = Number(values.progress);
       const activityMatch = !activity || (activity === 'has_shipments' && sent > 0) || (activity === 'delivered' && delivered > 0) || (activity === 'in_progress' && progress > 0) || (activity === 'no_shipments' && sent === 0);
       const matches = (!query || searchable.includes(query)) && activityMatch;
-      row.classList.toggle('d-none', !matches);
-      if (matches) visible += 1;
+      if (matches) matchingRows.push(row);
     });
-    document.getElementById('vendorFilterEmpty')?.classList.toggle('d-none', visible !== 0);
-    const count = document.getElementById('vendorVisibleCount');
-    if (count) count.textContent = visible;
+    vendorPaginator.render(matchingRows, resetPage);
   }
   [vendorSearchField, vendorTableSearch, vendorPerformanceFilter].forEach((control) => control?.addEventListener(control === vendorTableSearch ? 'input' : 'change', filterVendors));
   vendorFilterReset?.addEventListener('click', () => { vendorSearchField.value = 'all'; vendorTableSearch.value = ''; vendorPerformanceFilter.value = ''; filterVendors(); });
+  filterVendors();
   vendorsSidebarTab?.addEventListener('click', () => {
     const vendorDataTab = document.getElementById('vendor-data-tab');
     if (vendorDataTab && typeof bootstrap !== 'undefined') bootstrap.Tab.getOrCreateInstance(vendorDataTab).show();
   });
-  function filterLocations() {
+  function filterLocations(resetPage = true) {
     const rows = [...document.querySelectorAll('.location-table-row')];
+    if (!rows.length) return;
     const field = locationSearchField?.value || 'all';
     const query = (locationTableSearch?.value || '').trim().toLowerCase();
     const completeness = locationCompletenessFilter?.value || '';
-    let visible = 0;
+    const matchingRows = [];
     rows.forEach((row) => {
       const values = {company: row.dataset.company || '', branch: row.dataset.branch || '', category: row.dataset.category || '', address: row.dataset.address || '', phone: row.dataset.phone || '', fax: row.dataset.fax || '', city: row.dataset.city || '', state: row.dataset.state || '', postcode: row.dataset.postcode || '', country: row.dataset.country || ''};
       const searchable = field === 'all' ? Object.values(values).join(' ') : values[field] || '';
       const completenessMatch = !completeness || (completeness === 'complete' && Boolean(values.postcode)) || (completeness === 'missing_postcode' && !values.postcode);
       const matches = (!query || searchable.includes(query)) && completenessMatch;
-      row.classList.toggle('d-none', !matches);
-      if (matches) visible += 1;
+      if (matches) matchingRows.push(row);
     });
-    document.getElementById('locationFilterEmpty')?.classList.toggle('d-none', visible !== 0);
-    const count = document.getElementById('locationVisibleCount'); if (count) count.textContent = visible;
+    locationPaginator.render(matchingRows, resetPage);
   }
   [locationSearchField, locationTableSearch, locationCompletenessFilter].forEach((control) => control?.addEventListener(control === locationTableSearch ? 'input' : 'change', filterLocations));
   locationFilterReset?.addEventListener('click', () => { locationSearchField.value = 'all'; locationTableSearch.value = ''; locationCompletenessFilter.value = ''; filterLocations(); });
+  filterLocations();
   locationsSidebarTab?.addEventListener('click', () => { const tab = document.getElementById('location-data-tab'); if (tab && typeof bootstrap !== 'undefined') bootstrap.Tab.getOrCreateInstance(tab).show(); });
-  function filterAdminAccounts() {
+  function filterAdminAccounts(resetPage = true) {
     const rows = [...document.querySelectorAll('.admin-account-row')];
+    if (!rows.length) return;
     const field = adminSearchField?.value || 'all'; const query = (adminTableSearch?.value || '').trim().toLowerCase();
-    const role = adminRoleFilter?.value || ''; const status = adminStatusFilter?.value || ''; let visible = 0;
+    const role = adminRoleFilter?.value || ''; const status = adminStatusFilter?.value || ''; const matchingRows = [];
     rows.forEach((row) => {
       const values = {name: row.dataset.name || '', username: row.dataset.username || '', company: row.dataset.company || '', role: row.dataset.role || '', status: row.dataset.status || '', location: row.dataset.location || ''};
       const searchable = field === 'all' ? Object.values(values).join(' ') : values[field] || '';
       const matches = (!query || searchable.includes(query)) && (!role || values.role === role) && (!status || values.status === status);
-      row.classList.toggle('d-none', !matches); if (matches) visible += 1;
+      if (matches) matchingRows.push(row);
     });
-    document.getElementById('adminFilterEmpty')?.classList.toggle('d-none', visible !== 0);
-    const count = document.getElementById('adminVisibleCount'); if (count) count.textContent = visible;
+    adminPaginator.render(matchingRows, resetPage);
   }
   [adminSearchField, adminTableSearch, adminRoleFilter, adminStatusFilter].forEach((control) => control?.addEventListener(control === adminTableSearch ? 'input' : 'change', filterAdminAccounts));
   adminFilterReset?.addEventListener('click', () => { adminSearchField.value = 'all'; adminTableSearch.value = ''; adminRoleFilter.value = ''; adminStatusFilter.value = ''; filterAdminAccounts(); });
+  filterAdminAccounts();
   adminSidebarTab?.addEventListener('click', () => { const tab = document.getElementById('admin-data-tab'); if (tab && typeof bootstrap !== 'undefined') bootstrap.Tab.getOrCreateInstance(tab).show(); });
   const budgetDataTab = document.getElementById('budget-data-tab');
   const budgetAnalyticsTab = document.getElementById('budget-analytics-tab');

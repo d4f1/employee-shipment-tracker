@@ -5,7 +5,7 @@ import os
 import re
 import uuid
 import xml.etree.ElementTree as ElementTree
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
@@ -33,6 +33,26 @@ DEFAULT_SELF_REGISTER_ROLE = "employee"
 DEFAULT_LANGUAGE = "id"
 SUPPORTED_LANGUAGES = {"id": "Bahasa", "en": "English"}
 APPLICATION_DIRECTORY = Path(__file__).resolve().parent
+MONTH_NAMES = {
+    "en": ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"),
+    "id": ("Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"),
+}
+MONTH_ABBREVIATIONS = {
+    "en": ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+    "id": ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"),
+}
+SHIPMENT_STATUS_LABELS = {
+    "CREATED": "Created",
+    "PENDING": "Pending",
+    "PICKED_UP": "Picked up",
+    "IN_TRANSIT": "In transit",
+    "OUT_FOR_DELIVERY": "Out for delivery",
+    "DELIVERED": "Delivered",
+    "RECEIVED": "Received",
+    "ON_HOLD": "On hold",
+    "RETURNED": "Returned",
+    "CANCELLED": "Cancelled",
+}
 
 
 def resolve_database_url(database_url: str) -> str:
@@ -53,7 +73,7 @@ JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-this-development-secret")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_ACCESS_TOKEN_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_MINUTES", "60"))
 JWT_COOKIE_SECURE = os.getenv("JWT_COOKIE_SECURE", "false").lower() == "true"
-RAJAONGKIR_MOCK = os.getenv("RAJAONGKIR_MOCK", "true").lower() == "true"
+RAJAONGKIR_MOCK = os.getenv("RAJAONGKIR_MOCK", "false").lower() == "true"
 RAJAONGKIR_API_KEY = os.getenv("RAJAONGKIR_API_KEY", "")
 RAJAONGKIR_BASE_URL = os.getenv(
     "RAJAONGKIR_BASE_URL", "https://rajaongkir.komerce.id/api/v1"
@@ -308,6 +328,7 @@ TRANSLATIONS = {
         "Password": "Kata sandi",
         "Show password": "Tampilkan kata sandi",
         "Hide password": "Sembunyikan kata sandi",
+        "Scroll down": "Gulir ke bawah",
         "Current location detection": "Deteksi lokasi saat ini",
         "Location will be detected automatically when you sign in.": "Lokasi akan dideteksi otomatis saat Anda masuk.",
         "Sign in": "Masuk",
@@ -480,6 +501,11 @@ TRANSLATIONS = {
         "Available employee slots are created from the minimum allocation.": "Slot karyawan tersedia dibuat berdasarkan alokasi minimum.",
         "Increase the minimum to create more available employee slots.": "Naikkan minimum untuk membuat lebih banyak slot karyawan tersedia.",
         "Temporary password": "Kata sandi sementara",
+        "Optional": "opsional",
+        "Example: dwi.santoso": "Contoh: dwi.santoso",
+        "Example: Dwi Santoso": "Contoh: Dwi Santoso",
+        "Example: Dipo Star Finance": "Contoh: Dipo Star Finance",
+        "Minimum 8 characters": "Minimal 8 karakter",
         "Profile details": "Detail profil",
         "Company name": "Nama perusahaan",
         "Avatar URL": "URL avatar",
@@ -644,6 +670,108 @@ TRANSLATIONS = {
         "Refresh now": "Refresh sekarang",
         "Refreshing...": "Sedang refresh...",
         "Tracking refreshed successfully.": "Pelacakan berhasil diperbarui.",
+        "Operations": "Operasional",
+        "Search AWB, employee, or destination": "Cari AWB, karyawan, atau tujuan",
+        "Shipments": "Pengiriman",
+        "Tracking": "Pelacakan",
+        "Access the shipment portal": "Akses portal pengiriman",
+        "Sign in or create an employee account with Google to use tracking and shipment tools.": "Masuk atau buat akun karyawan dengan Google untuk menggunakan fitur pelacakan dan pengiriman.",
+        "Sign in or register": "Masuk atau daftar",
+        "Protected employee access": "Akses karyawan terlindungi",
+        "Visibility": "Visibilitas",
+        "Live shipment progress": "Progres pengiriman langsung",
+        "AWB Lookup": "Pencarian AWB",
+        "Multiple courier tracking": "Pelacakan multi-kurir",
+        "Secure Access": "Akses aman",
+        "Role-based operations": "Operasional berbasis peran",
+        "or continue with Google": "atau lanjutkan dengan Google",
+        "Sign in with Google": "Masuk dengan Google",
+        "Register with Google": "Daftar dengan Google",
+        "Vendor": "Vendor",
+        "Company location": "Lokasi perusahaan",
+        "Edit location": "Ubah lokasi",
+        "Correct the address, then validate the pointer before saving.": "Perbaiki alamat, lalu validasi titik lokasi sebelum menyimpan.",
+        "Validate pointer": "Validasi titik lokasi",
+        "Location updated successfully.": "Lokasi berhasil diperbarui.",
+        "Searching address...": "Mencari alamat...",
+        "No address suggestions found.": "Tidak ada saran alamat.",
+        "View map": "Lihat peta",
+        "day(s)": "hari",
+        "No tracking events": "Belum ada riwayat pelacakan",
+        "Jakarta Distribution Center": "Pusat Distribusi Jakarta",
+        "Line haul JNE / J&T": "Antarhub JNE / J&T",
+        "Employee Office Branch": "Cabang kantor karyawan",
+        "Choose an existing role.": "Pilih peran yang tersedia.",
+        "Password must be at least 8 characters.": "Kata sandi minimal 8 karakter.",
+        "Username already exists.": "Nama pengguna sudah digunakan.",
+        "Employee accounts must be linked to an employee.": "Akun karyawan harus dihubungkan ke data karyawan.",
+        "Selected employee was not found.": "Karyawan yang dipilih tidak ditemukan.",
+        "Selected employee already has an account.": "Karyawan yang dipilih sudah memiliki akun.",
+        "User account was not found.": "Akun pengguna tidak ditemukan.",
+        "Username and full name are required.": "Nama pengguna dan nama lengkap wajib diisi.",
+        "You cannot remove admin access from your own account.": "Anda tidak dapat menghapus akses admin dari akun sendiri.",
+        "Minimum employee allocation must be at least 1.": "Alokasi minimum karyawan harus setidaknya 1.",
+        "Maximum employee allocation must be greater than or equal to the minimum.": "Alokasi maksimum karyawan harus lebih besar atau sama dengan minimum.",
+        "Maximum employee allocation cannot exceed 500.": "Alokasi maksimum karyawan tidak boleh lebih dari 500.",
+        "Budget amount must be greater than zero.": "Jumlah anggaran harus lebih dari nol.",
+        "Monthly budget does not exist yet.": "Anggaran bulanan belum tersedia.",
+        "Item name is required.": "Nama item wajib diisi.",
+        "Category is required.": "Kategori wajib diisi.",
+        "Item amount must be greater than 0.": "Jumlah item harus lebih dari 0.",
+        "Purchase item was not found.": "Item pembelian tidak ditemukan.",
+        "Company, branch, and address are required.": "Perusahaan, cabang, dan alamat wajib diisi.",
+        "Company name is required.": "Nama perusahaan wajib diisi.",
+        "Choose a spreadsheet file to import.": "Pilih file spreadsheet untuk diimpor.",
+        "The branch import could not be saved. No locations were changed.": "Impor cabang tidak dapat disimpan. Tidak ada lokasi yang diubah.",
+        "Portal features": "Fitur portal",
+        "Portal benefits": "Manfaat portal",
+        "Close": "Tutup",
+        "Language": "Bahasa",
+        "User menu": "Menu pengguna",
+        "Shipment pagination": "Paginasi pengiriman",
+        "The system will request the latest timeline from {courier} through the configured RajaOngkir provider.": "Sistem akan meminta linimasa terbaru dari {courier} melalui penyedia RajaOngkir yang dikonfigurasi.",
+        "Laptop charger": "Charger laptop",
+        "Office supplies": "Perlengkapan kantor",
+        "IT equipment": "Peralatan TI",
+        "Courier supplies": "Perlengkapan kurir",
+        "Packaging": "Kemasan",
+        "Head Office": "Kantor pusat",
+        "Street, building, district": "Jalan, gedung, kecamatan",
+        "Branch": "Cabang",
+        "Internal courier tracking number": "Nomor pelacakan internal kurir",
+        "Purchase order number": "Nomor pesanan pembelian",
+        "Maximum allocation cannot be lower than the current {count} employee slots.": "Alokasi maksimum tidak boleh lebih kecil dari {count} slot karyawan yang ada.",
+        "New budget total must be greater than the existing budget of Rp {amount}.": "Total anggaran baru harus lebih besar dari anggaran saat ini sebesar Rp {amount}.",
+        "The spreadsheet must be no larger than {size} MB.": "Ukuran spreadsheet tidak boleh lebih dari {size} MB.",
+        "{created} imported, {updated} updated, {unchanged} unchanged.": "{created} diimpor, {updated} diperbarui, {unchanged} tidak berubah.",
+        "Value exceeds the {limit}-character limit.": "Nilai melebihi batas {limit} karakter.",
+        "The {field_name} column appears more than once.": "Kolom {field_name} muncul lebih dari sekali.",
+        "A maximum of {limit} branch rows can be imported at once.": "Maksimal {limit} baris cabang dapat diimpor sekaligus.",
+        "Row {row}: Location and Address are required.": "Baris {row}: Lokasi dan Alamat wajib diisi.",
+        "Row {row}: duplicate Company + Location.": "Baris {row}: Perusahaan + Lokasi duplikat.",
+        "{count} more row error(s).": "{count} kesalahan baris lainnya.",
+        "The Excel file does not contain a worksheet.": "File Excel tidak memiliki worksheet.",
+        "The Excel file could not be read.": "File Excel tidak dapat dibaca.",
+        "CSV files must use UTF-8 encoding.": "File CSV harus menggunakan encoding UTF-8.",
+        "Upload an .xlsx or .csv file.": "Unggah file .xlsx atau .csv.",
+        "The Excel file is too large after extraction.": "File Excel terlalu besar setelah diekstrak.",
+        "The Excel file is invalid or corrupted.": "File Excel tidak valid atau rusak.",
+        "The spreadsheet is empty.": "Spreadsheet kosong.",
+        "Required columns are Location and Address.": "Kolom wajib adalah Location dan Address.",
+        "No branch rows were found below the header.": "Tidak ada baris cabang di bawah header.",
+        "Created": "Dibuat",
+        "Pending": "Menunggu",
+        "Picked up": "Paket dijemput",
+        "In transit": "Dalam perjalanan",
+        "Out for delivery": "Dalam pengantaran",
+        "Delivered": "Terkirim",
+        "Received": "Diterima",
+        "On hold": "Ditahan",
+        "Returned": "Dikembalikan",
+        "Cancelled": "Dibatalkan",
+        "Shipment record created": "Data pengiriman dibuat",
+        "Package departed from origin hub": "Paket berangkat dari hub asal",
+        "Saved shipment address": "Alamat pengiriman tersimpan",
     },
     "en": {},
 }
@@ -656,7 +784,69 @@ def get_locale(request: Request) -> str:
 
 def translate_text(lang: str, text: str, **kwargs) -> str:
     translated = TRANSLATIONS.get(lang, {}).get(text, text)
-    return translated.format(**kwargs) if kwargs else translated
+    if translated != text or kwargs:
+        return translated.format(**kwargs) if kwargs else translated
+
+    dynamic_messages = (
+        (r"^Maximum allocation cannot be lower than the current (?P<count>\d+) employee slots\.$", "Maximum allocation cannot be lower than the current {count} employee slots."),
+        (r"^New budget total must be greater than the existing budget of Rp (?P<amount>[\d,]+)\.$", "New budget total must be greater than the existing budget of Rp {amount}."),
+        (r"^The spreadsheet must be no larger than (?P<size>\d+) MB\.$", "The spreadsheet must be no larger than {size} MB."),
+        (r"^(?P<created>\d+) imported, (?P<updated>\d+) updated, (?P<unchanged>\d+) unchanged\.$", "{created} imported, {updated} updated, {unchanged} unchanged."),
+        (r"^Value exceeds the (?P<limit>\d+)-character limit\.$", "Value exceeds the {limit}-character limit."),
+        (r"^The (?P<field_name>[a-z_]+) column appears more than once\.$", "The {field_name} column appears more than once."),
+        (r"^A maximum of (?P<limit>\d+) branch rows can be imported at once\.$", "A maximum of {limit} branch rows can be imported at once."),
+        (r"^Row (?P<row>\d+): Location and Address are required\.$", "Row {row}: Location and Address are required."),
+        (r"^Row (?P<row>\d+): duplicate Company \+ Location\.$", "Row {row}: duplicate Company + Location."),
+        (r"^(?P<count>\d+) more row error\(s\)\.$", "{count} more row error(s)."),
+    )
+    for pattern, key in dynamic_messages:
+        match = re.fullmatch(pattern, text)
+        if match:
+            values = match.groupdict()
+            if "field_name" in values:
+                field_labels = {
+                    "company_name": "Company name",
+                    "branch_name": "Branch name",
+                    "address": "Full address",
+                    "category": "Category",
+                    "phone": "Phone",
+                    "fax": "Fax",
+                }
+                values["field_name"] = translate_text(
+                    lang,
+                    field_labels.get(values["field_name"], values["field_name"].replace("_", " ").title()),
+                )
+            return TRANSLATIONS.get(lang, {}).get(key, key).format(**values)
+    return text
+
+
+def localized_month_name(month: int, lang: str, abbreviated: bool = False) -> str:
+    """Return a month name without depending on the host operating-system locale."""
+    labels = MONTH_ABBREVIATIONS if abbreviated else MONTH_NAMES
+    return labels.get(lang, labels[DEFAULT_LANGUAGE])[month - 1]
+
+
+def format_local_date(
+    value: date | datetime | None,
+    lang: str,
+    *,
+    include_time: bool = False,
+    include_year: bool = True,
+) -> str:
+    if not value:
+        return "-"
+    date_value = value.date() if isinstance(value, datetime) else value
+    date_label = f"{date_value.day:02d} {localized_month_name(date_value.month, lang, abbreviated=True)}"
+    if include_year:
+        date_label = f"{date_label} {date_value.year}"
+    if include_time and isinstance(value, datetime):
+        return f"{date_label}, {value:%H:%M}"
+    return date_label
+
+
+def localized_shipment_status(value: str, lang: str) -> str:
+    label = SHIPMENT_STATUS_LABELS.get(str(value).strip().upper())
+    return translate_text(lang, label) if label else str(value)
 
 
 @pass_context
@@ -664,7 +854,24 @@ def tr_filter(context, value: str) -> str:
     return translate_text(context.get("lang", DEFAULT_LANGUAGE), str(value))
 
 
+@pass_context
+def local_date_filter(context, value: date | datetime | None, with_time: bool = False, with_year: bool = True) -> str:
+    return format_local_date(
+        value,
+        context.get("lang", DEFAULT_LANGUAGE),
+        include_time=with_time,
+        include_year=with_year,
+    )
+
+
+@pass_context
+def shipment_status_filter(context, value: str) -> str:
+    return localized_shipment_status(value, context.get("lang", DEFAULT_LANGUAGE))
+
+
 templates.env.filters["tr"] = tr_filter
+templates.env.filters["local_date"] = local_date_filter
+templates.env.filters["shipment_status"] = shipment_status_filter
 
 
 def localized_context(request: Request, **context):
@@ -909,7 +1116,7 @@ def search_geocode(query: str, limit: int = 6) -> list[dict]:
     return suggestions
 
 
-def search_saved_locations(db: Session, query: str, limit: int = 6) -> list[dict]:
+def search_saved_locations(db: Session, query: str, limit: int = 6, lang: str = DEFAULT_LANGUAGE) -> list[dict]:
     normalized_query = query.strip().lower()
     if len(normalized_query) < 3:
         return []
@@ -984,7 +1191,7 @@ def search_saved_locations(db: Session, query: str, limit: int = 6) -> list[dict
         suggestions.append({
             "label": value,
             "primary": parts[0] if parts else value,
-            "secondary": ", ".join(parts[1:]) if len(parts) > 1 else "Saved shipment address",
+            "secondary": ", ".join(parts[1:]) if len(parts) > 1 else translate_text(lang, "Saved shipment address"),
             "postcode": None,
             "road": None,
             "city": None,
@@ -2092,7 +2299,7 @@ def search_location_for_form(
     if not user:
         raise HTTPException(status_code=401, detail="Login is required")
     require_roles(user, "admin", "operator")
-    saved_suggestions = search_saved_locations(db, query)
+    saved_suggestions = search_saved_locations(db, query, lang=get_locale(request))
     remaining_limit = max(0, 6 - len(saved_suggestions))
     provider_suggestions = search_geocode(query, remaining_limit) if remaining_limit else []
     seen = {item["label"].strip().lower() for item in saved_suggestions}
@@ -2568,6 +2775,9 @@ def dashboard(
     user = get_current_web_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    lang = get_locale(request)
+    translate = lambda text: translate_text(lang, text)
+    month_labels = [localized_month_name(month, lang, abbreviated=True) for month in range(1, 13)]
     employees = db.scalars(select(Employee).order_by(Employee.name)).all() if user.role in {"admin", "operator"} else []
     recipient_account_stmt = select(User).where(User.is_active.is_(True))
     if user.role == "operator":
@@ -2603,6 +2813,7 @@ def dashboard(
         "in_progress": 0,
     }
     company_locations = []
+    company_suggestions = []
     budget_month = normalize_budget_month(budget_month)
     monthly_budget = None
     purchase_items = []
@@ -2618,13 +2829,13 @@ def dashboard(
         "timelineLabels": [],
         "timelineAmounts": [],
         "cumulativeAmounts": [],
-        "usageLabels": ["Spent", "Remaining"],
+        "usageLabels": [translate("Spent"), translate("Remaining")],
         "usageAmounts": [0, 0],
     }
     shipment_chart_data = {
         "selectedYear": datetime.utcnow().year,
         "availableYears": [datetime.utcnow().year],
-        "monthLabels": [datetime(2000, month, 1).strftime("%b") for month in range(1, 13)],
+        "monthLabels": month_labels,
         "monthlySent": [0] * 12,
         "monthlyDelivered": [0] * 12,
         "yearLabels": [str(datetime.utcnow().year)],
@@ -2638,7 +2849,12 @@ def dashboard(
         "vendorInProgress": [],
     }
     location_chart_data = {"originLabels": [], "originCounts": [], "destinationLabels": [], "destinationCounts": []}
-    user_chart_data = {"roleLabels": [], "roleCounts": [], "statusLabels": ["Active", "Inactive"], "statusCounts": [0, 0]}
+    user_chart_data = {
+        "roleLabels": [],
+        "roleCounts": [],
+        "statusLabels": [translate("Active"), translate("Inactive")],
+        "statusCounts": [0, 0],
+    }
     if user.role == "admin":
         delivery_dates = [
             shipment.delivered_at or shipment.updated_at
@@ -2675,7 +2891,7 @@ def dashboard(
         shipment_chart_data = {
             "selectedYear": selected_year,
             "availableYears": available_years,
-            "monthLabels": [datetime(2000, month, 1).strftime("%b") for month in range(1, 13)],
+            "monthLabels": month_labels,
             "monthlySent": monthly_sent,
             "monthlyDelivered": monthly_delivered,
             "yearLabels": [str(year) for year in available_years],
@@ -2687,6 +2903,17 @@ def dashboard(
         company_locations = db.scalars(
             select(CompanyLocation).order_by(CompanyLocation.company_name, CompanyLocation.branch_name)
         ).all()
+        seen_company_names = set()
+        for stored_company_name in db.scalars(
+            select(CompanyLocation.company_name)
+            .where(CompanyLocation.is_active.is_(True))
+            .order_by(CompanyLocation.company_name)
+        ):
+            company_name = stored_company_name.strip()
+            company_key = company_name.casefold()
+            if company_name and company_key not in seen_company_names:
+                seen_company_names.add(company_key)
+                company_suggestions.append(company_name)
         active_operators = [
             account for account in users
             if account.role == "operator" and account.is_active
@@ -2751,9 +2978,9 @@ def dashboard(
         for account in users:
             role_counts[account.role] = role_counts.get(account.role, 0) + 1
         user_chart_data = {
-            "roleLabels": ["Admin", "Vendor", "Employee"],
+            "roleLabels": [translate("Admin"), translate("Vendor"), translate("Employee")],
             "roleCounts": [role_counts.get("admin", 0), role_counts.get("operator", 0), role_counts.get("employee", 0)],
-            "statusLabels": ["Active", "Inactive"],
+            "statusLabels": [translate("Active"), translate("Inactive")],
             "statusCounts": [sum(account.is_active for account in users), sum(not account.is_active for account in users)],
         }
         monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == budget_month))
@@ -2783,7 +3010,7 @@ def dashboard(
             month_spent_amount = yearly_spent_map.get(month_key, 0.0)
             annual_months.append({
                 "month": month_key,
-                "label": datetime.strptime(month_key, "%Y-%m").strftime("%B"),
+                "label": localized_month_name(month_number, lang),
                 "budget": month_budget_amount,
                 "spent": month_spent_amount,
                 "remaining": month_budget_amount - month_spent_amount,
@@ -2799,21 +3026,18 @@ def dashboard(
         }
         category_totals: dict[str, float] = {}
         category_counts: dict[str, int] = {}
-        daily_totals: dict[str, float] = {}
+        daily_totals: dict[date, float] = {}
         for item in purchase_items:
             category_totals[item.category] = category_totals.get(item.category, 0.0) + item.amount
             category_counts[item.category] = category_counts.get(item.category, 0) + 1
-            day_key = item.created_at.strftime("%d %b")
+            day_key = item.created_at.date()
             daily_totals[day_key] = daily_totals.get(day_key, 0.0) + item.amount
         budget_category_totals = [
             {"category": category, "amount": amount}
             for category, amount in sorted(category_totals.items(), key=lambda entry: entry[0].lower())
         ]
         category_entries = sorted(category_totals.items(), key=lambda entry: entry[1], reverse=True)
-        timeline_entries = sorted(
-            daily_totals.items(),
-            key=lambda entry: datetime.strptime(entry[0], "%d %b").replace(year=datetime.utcnow().year),
-        )
+        timeline_entries = sorted(daily_totals.items(), key=lambda entry: entry[0])
         cumulative_amounts = []
         running_total = 0.0
         for _, amount in timeline_entries:
@@ -2823,10 +3047,10 @@ def dashboard(
             "categoryLabels": [category for category, _ in category_entries],
             "categoryAmounts": [amount for _, amount in category_entries],
             "categoryCounts": [category_counts.get(category, 0) for category, _ in category_entries],
-            "timelineLabels": [label for label, _ in timeline_entries],
+            "timelineLabels": [format_local_date(label, lang, include_year=False) for label, _ in timeline_entries],
             "timelineAmounts": [amount for _, amount in timeline_entries],
             "cumulativeAmounts": cumulative_amounts,
-            "usageLabels": ["Spent", "Remaining"],
+            "usageLabels": [translate("Spent"), translate("Remaining")],
             "usageAmounts": [budget_spent, max(budget_remaining, 0)],
         }
     return templates.TemplateResponse(
@@ -2884,6 +3108,7 @@ def dashboard(
             budget_error=budget_error,
             sort=sort,
             company_locations=company_locations,
+            company_suggestions=company_suggestions,
         ),
     )
 

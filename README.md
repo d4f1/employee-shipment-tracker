@@ -66,8 +66,8 @@ Add these environment variables:
 | `JWT_ALGORITHM` | `HS256` |
 | `JWT_ACCESS_TOKEN_MINUTES` | `60` |
 | `JWT_COOKIE_SECURE` | `true` |
-| `RAJAONGKIR_MOCK` | `true` |
-| `RAJAONGKIR_API_KEY` | Leave empty for mock demo |
+| `RAJAONGKIR_MOCK` | `false` |
+| `RAJAONGKIR_API_KEY` | RajaOngkir live API key (set as a production secret) |
 | `RAJAONGKIR_BASE_URL` | `https://rajaongkir.komerce.id/api/v1` |
 | `NOMINATIM_REVERSE_URL` | `https://nominatim.openstreetmap.org/reverse` |
 | `GEOCODER_USER_AGENT` | `employee-shipment-tracker-demo/1.0` |
@@ -170,18 +170,17 @@ python -c "import secrets; print(secrets.token_urlsafe(64))"
 
 ## RajaOngkir configuration
 
-Mock mode is enabled by default:
-
-```env
-RAJAONGKIR_MOCK=true
-```
-
-For live tracking:
+Live mode is enabled by default:
 
 ```env
 RAJAONGKIR_MOCK=false
 RAJAONGKIR_API_KEY=your-secret-key
-RAJAONGKIR_BASE_URL=https://rajaongkir.komerce.id/api/v1
+```
+
+Use mock mode only for local demos:
+
+```env
+RAJAONGKIR_MOCK=true
 ```
 
 ## Production improvements
