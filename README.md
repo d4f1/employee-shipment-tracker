@@ -106,6 +106,16 @@ curl http://127.0.0.1:8000/api/shipments \
   -H 'Authorization: Bearer YOUR_TOKEN'
 ```
 
+## Import branch locations
+
+Admins can import up to 500 branch locations from the **Locations** panel using a UTF-8 CSV or XLSX file up to 5 MB. Enter the shared company name in the form, then upload a sheet with these headers:
+
+| Required | Optional | Ignored |
+|---|---|---|
+| `Location`, `Address` | `Company`, `Category`, `Phone`, `Fax` | `No.` |
+
+The import is atomic: any invalid row stops the whole import. Existing rows with the same company and location are updated; new rows are added. When `Category`, `Phone`, or `Fax` headers are omitted, those values on matching existing locations are preserved.
+
 ## Google sign-in and registration
 
 The anonymous landing page opens authentication in a modal and supports both existing Google-account login and new employee registration.

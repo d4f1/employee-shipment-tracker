@@ -1,16 +1,21 @@
+import csv
+import io
 import json
 import os
 import re
 import uuid
+import xml.etree.ElementTree as ElementTree
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode
+from zipfile import BadZipFile, ZipFile
 
 import httpx
 import jwt
 from jinja2 import pass_context
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Form, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.templating import Jinja2Templates
@@ -51,6 +56,17 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
 SHIPMENTS_PER_PAGE = 10
+LOCATION_IMPORT_MAX_BYTES = 5 * 1024 * 1024
+LOCATION_IMPORT_MAX_ROWS = 500
+LOCATION_IMPORT_MAX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024
+LOCATION_IMPORT_HEADER_ALIASES = {
+    "company_name": {"company", "companyname", "perusahaan", "namaperusahaan"},
+    "branch_name": {"location", "branch", "branchname", "locationname", "cabang", "namacabang"},
+    "category": {"category", "kategori", "type", "jenis"},
+    "address": {"address", "fulladdress", "alamat", "alamatlengkap"},
+    "phone": {"phone", "telephone", "tel", "telepon", "nomortelepon", "notelp"},
+    "fax": {"fax", "faks"},
+}
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
@@ -192,6 +208,9 @@ class CompanyLocation(Base):
     company_name: Mapped[str] = mapped_column(String(200), index=True)
     branch_name: Mapped[str] = mapped_column(String(200), index=True)
     address: Mapped[str] = mapped_column(String(500))
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    fax: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     road: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     city: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     state: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
@@ -248,6 +267,16 @@ def ensure_optional_columns():
     if "vendor_id" not in employee_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE employees ADD COLUMN vendor_id INTEGER"))
+    location_columns = {column["name"] for column in inspect(engine).get_columns("company_locations")}
+    missing_location_columns = {
+        "category": "VARCHAR(100)",
+        "phone": "VARCHAR(50)",
+        "fax": "VARCHAR(50)",
+    }
+    with engine.begin() as connection:
+        for column_name, column_type in missing_location_columns.items():
+            if column_name not in location_columns:
+                connection.execute(text(f"ALTER TABLE company_locations ADD COLUMN {column_name} {column_type}"))
 
 
 ensure_optional_columns()
@@ -321,6 +350,14 @@ TRANSLATIONS = {
         "Company locations": "Lokasi perusahaan",
         "Register company and branch addresses for manual shipment entry.": "Daftarkan alamat perusahaan dan cabang untuk input pengiriman manual.",
         "Add branch location": "Tambah lokasi cabang",
+        "Import branch sheet": "Impor sheet cabang",
+        "Upload CSV or XLSX with Location and Address. Category, Phone, and Fax are optional; No. is ignored.": "Unggah CSV atau XLSX dengan kolom Location dan Address. Category, Phone, dan Fax opsional; No. diabaikan.",
+        "Spreadsheet file": "File spreadsheet",
+        "Phone": "Telepon",
+        "Fax": "Faks",
+        "Contact": "Kontak",
+        "Matching Company name and Location rows are updated. New rows are added; the import is cancelled if any row is invalid.": "Baris dengan Company name dan Location yang sama akan diperbarui. Baris baru ditambahkan; impor dibatalkan jika ada baris tidak valid.",
+        "Import branches": "Impor cabang",
         "Branch name": "Nama cabang",
         "Full address": "Alamat lengkap",
         "Road": "Jalan",
@@ -940,6 +977,167 @@ def search_saved_locations(db: Session, query: str, limit: int = 6) -> list[dict
             "source": "saved",
         })
     return suggestions
+
+
+def normalize_location_import_header(value: object) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(value or "").strip().lower())
+
+
+def clean_location_import_value(value: object, limit: int) -> str:
+    clean_value = str(value or "").strip()
+    if len(clean_value) > limit:
+        raise ValueError(f"Value exceeds the {limit}-character limit.")
+    return clean_value
+
+
+def xlsx_column_index(cell_reference: str) -> int:
+    column_match = re.match(r"([A-Za-z]+)", cell_reference or "")
+    if not column_match:
+        return 0
+    column_index = 0
+    for character in column_match.group(1).upper():
+        column_index = (column_index * 26) + (ord(character) - ord("A") + 1)
+    return column_index - 1
+
+
+def read_xlsx_rows_without_openpyxl(content: bytes) -> list[list[object]]:
+    """Read ordinary XLSX cell values when the optional Excel library is unavailable."""
+    spreadsheet_namespace = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    try:
+        with ZipFile(io.BytesIO(content)) as archive:
+            shared_strings = []
+            if "xl/sharedStrings.xml" in archive.namelist():
+                shared_root = ElementTree.fromstring(archive.read("xl/sharedStrings.xml"))
+                shared_strings = [
+                    "".join(text_node.text or "" for text_node in item.iter(f"{spreadsheet_namespace}t"))
+                    for item in shared_root.findall(f"{spreadsheet_namespace}si")
+                ]
+            worksheet_names = sorted(
+                (name for name in archive.namelist() if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", name)),
+                key=lambda name: int(re.search(r"sheet(\d+)\.xml", name).group(1)),
+            )
+            if not worksheet_names:
+                raise ValueError("The Excel file does not contain a worksheet.")
+            worksheet_root = ElementTree.fromstring(archive.read(worksheet_names[0]))
+    except (BadZipFile, ElementTree.ParseError, KeyError, ValueError, IndexError) as exc:
+        raise ValueError("The Excel file could not be read.") from exc
+
+    rows = []
+    for row_element in worksheet_root.findall(f".//{spreadsheet_namespace}row"):
+        row_values: list[object] = []
+        for cell in row_element.findall(f"{spreadsheet_namespace}c"):
+            column_index = xlsx_column_index(cell.get("r", ""))
+            while len(row_values) <= column_index:
+                row_values.append("")
+            cell_type = cell.get("t")
+            value_element = cell.find(f"{spreadsheet_namespace}v")
+            raw_value = value_element.text if value_element is not None else ""
+            if cell_type == "s" and raw_value:
+                value = shared_strings[int(raw_value)]
+            elif cell_type == "inlineStr":
+                value = "".join(text_node.text or "" for text_node in cell.iter(f"{spreadsheet_namespace}t"))
+            elif cell_type == "b":
+                value = raw_value == "1"
+            else:
+                value = raw_value or ""
+            row_values[column_index] = value
+        rows.append(row_values)
+    return rows
+
+
+def read_location_import_sheet(file_name: str, content: bytes) -> list[list[object]]:
+    suffix = Path(file_name or "").suffix.lower()
+    if suffix == ".csv":
+        try:
+            return list(csv.reader(io.StringIO(content.decode("utf-8-sig"))))
+        except UnicodeDecodeError as exc:
+            raise ValueError("CSV files must use UTF-8 encoding.") from exc
+    if suffix != ".xlsx":
+        raise ValueError("Upload an .xlsx or .csv file.")
+    try:
+        with ZipFile(io.BytesIO(content)) as archive:
+            if sum(item.file_size for item in archive.infolist()) > LOCATION_IMPORT_MAX_UNCOMPRESSED_BYTES:
+                raise ValueError("The Excel file is too large after extraction.")
+    except BadZipFile as exc:
+        raise ValueError("The Excel file is invalid or corrupted.") from exc
+    try:
+        from openpyxl import load_workbook
+    except ModuleNotFoundError:
+        return read_xlsx_rows_without_openpyxl(content)
+    try:
+        workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    except Exception as exc:
+        raise ValueError("The Excel file could not be read.") from exc
+    try:
+        return [list(row) for row in workbook.active.iter_rows(values_only=True)]
+    finally:
+        workbook.close()
+
+
+def parse_location_import_records(file_name: str, content: bytes, default_company_name: str, country: str) -> list[dict]:
+    rows = read_location_import_sheet(file_name, content)
+    if not rows:
+        raise ValueError("The spreadsheet is empty.")
+
+    header_index = None
+    header_positions: dict[str, int] = {}
+    for index, row in enumerate(rows[:10]):
+        positions = {}
+        for column_index, value in enumerate(row):
+            normalized_header = normalize_location_import_header(value)
+            for field_name, aliases in LOCATION_IMPORT_HEADER_ALIASES.items():
+                if normalized_header in aliases:
+                    if field_name in positions:
+                        raise ValueError(f"The {field_name} column appears more than once.")
+                    positions[field_name] = column_index
+        if {"branch_name", "address"}.issubset(positions):
+            header_index = index
+            header_positions = positions
+            break
+    if header_index is None:
+        raise ValueError("Required columns are Location and Address.")
+
+    records = []
+    seen_keys = set()
+    errors = []
+    limits = {
+        "company_name": 200,
+        "branch_name": 200,
+        "address": 500,
+        "category": 100,
+        "phone": 50,
+        "fax": 50,
+    }
+    for row_number, row in enumerate(rows[header_index + 1:], start=header_index + 2):
+        values = {}
+        for field_name, limit in limits.items():
+            column_index = header_positions.get(field_name)
+            raw_value = row[column_index] if column_index is not None and column_index < len(row) else ""
+            values[field_name] = clean_location_import_value(raw_value, limit)
+        if not any(values.values()):
+            continue
+        values["company_name"] = values["company_name"] or default_company_name
+        if not values["branch_name"] or not values["address"]:
+            errors.append(f"Row {row_number}: Location and Address are required.")
+            continue
+        key = (values["company_name"].casefold(), values["branch_name"].casefold())
+        if key in seen_keys:
+            errors.append(f"Row {row_number}: duplicate Company + Location.")
+            continue
+        seen_keys.add(key)
+        values["country"] = country
+        values["_provided_fields"] = set(header_positions)
+        records.append(values)
+        if len(records) > LOCATION_IMPORT_MAX_ROWS:
+            raise ValueError(f"A maximum of {LOCATION_IMPORT_MAX_ROWS} branch rows can be imported at once.")
+    if errors:
+        error_summary = " ".join(errors[:8])
+        if len(errors) > 8:
+            error_summary += f" {len(errors) - 8} more row error(s)."
+        raise ValueError(error_summary)
+    if not records:
+        raise ValueError("No branch rows were found below the header.")
+    return records
 
 
 def is_postal_code_only(value: Optional[str]) -> bool:
@@ -2340,6 +2538,8 @@ def dashboard(
     budget_item_updated: Optional[int] = None,
     location_created: Optional[int] = None,
     location_updated: Optional[int] = None,
+    location_imported: Optional[str] = None,
+    location_import_error: Optional[str] = None,
     budget_error: Optional[str] = None,
     budget_month: Optional[str] = None,
     analytics_year: Optional[int] = Query(None),
@@ -2661,6 +2861,8 @@ def dashboard(
             budget_item_updated=bool(budget_item_updated),
             location_created=bool(location_created),
             location_updated=bool(location_updated),
+            location_imported=location_imported,
+            location_import_error=location_import_error,
             budget_error=budget_error,
             sort=sort,
             company_locations=company_locations,
@@ -2967,6 +3169,9 @@ def create_company_location_form(
     company_name: str = Form(...),
     branch_name: str = Form(...),
     address: str = Form(...),
+    category: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    fax: Optional[str] = Form(None),
     road: Optional[str] = Form(None),
     city: Optional[str] = Form(None),
     state: Optional[str] = Form(None),
@@ -2989,6 +3194,9 @@ def create_company_location_form(
         company_name=company_name,
         branch_name=branch_name,
         address=address,
+        category=category.strip() if category else None,
+        phone=phone.strip() if phone else None,
+        fax=fax.strip() if fax else None,
         road=road.strip() if road else None,
         city=city.strip() if city else None,
         state=state.strip() if state else None,
@@ -3000,6 +3208,90 @@ def create_company_location_form(
     return dashboard_redirect(location_created=1)
 
 
+@app.post("/locations/import")
+async def import_company_locations_form(
+    request: Request,
+    company_name: str = Form(...),
+    country: Optional[str] = Form("Indonesia"),
+    location_file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    user = get_current_web_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    require_roles(user, "admin")
+
+    company_name = company_name.strip()
+    country = country.strip() if country else "Indonesia"
+    if not company_name:
+        return dashboard_redirect(fragment="locationsPanel", location_import_error="Company name is required.")
+    try:
+        content = await location_file.read()
+    finally:
+        await location_file.close()
+    if not content:
+        return dashboard_redirect(fragment="locationsPanel", location_import_error="Choose a spreadsheet file to import.")
+    if len(content) > LOCATION_IMPORT_MAX_BYTES:
+        return dashboard_redirect(
+            fragment="locationsPanel",
+            location_import_error=f"The spreadsheet must be no larger than {LOCATION_IMPORT_MAX_BYTES // (1024 * 1024)} MB.",
+        )
+    try:
+        records = parse_location_import_records(
+            location_file.filename or "",
+            content,
+            company_name,
+            country,
+        )
+    except ValueError as exc:
+        return dashboard_redirect(fragment="locationsPanel", location_import_error=str(exc))
+
+    existing_locations = {
+        (location.company_name.casefold(), location.branch_name.casefold()): location
+        for location in db.scalars(select(CompanyLocation)).all()
+    }
+    created_count = 0
+    updated_count = 0
+    unchanged_count = 0
+    try:
+        for record in records:
+            key = (record["company_name"].casefold(), record["branch_name"].casefold())
+            location = existing_locations.get(key)
+            if not location:
+                db.add(CompanyLocation(
+                    company_name=record["company_name"],
+                    branch_name=record["branch_name"],
+                    address=record["address"],
+                    category=record["category"] or None,
+                    phone=record["phone"] or None,
+                    fax=record["fax"] or None,
+                    country=record["country"],
+                    created_by_id=user.id,
+                ))
+                created_count += 1
+                continue
+            changes = {
+                "address": record["address"],
+                "country": record["country"],
+            }
+            for field_name in ("category", "phone", "fax"):
+                if field_name in record["_provided_fields"]:
+                    changes[field_name] = record[field_name] or None
+            if all(getattr(location, field_name) == value for field_name, value in changes.items()):
+                unchanged_count += 1
+                continue
+            for field_name, value in changes.items():
+                setattr(location, field_name, value)
+            updated_count += 1
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return dashboard_redirect(fragment="locationsPanel", location_import_error="The branch import could not be saved. No locations were changed.")
+
+    summary = f"{created_count} imported, {updated_count} updated, {unchanged_count} unchanged."
+    return dashboard_redirect(fragment="locationsPanel", location_imported=summary)
+
+
 @app.post("/locations/{location_id}/edit")
 def edit_company_location_form(
     location_id: int,
@@ -3007,6 +3299,9 @@ def edit_company_location_form(
     company_name: str = Form(...),
     branch_name: str = Form(...),
     address: str = Form(...),
+    category: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    fax: Optional[str] = Form(None),
     road: Optional[str] = Form(None),
     city: Optional[str] = Form(None),
     state: Optional[str] = Form(None),
@@ -3032,6 +3327,9 @@ def edit_company_location_form(
     location.company_name = company_name
     location.branch_name = branch_name
     location.address = address
+    location.category = category.strip() if category else None
+    location.phone = phone.strip() if phone else None
+    location.fax = fax.strip() if fax else None
     location.road = road.strip() if road else None
     location.city = city.strip() if city else None
     location.state = state.strip() if state else None

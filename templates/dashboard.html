@@ -1347,6 +1347,11 @@
                         </button>
                       </div>
                     </div>
+                    <div class="row g-2">
+                      <div class="col-4"><label class="form-label fw-semibold">{{ 'Category'|tr }}</label><input class="form-control" name="category" placeholder="Branch"></div>
+                      <div class="col-4"><label class="form-label fw-semibold">{{ 'Phone'|tr }}</label><input class="form-control" name="phone" placeholder="0211234567"></div>
+                      <div class="col-4"><label class="form-label fw-semibold">{{ 'Fax'|tr }}</label><input class="form-control" name="fax" placeholder="0211234568"></div>
+                    </div>
                     <div>
                       <label class="form-label fw-semibold">{{ 'Road'|tr }}</label>
                       <input class="form-control" name="road" id="companyRoadInput" placeholder="Jalan Kedoya Raya">
@@ -1373,13 +1378,34 @@
                     </div>
                     <button class="btn btn-primary w-100" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save location'|tr }}</button>
                   </form>
+                  <hr class="my-4">
+                  <form method="post" action="/locations/import" enctype="multipart/form-data" class="vstack gap-3">
+                    <div>
+                      <div class="fw-bold"><i class="bi bi-file-earmark-spreadsheet me-1"></i>{{ 'Import branch sheet'|tr }}</div>
+                      <div class="small muted mt-1">{{ 'Upload CSV or XLSX with Location and Address. Category, Phone, and Fax are optional; No. is ignored.'|tr }}</div>
+                    </div>
+                    <div>
+                      <label class="form-label fw-semibold">{{ 'Company name'|tr }}</label>
+                      <input class="form-control" name="company_name" required placeholder="Dipo Star Finance">
+                    </div>
+                    <div>
+                      <label class="form-label fw-semibold">{{ 'Spreadsheet file'|tr }}</label>
+                      <input class="form-control" type="file" name="location_file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                    </div>
+                    <div>
+                      <label class="form-label fw-semibold">{{ 'Country'|tr }}</label>
+                      <input class="form-control" name="country" value="Indonesia">
+                    </div>
+                    <div class="small muted">{{ 'Matching Company name and Location rows are updated. New rows are added; the import is cancelled if any row is invalid.'|tr }}</div>
+                    <button class="btn btn-soft w-100" type="submit"><i class="bi bi-upload me-2"></i>{{ 'Import branches'|tr }}</button>
+                  </form>
                 </div>
                 <div class="col-lg-8">
                   <div class="fw-bold mb-3">{{ 'Saved locations'|tr }}</div>
                   <div class="rounded-4 border bg-light p-3 mb-3" id="locationFilterPanel">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><div class="fw-bold"><i class="bi bi-funnel me-2 text-primary"></i>{{ 'Filter locations'|tr }}</div><span class="small muted">{{ 'Search any location table field.'|tr }}</span></div>
                     <div class="row g-2">
-                      <div class="col-md-3"><select class="form-select" id="locationSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="company">{{ 'Company'|tr }}</option><option value="branch">{{ 'Branch name'|tr }}</option><option value="address">{{ 'Full address'|tr }}</option><option value="city">{{ 'City'|tr }}</option><option value="state">{{ 'Province'|tr }}</option><option value="postcode">{{ 'Postal code'|tr }}</option><option value="country">{{ 'Country'|tr }}</option></select></div>
+                      <div class="col-md-3"><select class="form-select" id="locationSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="company">{{ 'Company'|tr }}</option><option value="branch">{{ 'Branch name'|tr }}</option><option value="category">{{ 'Category'|tr }}</option><option value="address">{{ 'Full address'|tr }}</option><option value="phone">{{ 'Phone'|tr }}</option><option value="fax">{{ 'Fax'|tr }}</option><option value="city">{{ 'City'|tr }}</option><option value="state">{{ 'Province'|tr }}</option><option value="postcode">{{ 'Postal code'|tr }}</option><option value="country">{{ 'Country'|tr }}</option></select></div>
                       <div class="col-md-5"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="locationTableSearch" placeholder="{{ 'Search locations...'|tr }}"></div></div>
                       <div class="col-md-3"><select class="form-select" id="locationCompletenessFilter"><option value="">{{ 'All location records'|tr }}</option><option value="complete">{{ 'Complete postal data'|tr }}</option><option value="missing_postcode">{{ 'Missing postal code'|tr }}</option></select></div>
                       <div class="col-md-1 d-grid"><button class="btn btn-soft" id="locationFilterReset" type="button" title="{{ 'Reset filters'|tr }}"><i class="bi bi-arrow-counterclockwise"></i></button></div>
@@ -1391,6 +1417,8 @@
                         <tr>
                           <th>{{ 'Company'|tr }}</th>
                           <th>{{ 'Branch name'|tr }}</th>
+                          <th>{{ 'Category'|tr }}</th>
+                          <th>{{ 'Contact'|tr }}</th>
                           <th>{{ 'Full address'|tr }}</th>
                           <th>{{ 'Postal code'|tr }}</th>
                           <th class="text-end">{{ 'Action'|tr }}</th>
@@ -1398,23 +1426,25 @@
                       </thead>
                       <tbody>
                         {% for location in company_locations %}
-                        <tr class="location-table-row" data-company="{{ location.company_name|lower }}" data-branch="{{ location.branch_name|lower }}" data-address="{{ location.address|lower }}" data-city="{{ (location.city or '')|lower }}" data-state="{{ (location.state or '')|lower }}" data-postcode="{{ (location.postcode or '')|lower }}" data-country="{{ (location.country or '')|lower }}">
+                        <tr class="location-table-row" data-company="{{ location.company_name|lower }}" data-branch="{{ location.branch_name|lower }}" data-category="{{ (location.category or '')|lower }}" data-address="{{ location.address|lower }}" data-phone="{{ (location.phone or '')|lower }}" data-fax="{{ (location.fax or '')|lower }}" data-city="{{ (location.city or '')|lower }}" data-state="{{ (location.state or '')|lower }}" data-postcode="{{ (location.postcode or '')|lower }}" data-country="{{ (location.country or '')|lower }}">
                           <td class="fw-semibold">{{ location.company_name }}</td>
                           <td>{{ location.branch_name }}</td>
+                          <td>{{ location.category or '-' }}</td>
+                          <td class="small"><div>{{ location.phone or '-' }}</div>{% if location.fax %}<div class="muted">{{ 'Fax'|tr }}: {{ location.fax }}</div>{% endif %}</td>
                           <td class="small">{{ location.address }}{% if location.city %}, {{ location.city }}{% endif %}{% if location.state %}, {{ location.state }}{% endif %}{% if location.country %}, {{ location.country }}{% endif %}</td>
                           <td class="fw-semibold">{{ location.postcode or '-' }}</td>
-                          <td class="text-end"><button class="btn btn-sm btn-soft edit-location-button" type="button" data-bs-toggle="modal" data-bs-target="#editLocationModal" data-location-id="{{ location.id }}" data-company="{{ location.company_name }}" data-branch="{{ location.branch_name }}" data-address="{{ location.address }}" data-road="{{ location.road or '' }}" data-city="{{ location.city or '' }}" data-state="{{ location.state or '' }}" data-postcode="{{ location.postcode or '' }}" data-country="{{ location.country or 'Indonesia' }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
+                          <td class="text-end"><button class="btn btn-sm btn-soft edit-location-button" type="button" data-bs-toggle="modal" data-bs-target="#editLocationModal" data-location-id="{{ location.id }}" data-company="{{ location.company_name }}" data-branch="{{ location.branch_name }}" data-category="{{ location.category or '' }}" data-phone="{{ location.phone or '' }}" data-fax="{{ location.fax or '' }}" data-address="{{ location.address }}" data-road="{{ location.road or '' }}" data-city="{{ location.city or '' }}" data-state="{{ location.state or '' }}" data-postcode="{{ location.postcode or '' }}" data-country="{{ location.country or 'Indonesia' }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
                         </tr>
                         {% else %}
                         <tr>
-                          <td colspan="5" class="text-center empty-state">
+                          <td colspan="7" class="text-center empty-state">
                             <i class="bi bi-geo-alt display-5 text-secondary"></i>
                             <h5 class="mt-3">{{ 'No company locations yet.'|tr }}</h5>
                             <p class="muted mb-0">{{ 'Register company and branch addresses for manual shipment entry.'|tr }}</p>
                           </td>
                         </tr>
                         {% endfor %}
-                        <tr class="d-none" id="locationFilterEmpty"><td colspan="5" class="text-center py-4 muted">{{ 'No locations match the selected filters.'|tr }}</td></tr>
+                        <tr class="d-none" id="locationFilterEmpty"><td colspan="7" class="text-center py-4 muted">{{ 'No locations match the selected filters.'|tr }}</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -1801,6 +1831,9 @@
           <div class="row g-3">
             <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Company name'|tr }}</label><input class="form-control" id="editLocationCompany" name="company_name" required></div>
             <div class="col-md-6"><label class="form-label fw-semibold">{{ 'Branch name'|tr }}</label><input class="form-control" id="editLocationBranch" name="branch_name" required></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Category'|tr }}</label><input class="form-control" id="editLocationCategory" name="category"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Phone'|tr }}</label><input class="form-control" id="editLocationPhone" name="phone"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">{{ 'Fax'|tr }}</label><input class="form-control" id="editLocationFax" name="fax"></div>
             <div class="col-12"><label class="form-label fw-semibold">{{ 'Full address'|tr }}</label><div class="address-suggest-field"><textarea class="form-control" id="editLocationAddress" name="address" rows="3" required autocomplete="off"></textarea><div class="address-suggestions d-none" id="editLocationAddressSuggestions"></div></div></div>
             <div class="col-12"><label class="form-label fw-semibold">{{ 'Road'|tr }}</label><input class="form-control" id="editLocationRoad" name="road"></div>
             <div class="col-md-6"><label class="form-label fw-semibold">{{ 'City'|tr }}</label><input class="form-control" id="editLocationCity" name="city"></div>
@@ -1930,6 +1963,12 @@
   </div>
   <div id="locationUpdatedToast" class="toast text-bg-success" role="alert">
     <div class="d-flex"><div class="toast-body"><i class="bi bi-geo-alt-fill me-2"></i>{{ 'Location updated successfully.'|tr }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+  </div>
+  <div id="locationImportedToast" class="toast text-bg-success" role="alert">
+    <div class="d-flex"><div class="toast-body"><i class="bi bi-file-earmark-check-fill me-2"></i>{{ location_imported }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
+  </div>
+  <div id="locationImportErrorToast" class="toast text-bg-danger" role="alert">
+    <div class="d-flex"><div class="toast-body"><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ location_import_error }}</div><button class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>
   </div>
   <div id="budgetErrorToast" class="toast text-bg-danger" role="alert">
     <div class="d-flex">
@@ -2183,7 +2222,7 @@
     const completeness = locationCompletenessFilter?.value || '';
     let visible = 0;
     rows.forEach((row) => {
-      const values = {company: row.dataset.company || '', branch: row.dataset.branch || '', address: row.dataset.address || '', city: row.dataset.city || '', state: row.dataset.state || '', postcode: row.dataset.postcode || '', country: row.dataset.country || ''};
+      const values = {company: row.dataset.company || '', branch: row.dataset.branch || '', category: row.dataset.category || '', address: row.dataset.address || '', phone: row.dataset.phone || '', fax: row.dataset.fax || '', city: row.dataset.city || '', state: row.dataset.state || '', postcode: row.dataset.postcode || '', country: row.dataset.country || ''};
       const searchable = field === 'all' ? Object.values(values).join(' ') : values[field] || '';
       const completenessMatch = !completeness || (completeness === 'complete' && Boolean(values.postcode)) || (completeness === 'missing_postcode' && !values.postcode);
       const matches = (!query || searchable.includes(query)) && completenessMatch;
@@ -2796,6 +2835,9 @@
       editLocationForm.action = `/locations/${button.dataset.locationId}/edit`;
       document.getElementById('editLocationCompany').value = button.dataset.company || '';
       document.getElementById('editLocationBranch').value = button.dataset.branch || '';
+      document.getElementById('editLocationCategory').value = button.dataset.category || '';
+      document.getElementById('editLocationPhone').value = button.dataset.phone || '';
+      document.getElementById('editLocationFax').value = button.dataset.fax || '';
       editLocationAddress.value = button.dataset.address || '';
       document.getElementById('editLocationRoad').value = button.dataset.road || '';
       document.getElementById('editLocationCity').value = button.dataset.city || '';
@@ -3046,6 +3088,20 @@
   window.addEventListener('DOMContentLoaded', () => {
     showDashboardTab('#locations-tab');
     bootstrap.Toast.getOrCreateInstance(document.getElementById('locationUpdatedToast'), {delay: 3500}).show();
+    window.history.replaceState({}, document.title, '/#locationsPanel');
+  });
+  {% endif %}
+  {% if location_imported %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#locations-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('locationImportedToast'), {delay: 5000}).show();
+    window.history.replaceState({}, document.title, '/#locationsPanel');
+  });
+  {% endif %}
+  {% if location_import_error %}
+  window.addEventListener('DOMContentLoaded', () => {
+    showDashboardTab('#locations-tab');
+    bootstrap.Toast.getOrCreateInstance(document.getElementById('locationImportErrorToast'), {delay: 6500}).show();
     window.history.replaceState({}, document.title, '/#locationsPanel');
   });
   {% endif %}
