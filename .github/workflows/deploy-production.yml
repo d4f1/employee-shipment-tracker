@@ -1,0 +1,149 @@
+name: Validate and deploy production
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Test application before merge
+    runs-on: ubuntu-24.04
+    env:
+      DATABASE_URL: sqlite:////tmp/employee_shipments-ci.db
+      JWT_SECRET_KEY: ci-only-secret
+      RAJAONGKIR_MOCK: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install --requirement requirements-dev.txt
+
+      - name: Compile application
+        run: python -m py_compile app.py
+
+      - name: Run pytest suite
+        run: python -m pytest -q
+
+  deploy:
+    name: Deploy to production VM
+    needs: validate
+    if: github.ref == 'refs/heads/master'
+    concurrency:
+      group: employee-shipment-tracker-production
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 15
+    env:
+      PRODUCTION_SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
+      PRODUCTION_SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
+      PRODUCTION_SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+      PRODUCTION_SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Configure production SSH access
+        run: |
+          test -n "$PRODUCTION_SSH_HOST"
+          test -n "$PRODUCTION_SSH_USER"
+          test -n "$PRODUCTION_SSH_PRIVATE_KEY"
+          test -n "$PRODUCTION_SSH_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRODUCTION_SSH_PRIVATE_KEY" > "$HOME/.ssh/production_deploy_key"
+          chmod 600 "$HOME/.ssh/production_deploy_key"
+          printf '%s\n' "$PRODUCTION_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+
+      - name: Deploy the validated commit
+        env:
+          DEPLOY_COMMIT: ${{ github.sha }}
+        run: |
+          ssh -i "$HOME/.ssh/production_deploy_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST" \
+            "sudo bash -s -- '$DEPLOY_COMMIT'" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+
+          repo=/opt/employee-shipment-tracker/app
+          state=/opt/employee-shipment-tracker/state
+          env_file="$state/application.env"
+          service=employee-shipment-tracker.service
+          target="$1"
+
+          test -f "$env_file"
+          grep -q '^DATABASE_URL=postgresql+psycopg:///employee_shipments$' "$env_file"
+          grep -q '^JWT_SECRET_KEY=.' "$env_file"
+          grep -q '^JWT_COOKIE_SECURE=true$' "$env_file"
+          grep -q '^RAJAONGKIR_MOCK=false$' "$env_file"
+          grep -q '^RAJAONGKIR_API_KEY=.' "$env_file"
+          systemctl is-active --quiet postgresql
+          psql -d employee_shipments -Atc 'SELECT 1' | grep -qx 1
+
+          git -C "$repo" -c safe.directory="$repo" diff --quiet
+          git -C "$repo" -c safe.directory="$repo" diff --cached --quiet
+          git -C "$repo" -c safe.directory="$repo" fetch origin \
+            master:refs/remotes/origin/master --quiet
+          test "$target" = "$(git -C "$repo" -c safe.directory="$repo" rev-parse origin/master)"
+
+          install -d -m 700 "$state/postgresql-backups"
+          database_backup="$state/postgresql-backups/employee_shipments-$(date -u +%Y%m%dT%H%M%SZ)-before-${target:0:7}.dump"
+          pg_dump --format=custom --file="$database_backup" --dbname=employee_shipments
+
+          original=$(git -C "$repo" -c safe.directory="$repo" rev-parse HEAD)
+          code_switched=false
+          service_restarted=false
+          rollback() {
+            status=$?
+            echo "Deployment failed; restoring the prior application revision." >&2
+            if [ "$service_restarted" = true ]; then
+              systemctl stop "$service" || true
+            fi
+            if [ "$code_switched" = true ]; then
+              git -C "$repo" -c safe.directory="$repo" checkout --detach "$original" || true
+            fi
+            if [ "$service_restarted" = true ]; then
+              systemctl start "$service" || true
+            fi
+            exit "$status"
+          }
+          trap rollback ERR
+
+          git -C "$repo" -c safe.directory="$repo" checkout --detach "$target"
+          code_switched=true
+          "$repo/.venv/bin/pip" install --disable-pip-version-check --requirement "$repo/requirements.txt"
+          "$repo/.venv/bin/python" -m py_compile "$repo/app.py"
+
+          service_restarted=true
+          systemctl restart "$service"
+          for attempt in $(seq 1 15); do
+            health=$(curl --silent --show-error --fail http://127.0.0.1:8000/api/health 2>/dev/null || true)
+            case "$health" in
+              *'"status":"ok"'*'"rajaongkir_mode":"live"'*) break ;;
+            esac
+            if [ "$attempt" = 15 ]; then
+              echo "Application health check did not reach live mode." >&2
+              false
+            fi
+            sleep 1
+          done
+
+          systemctl is-active --quiet "$service"
+          locations=$(psql -d employee_shipments -Atc 'SELECT count(*) FROM company_locations')
+          case "$locations" in
+            ''|*[!0-9]*) echo "Invalid company location count." >&2; false ;;
+          esac
+          test "$(git -C "$repo" -c safe.directory="$repo" rev-parse HEAD)" = "$target"
+          echo "Deployment completed: $(git -C "$repo" -c safe.directory="$repo" rev-parse --short HEAD)"
+          echo "PostgreSQL backup: $(basename "$database_backup")"
+          echo "Company locations: $locations"
+          REMOTE_SCRIPT

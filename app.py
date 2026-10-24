@@ -537,6 +537,7 @@ TRANSLATIONS = {
         "User account updated successfully.": "Akun pengguna berhasil diperbarui.",
         "Monthly budget": "Budget bulanan",
         "Track buying needs by category and remaining budget.": "Pantau kebutuhan pembelian per kategori dan sisa budget.",
+        "Track shipping costs and the remaining monthly budget.": "Pantau biaya pengiriman dan sisa anggaran bulanan.",
         "Budget month": "Bulan budget",
         "Set budget": "Atur budget",
         "Admin monthly budget": "Budget bulanan admin",
@@ -568,31 +569,42 @@ TRANSLATIONS = {
         "Optional note": "Catatan opsional",
         "Save item": "Simpan item",
         "Category breakdown": "Rincian kategori",
+        "Shipping cost by courier": "Biaya kirim per kurir",
         "Recent items": "Item terbaru",
         "Purchase items": "Item pembelian",
         "Monthly purchase items": "Item pembelian bulanan",
+        "Monthly shipments": "Pengiriman bulanan",
+        "Shipping costs are deducted automatically from this monthly budget.": "Biaya pengiriman dikurangi otomatis dari anggaran bulanan ini.",
         "Search and filter every saved budget item.": "Cari dan filter semua item anggaran yang tersimpan.",
         "All fields": "Semua kolom",
         "All categories": "Semua kategori",
+        "All couriers": "Semua kurir",
         "Search budget items...": "Cari item anggaran...",
+        "Search shipments...": "Cari pengiriman...",
         "Reset filters": "Atur ulang filter",
         "Date": "Tanggal",
         "No items match the selected filters.": "Tidak ada item yang cocok dengan filter.",
+        "No shipments match the selected filters.": "Tidak ada pengiriman yang cocok dengan filter yang dipilih.",
         "items shown": "item ditampilkan",
         "matching items": "item cocok",
+        "matching shipments": "pengiriman cocok",
         "per page": "per halaman",
         "Page": "Halaman",
         "No purchase items yet.": "Belum ada item pembelian.",
+        "No shipments in this month.": "Belum ada pengiriman pada bulan ini.",
         "Budget saved successfully.": "Budget berhasil disimpan.",
         "Purchase item added successfully.": "Item pembelian berhasil ditambahkan.",
         "Edit purchase item": "Edit item pembelian",
         "Purchase item updated successfully.": "Item pembelian berhasil diperbarui.",
         "Budget analytics": "Analitik budget",
         "Largest category usage, item count, timeline, and spending curve.": "Penggunaan kategori terbesar, jumlah item, timeline, dan kurva pengeluaran.",
+        "Shipping costs by courier, shipment count, timeline, and spending curve.": "Biaya kirim per kurir, jumlah pengiriman, timeline, dan kurva pengeluaran.",
         "Budget usage": "Penggunaan budget",
         "Category usage": "Penggunaan kategori",
         "Items by category": "Item per kategori",
+        "Shipments by courier": "Pengiriman per kurir",
         "Daily spending timeline": "Timeline pengeluaran harian",
+        "Daily shipping cost timeline": "Timeline biaya kirim harian",
         "Cumulative spending curve": "Kurva pengeluaran kumulatif",
         "No chart data yet.": "Belum ada data grafik.",
         "New delivery": "Pengiriman baru",
@@ -611,6 +623,11 @@ TRANSLATIONS = {
         "Enter a valid AWB to automatically fill shipment details. All fields remain editable.": "Masukkan AWB yang valid untuk mengisi detail pengiriman secara otomatis. Semua kolom tetap dapat diedit.",
         "AWB verified. {count} shipment fields were filled automatically and remain editable.": "AWB terverifikasi. {count} kolom pengiriman diisi otomatis dan tetap dapat diedit.",
         "NCS is available for shipment entry and domestic cost, but this provider does not currently support NCS AWB tracking. Enter details manually if lookup fails.": "NCS tersedia untuk input pengiriman dan ongkir domestik, tetapi penyedia ini saat ini belum mendukung pelacakan AWB NCS. Isi detail secara manual jika pencarian gagal.",
+        "Manual NCS entry": "Input NCS manual",
+        "Use manual entry": "Gunakan input manual",
+        "NCS AWB lookup is unavailable. The AWB is optional; fill shipment details and save without lookup.": "Lookup AWB NCS tidak tersedia. AWB bersifat opsional; isi detail pengiriman lalu simpan tanpa lookup.",
+        "Manual entry is active. Fill in origin, destination, ETA, and shipping cost, then create the shipment.": "Input manual aktif. Isi asal, tujuan, ETA, dan biaya kirim, lalu buat pengiriman.",
+        "NCS AWB or internal reference (optional)": "AWB NCS atau referensi internal (opsional)",
         "AWB / waybill": "AWB / waybill",
         "Lookup": "Cari",
         "Lookup AWB to fill origin and destination.": "Cari AWB untuk mengisi origin dan destination.",
@@ -979,6 +996,14 @@ def normalize_budget_month(value: Optional[str]) -> str:
         except ValueError:
             pass
     return datetime.utcnow().strftime("%Y-%m")
+
+
+def budget_month_range(month: str) -> tuple[datetime, datetime]:
+    """Return the inclusive/exclusive datetime range for a normalized budget month."""
+    start = datetime.strptime(month, "%Y-%m")
+    if start.month == 12:
+        return start, datetime(start.year + 1, 1, 1)
+    return start, datetime(start.year, start.month + 1, 1)
 
 
 def validate_vendor_allocation(minimum: int, maximum: int) -> Optional[str]:
@@ -2816,12 +2841,12 @@ def dashboard(
     company_suggestions = []
     budget_month = normalize_budget_month(budget_month)
     monthly_budget = None
-    purchase_items = []
+    budget_shipments = []
     budget_amount = 0.0
     budget_spent = 0.0
     budget_remaining = 0.0
     annual_budget_summary = {"year": budget_month[:4], "budget": 0.0, "spent": 0.0, "remaining": 0.0, "months": []}
-    budget_category_totals = []
+    budget_courier_totals = []
     budget_chart_data = {
         "categoryLabels": [],
         "categoryAmounts": [],
@@ -2984,25 +3009,35 @@ def dashboard(
             "statusCounts": [sum(account.is_active for account in users), sum(not account.is_active for account in users)],
         }
         monthly_budget = db.scalar(select(MonthlyBudget).where(MonthlyBudget.month == budget_month))
-        purchase_items = db.scalars(
-            select(PurchaseItem)
-            .where(PurchaseItem.month == budget_month)
-            .order_by(PurchaseItem.created_at.desc())
+        budget_month_start, budget_month_end = budget_month_range(budget_month)
+        budget_shipments = db.scalars(
+            select(Shipment)
+            .where(
+                Shipment.created_at >= budget_month_start,
+                Shipment.created_at < budget_month_end,
+            )
+            .order_by(Shipment.created_at.desc())
         ).all()
         budget_amount = monthly_budget.amount if monthly_budget else 0.0
-        budget_spent = sum(item.amount for item in purchase_items)
+        budget_spent = sum(shipment.shipping_cost or 0 for shipment in budget_shipments)
         budget_remaining = budget_amount - budget_spent
         budget_year = budget_month[:4]
         yearly_budgets = db.scalars(
             select(MonthlyBudget).where(MonthlyBudget.month.like(f"{budget_year}-%")).order_by(MonthlyBudget.month)
         ).all()
-        yearly_items = db.scalars(
-            select(PurchaseItem).where(PurchaseItem.month.like(f"{budget_year}-%"))
+        yearly_start = datetime(int(budget_year), 1, 1)
+        yearly_end = datetime(int(budget_year) + 1, 1, 1)
+        yearly_shipments = db.scalars(
+            select(Shipment).where(
+                Shipment.created_at >= yearly_start,
+                Shipment.created_at < yearly_end,
+            )
         ).all()
         yearly_budget_map = {entry.month: entry.amount for entry in yearly_budgets}
         yearly_spent_map: dict[str, float] = {}
-        for item in yearly_items:
-            yearly_spent_map[item.month] = yearly_spent_map.get(item.month, 0.0) + item.amount
+        for shipment in yearly_shipments:
+            shipment_month = shipment.created_at.strftime("%Y-%m")
+            yearly_spent_map[shipment_month] = yearly_spent_map.get(shipment_month, 0.0) + (shipment.shipping_cost or 0)
         annual_months = []
         for month_number in range(1, 13):
             month_key = f"{budget_year}-{month_number:02d}"
@@ -3024,19 +3059,21 @@ def dashboard(
             "remaining": annual_budget_total - annual_spent_total,
             "months": annual_months,
         }
-        category_totals: dict[str, float] = {}
-        category_counts: dict[str, int] = {}
+        courier_totals: dict[str, float] = {}
+        courier_counts: dict[str, int] = {}
         daily_totals: dict[date, float] = {}
-        for item in purchase_items:
-            category_totals[item.category] = category_totals.get(item.category, 0.0) + item.amount
-            category_counts[item.category] = category_counts.get(item.category, 0) + 1
-            day_key = item.created_at.date()
-            daily_totals[day_key] = daily_totals.get(day_key, 0.0) + item.amount
-        budget_category_totals = [
-            {"category": category, "amount": amount}
-            for category, amount in sorted(category_totals.items(), key=lambda entry: entry[0].lower())
+        for shipment in budget_shipments:
+            courier = shipment.courier.upper()
+            shipping_cost = shipment.shipping_cost or 0
+            courier_totals[courier] = courier_totals.get(courier, 0.0) + shipping_cost
+            courier_counts[courier] = courier_counts.get(courier, 0) + 1
+            day_key = shipment.created_at.date()
+            daily_totals[day_key] = daily_totals.get(day_key, 0.0) + shipping_cost
+        budget_courier_totals = [
+            {"courier": courier, "amount": amount}
+            for courier, amount in sorted(courier_totals.items(), key=lambda entry: entry[0].lower())
         ]
-        category_entries = sorted(category_totals.items(), key=lambda entry: entry[1], reverse=True)
+        courier_entries = sorted(courier_totals.items(), key=lambda entry: entry[1], reverse=True)
         timeline_entries = sorted(daily_totals.items(), key=lambda entry: entry[0])
         cumulative_amounts = []
         running_total = 0.0
@@ -3044,9 +3081,9 @@ def dashboard(
             running_total += amount
             cumulative_amounts.append(running_total)
         budget_chart_data = {
-            "categoryLabels": [category for category, _ in category_entries],
-            "categoryAmounts": [amount for _, amount in category_entries],
-            "categoryCounts": [category_counts.get(category, 0) for category, _ in category_entries],
+            "categoryLabels": [courier for courier, _ in courier_entries],
+            "categoryAmounts": [amount for _, amount in courier_entries],
+            "categoryCounts": [courier_counts.get(courier, 0) for courier, _ in courier_entries],
             "timelineLabels": [format_local_date(label, lang, include_year=False) for label, _ in timeline_entries],
             "timelineAmounts": [amount for _, amount in timeline_entries],
             "cumulativeAmounts": cumulative_amounts,
@@ -3086,12 +3123,12 @@ def dashboard(
             user_error=user_error,
             budget_month=budget_month,
             monthly_budget=monthly_budget,
-            purchase_items=purchase_items,
+            budget_shipments=budget_shipments,
             budget_amount=budget_amount,
             budget_spent=budget_spent,
             budget_remaining=budget_remaining,
             annual_budget_summary=annual_budget_summary,
-            budget_category_totals=budget_category_totals,
+            budget_courier_totals=budget_courier_totals,
             budget_chart_data=budget_chart_data,
             shipment_chart_data=shipment_chart_data,
             location_chart_data=location_chart_data,
@@ -3647,19 +3684,29 @@ async def create_shipment_form(
             recipient_user_id=recipient_user_id,
             employee_id=employee_id,
         )
-        try:
-            provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination, shipping_cost, eta_days)
-        except HTTPException as exc:
-            if exc.status_code == 404 and allow_manual_awb == "1":
-                provider_fields = {
-                    "origin": origin,
-                    "destination": destination,
-                    "shipping_cost": shipping_cost,
-                    "eta_days": eta_days,
-                    "last_location": destination,
-                }
-            else:
-                raise
+        manual_ncs_entry = courier.strip().lower() == "ncs" and allow_manual_awb == "1"
+        if manual_ncs_entry:
+            provider_fields = {
+                "origin": origin,
+                "destination": destination,
+                "shipping_cost": shipping_cost,
+                "eta_days": eta_days,
+                "last_location": destination,
+            }
+        else:
+            try:
+                provider_fields = await resolve_awb_shipment_fields(courier, awb, origin, destination, shipping_cost, eta_days)
+            except HTTPException as exc:
+                if exc.status_code == 404 and allow_manual_awb == "1":
+                    provider_fields = {
+                        "origin": origin,
+                        "destination": destination,
+                        "shipping_cost": shipping_cost,
+                        "eta_days": eta_days,
+                        "last_location": destination,
+                    }
+                else:
+                    raise
         create_shipment_record(
             db,
             title=title,

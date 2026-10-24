@@ -1000,11 +1000,10 @@
           <div class="d-flex align-items-center justify-content-between gap-3">
             <div>
               <h5 class="fw-bold mb-1">{{ 'Monthly budget'|tr }}</h5>
-              <div class="muted small">{{ 'Track buying needs by category and remaining budget.'|tr }}</div>
+              <div class="muted small">{{ 'Track shipping costs and the remaining monthly budget.'|tr }}</div>
             </div>
             <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
               <button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#setBudgetModal"><i class="bi bi-wallet2 me-1"></i>{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</button>
-              <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createBudgetItemModal"><i class="bi bi-bag-plus me-1"></i>{{ 'Add purchase item'|tr }}</button>
               <span class="metric-icon bg-success-subtle text-success"><i class="bi bi-wallet2"></i></span>
             </div>
           </div>
@@ -1031,11 +1030,11 @@
           {% set used_percent = (budget_spent / budget_amount * 100) if budget_amount else 0 %}
           <div class="budget-meter mb-4" style="--budget-used: {{ used_percent if used_percent < 100 else 100 }}%"><span></span></div>
           <div class="rounded-4 border bg-light p-3 mb-3">
-            <div class="fw-bold mb-2">{{ 'Category breakdown'|tr }}</div>
-            {% for row in budget_category_totals %}
-            <div class="d-flex justify-content-between align-items-center small py-1"><span class="category-pill"><i class="bi bi-tag"></i>{{ row.category }}</span><strong>Rp {{ "{:,.0f}".format(row.amount) }}</strong></div>
+            <div class="fw-bold mb-2">{{ 'Shipping cost by courier'|tr }}</div>
+            {% for row in budget_courier_totals %}
+            <div class="d-flex justify-content-between align-items-center small py-1"><span class="category-pill"><i class="bi bi-truck"></i>{{ row.courier }}</span><strong>Rp {{ "{:,.0f}".format(row.amount) }}</strong></div>
             {% else %}
-            <div class="small muted">{{ 'No purchase items yet.'|tr }}</div>
+            <div class="small muted">{{ 'No shipments in this month.'|tr }}</div>
             {% endfor %}
           </div>
           <div class="border-top pt-4 mt-4">
@@ -1061,47 +1060,31 @@
           </div>
           <div class="border-top pt-4 mt-4">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-              <div><div class="fw-bold">{{ 'Monthly purchase items'|tr }}</div><div class="small muted">{{ 'Search and filter every saved budget item.'|tr }}</div></div>
+              <div><div class="fw-bold">{{ 'Monthly shipments'|tr }}</div><div class="small muted">{{ 'Shipping costs are deducted automatically from this monthly budget.'|tr }}</div></div>
               <span class="category-pill"><i class="bi bi-calendar3"></i>{{ budget_month }}</span>
             </div>
             <div class="row g-2 mb-3 budget-table-filters">
-              <div class="col-md-3"><select class="form-select" id="budgetSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="item">{{ 'Item name'|tr }}</option><option value="category">{{ 'Category'|tr }}</option><option value="amount">{{ 'Amount'|tr }}</option><option value="note">{{ 'Note'|tr }}</option><option value="date">{{ 'Date'|tr }}</option></select></div>
-              <div class="col-md-5"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="budgetTableSearch" placeholder="{{ 'Search budget items...'|tr }}"></div></div>
-              <div class="col-md-3"><select class="form-select" id="budgetCategoryFilter"><option value="">{{ 'All categories'|tr }}</option>{% for row in budget_category_totals %}<option value="{{ row.category|lower }}">{{ row.category }}</option>{% endfor %}</select></div>
+              <div class="col-md-3"><select class="form-select" id="budgetSearchField"><option value="all">{{ 'All fields'|tr }}</option><option value="item">{{ 'Shipment reference'|tr }}</option><option value="category">{{ 'Courier'|tr }}</option><option value="amount">{{ 'Shipping cost'|tr }}</option><option value="note">{{ 'Destination'|tr }}</option><option value="date">{{ 'Date'|tr }}</option></select></div>
+              <div class="col-md-5"><div class="input-group"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" id="budgetTableSearch" placeholder="{{ 'Search shipments...'|tr }}"></div></div>
+              <div class="col-md-3"><select class="form-select" id="budgetCategoryFilter"><option value="">{{ 'All couriers'|tr }}</option>{% for row in budget_courier_totals %}<option value="{{ row.courier|lower }}">{{ row.courier }}</option>{% endfor %}</select></div>
               <div class="col-md-1 d-grid"><button class="btn btn-soft" id="budgetFilterReset" type="button" title="{{ 'Reset filters'|tr }}"><i class="bi bi-arrow-counterclockwise"></i></button></div>
             </div>
             <div class="table-responsive">
               <table class="table align-middle table-hover mb-0" id="budgetItemsTable">
-                <thead><tr><th>{{ 'Item name'|tr }}</th><th>{{ 'Category'|tr }}</th><th>{{ 'Amount'|tr }}</th><th>{{ 'Note'|tr }}</th><th>{{ 'Date'|tr }}</th><th class="text-end">{{ 'Action'|tr }}</th></tr></thead>
+                <thead><tr><th>{{ 'Shipment reference'|tr }}</th><th>{{ 'Courier'|tr }}</th><th>{{ 'Shipping cost'|tr }}</th><th>{{ 'Destination'|tr }}</th><th>{{ 'Date'|tr }}</th></tr></thead>
                 <tbody>
-                  {% for item in purchase_items %}
-                  <tr class="budget-item-table-row" data-item="{{ item.item_name|lower }}" data-category="{{ item.category|lower }}" data-amount="{{ item.amount }}" data-note="{{ (item.note or '')|lower }}" data-date="{{ item.created_at.strftime('%Y-%m-%d') }}">
-                    <td class="fw-semibold">{{ item.item_name }}</td><td><span class="category-pill"><i class="bi bi-tag"></i>{{ item.category }}</span></td><td class="fw-semibold">Rp {{ "{:,.0f}".format(item.amount) }}</td><td class="small muted">{{ item.note or '-' }}</td><td class="small">{{ item.created_at|local_date }}</td><td class="text-end"><button class="btn btn-sm btn-soft" type="button" data-bs-toggle="modal" data-bs-target="#editBudgetItem{{ item.id }}"><i class="bi bi-pencil-square me-1"></i>{{ 'Edit'|tr }}</button></td>
+                  {% for shipment in budget_shipments %}
+                  <tr class="budget-item-table-row" data-item="{{ (shipment.reference_no ~ ' ' ~ shipment.title)|lower }}" data-category="{{ shipment.courier|lower }}" data-amount="{{ shipment.shipping_cost }}" data-note="{{ shipment.destination|lower }}" data-date="{{ shipment.created_at.strftime('%Y-%m-%d') }}">
+                    <td class="fw-semibold">{{ shipment.reference_no }}<div class="small muted">{{ shipment.title }}</div></td><td><span class="category-pill"><i class="bi bi-truck"></i>{{ shipment.courier|upper }}</span></td><td class="fw-semibold">Rp {{ "{:,.0f}".format(shipment.shipping_cost) }}</td><td class="small muted">{{ shipment.destination }}</td><td class="small">{{ shipment.created_at|local_date }}</td>
                   </tr>
                   {% else %}
-                  <tr><td colspan="6" class="text-center empty-state"><i class="bi bi-bag display-6 text-secondary"></i><div class="small mt-2">{{ 'No purchase items yet.'|tr }}</div></td></tr>
+                  <tr><td colspan="5" class="text-center empty-state"><i class="bi bi-truck display-6 text-secondary"></i><div class="small mt-2">{{ 'No shipments in this month.'|tr }}</div></td></tr>
                   {% endfor %}
-                  <tr class="d-none" id="budgetFilterEmpty"><td colspan="6" class="text-center py-4 muted">{{ 'No items match the selected filters.'|tr }}</td></tr>
+                  <tr class="d-none" id="budgetFilterEmpty"><td colspan="5" class="text-center py-4 muted">{{ 'No shipments match the selected filters.'|tr }}</td></tr>
                 </tbody>
               </table>
             </div>
-            {% for item in purchase_items %}
-            <div class="modal fade budget-edit-modal" id="editBudgetItem{{ item.id }}" tabindex="-1" aria-hidden="true">
-              <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable"><div class="modal-content border-0 rounded-4">
-                <form method="post" action="/budget-items/{{ item.id }}/edit">
-                  <div class="modal-header border-0"><div><div class="panel-kicker">{{ 'Edit purchase item'|tr }}</div><h5 class="modal-title">{{ item.item_name }}</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
-                  <div class="modal-body pt-2 vstack gap-3">
-                    <div><label class="form-label fw-semibold">{{ 'Item name'|tr }}</label><input class="form-control" name="item_name" required value="{{ item.item_name }}"></div>
-                    <div><label class="form-label fw-semibold">{{ 'Category'|tr }}</label><input class="form-control" name="category" required list="budgetCategories" value="{{ item.category }}"></div>
-                    <div><label class="form-label fw-semibold">{{ 'Amount'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required value="{{ '{:.0f}'.format(item.amount) }}"></div></div>
-                    <div><label class="form-label fw-semibold">{{ 'Note'|tr }}</label><textarea class="form-control" name="note" rows="2">{{ item.note or '' }}</textarea></div>
-                  </div>
-                  <div class="modal-footer border-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ 'Save changes'|tr }}</button></div>
-                </form>
-              </div></div>
-            </div>
-            {% endfor %}
-            <div class="small muted mt-2"><span id="budgetVisibleCount">{{ purchase_items|length }}</span> {{ 'matching items'|tr }}</div>
+            <div class="small muted mt-2"><span id="budgetVisibleCount">{{ budget_shipments|length }}</span> {{ 'matching shipments'|tr }}</div>
             <div class="pagination-shell d-none mt-3 px-3 py-2 d-flex flex-wrap align-items-center justify-content-between gap-2" id="budgetPagination">
               <div class="small muted" id="budgetPaginationSummary"></div>
               <div class="d-flex align-items-center gap-2"><button class="btn btn-sm btn-soft" id="budgetPreviousPage" type="button"><i class="bi bi-chevron-left me-1"></i>{{ 'Previous'|tr }}</button><span class="small fw-semibold" id="budgetPageInfo">{{ 'Page'|tr }} 1 / 1</span><button class="btn btn-sm btn-soft" id="budgetNextPage" type="button">{{ 'Next'|tr }}<i class="bi bi-chevron-right ms-1"></i></button></div>
@@ -1112,11 +1095,11 @@
             <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
               <div>
                 <div class="fw-bold">{{ 'Budget analytics'|tr }}</div>
-                <div class="small muted">{{ 'Largest category usage, item count, timeline, and spending curve.'|tr }}</div>
+                <div class="small muted">{{ 'Shipping costs by courier, shipment count, timeline, and spending curve.'|tr }}</div>
               </div>
               <span class="category-pill"><i class="bi bi-graph-up-arrow"></i>{{ budget_month }}</span>
             </div>
-            {% if purchase_items %}
+            {% if budget_shipments %}
             <div class="row g-3">
               <div class="col-lg-6 col-xxl-3">
                 <div class="chart-card">
@@ -1126,13 +1109,13 @@
               </div>
               <div class="col-lg-6 col-xxl-3">
                 <div class="chart-card">
-                  <div class="fw-semibold mb-2">{{ 'Category usage'|tr }}</div>
+                  <div class="fw-semibold mb-2">{{ 'Shipping cost by courier'|tr }}</div>
                   <div class="chart-frame"><canvas id="categoryPieChart"></canvas></div>
                 </div>
               </div>
               <div class="col-lg-6 col-xxl-3">
                 <div class="chart-card">
-                  <div class="fw-semibold mb-2">{{ 'Items by category'|tr }}</div>
+                  <div class="fw-semibold mb-2">{{ 'Shipments by courier'|tr }}</div>
                   <div class="chart-frame"><canvas id="itemCountChart"></canvas></div>
                 </div>
               </div>
@@ -1144,7 +1127,7 @@
               </div>
               <div class="col-12">
                 <div class="chart-card">
-                  <div class="fw-semibold mb-2">{{ 'Daily spending timeline'|tr }}</div>
+                  <div class="fw-semibold mb-2">{{ 'Daily shipping cost timeline'|tr }}</div>
                   <div class="chart-frame"><canvas id="dailyTimelineChart"></canvas></div>
                 </div>
               </div>
@@ -1493,27 +1476,8 @@
           <div><div class="panel-kicker">{{ 'Monthly budget'|tr }}</div><h4 class="modal-title fw-bold">{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</h4><p class="muted mb-0">{{ budget_month }}</p></div>
           <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
         </div>
-        <div class="modal-body px-4 py-4"><input type="hidden" name="month" value="{{ budget_month }}"><label class="form-label fw-semibold">{{ 'Monthly budget total'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1000" required value="{{ '{:.0f}'.format(budget_amount) }}"></div>{% if monthly_budget %}<div class="small muted mt-2">{{ 'Enter a new total greater than the current monthly budget.'|tr }}</div>{% endif %}</div>
+        <div class="modal-body px-4 py-4"><input type="hidden" name="month" value="{{ budget_month }}"><label class="form-label fw-semibold">{{ 'Monthly budget total'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required value="{{ '{:.0f}'.format(budget_amount) }}"></div>{% if monthly_budget %}<div class="small muted mt-2">{{ 'Enter a new total greater than the current monthly budget.'|tr }}</div>{% endif %}</div>
         <div class="modal-footer border-0 px-4 pb-4 pt-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-save me-2"></i>{{ ('Increase budget' if monthly_budget else 'Set budget')|tr }}</button></div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="createBudgetItemModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-    <div class="modal-content">
-      <form method="post" action="/budget-items/create">
-        <div class="modal-header border-0 px-4 pt-4 pb-2"><div><div class="panel-kicker">{{ 'Monthly budget'|tr }}</div><h4 class="modal-title fw-bold">{{ 'Add purchase item'|tr }}</h4><p class="muted mb-0">{{ budget_month }}</p></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
-        <div class="modal-body px-4 py-4 vstack gap-3">
-          <input type="hidden" name="month" value="{{ budget_month }}">
-          <datalist id="budgetCategories"><option value="{{ 'Office supplies'|tr }}"><option value="{{ 'IT equipment'|tr }}"><option value="{{ 'Courier supplies'|tr }}"><option value="{{ 'Packaging'|tr }}"><option value="{{ 'Operations'|tr }}"></datalist>
-          <div><label class="form-label fw-semibold">{{ 'Item name'|tr }}</label><input class="form-control" name="item_name" required placeholder="{{ 'Laptop charger'|tr }}"></div>
-          <div><label class="form-label fw-semibold">{{ 'Category'|tr }}</label><input class="form-control" name="category" required list="budgetCategories" placeholder="{{ 'Office supplies'|tr }}"></div>
-          <div><label class="form-label fw-semibold">{{ 'Amount'|tr }}</label><div class="input-group"><span class="input-group-text">Rp</span><input class="form-control" name="amount" type="number" min="1" step="1" required></div></div>
-          <div><label class="form-label fw-semibold">{{ 'Note'|tr }} <span class="text-secondary fw-normal small">({{ 'Optional'|tr }})</span></label><input class="form-control" name="note" placeholder="{{ 'Optional note'|tr }}"></div>
-        </div>
-        <div class="modal-footer border-0 px-4 pb-4 pt-0"><button class="btn btn-light" type="button" data-bs-dismiss="modal">{{ 'Cancel'|tr }}</button><button class="btn btn-primary" type="submit"><i class="bi bi-plus-circle me-2"></i>{{ 'Save item'|tr }}</button></div>
       </form>
     </div>
   </div>
@@ -1710,7 +1674,7 @@
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'AWB / waybill'|tr }}</label>
               <div class="input-group">
-                <input class="form-control" name="awb" id="awbInput" required placeholder="{{ 'Internal courier tracking number'|tr }}">
+                <input class="form-control" name="awb" id="awbInput" required autocomplete="off" placeholder="{{ 'Internal courier tracking number'|tr }}">
                 <button class="btn btn-soft" type="button" id="lookupAwbButton"><i class="bi bi-search me-1"></i>{{ 'Lookup'|tr }}</button>
               </div>
               <div class="small muted mt-1" id="awbLookupStatus">{{ 'Enter a valid AWB to automatically fill shipment details. All fields remain editable.'|tr }}</div>
@@ -1721,6 +1685,11 @@
               <label class="form-label fw-semibold">{{ 'Sender hashtags'|tr }}</label>
               <input class="form-control" name="sender_tags" value="{{ '#HO' if current_user.role == 'admin' else '#Vendor' }}" placeholder="#HO #Urgent">
               <div class="small muted mt-1">{{ 'Add optional tags separated by spaces.'|tr }}</div>
+            </div>
+            <div class="col-12 d-none" id="ncsManualEntryPanel">
+              <div class="alert alert-warning d-flex align-items-center gap-2 mb-0" role="status">
+                <div class="d-flex gap-2"><i class="bi bi-pencil-square mt-1"></i><div><div class="fw-semibold">{{ 'Manual NCS entry'|tr }}</div><div class="small">{{ 'NCS AWB lookup is unavailable. The AWB is optional; fill shipment details and save without lookup.'|tr }}</div></div></div>
+              </div>
             </div>
             <div class="col-md-4">
               <label class="form-label fw-semibold">{{ 'Origin'|tr }}</label>
@@ -1988,6 +1957,8 @@
     routeFilledTemplate: {{ ('Route filled from {source}. Last status: {status}.'|tr)|tojson }},
     awbFieldsFilledTemplate: {{ ('AWB verified. {count} shipment fields were filled automatically and remain editable.'|tr)|tojson }},
     ncsTrackingNotice: {{ ('NCS is available for shipment entry and domestic cost, but this provider does not currently support NCS AWB tracking. Enter details manually if lookup fails.'|tr)|tojson }},
+    ncsManualActive: {{ ('Manual entry is active. Fill in origin, destination, ETA, and shipping cost, then create the shipment.'|tr)|tojson }},
+    ncsManualAwbPlaceholder: {{ ('NCS AWB or internal reference (optional)'|tr)|tojson }},
     courierData: {{ ('courier data'|tr)|tojson }},
     trackingTimeline: {{ ('tracking timeline'|tr)|tojson }},
     awbLookupFailed: {{ ('AWB lookup failed'|tr)|tojson }},
@@ -2128,7 +2099,9 @@
   const shippingCostInput = document.getElementById('shippingCostInput');
   const allowManualAwbInput = document.getElementById('allowManualAwbInput');
   const courierSelect = document.getElementById('courierSelect');
+  const ncsManualEntryPanel = document.getElementById('ncsManualEntryPanel');
   const awbInput = document.getElementById('awbInput');
+  const defaultAwbPlaceholder = awbInput?.getAttribute('placeholder') || '';
   const lookupAwbButton = document.getElementById('lookupAwbButton');
   const awbLookupStatus = document.getElementById('awbLookupStatus');
   const originLocationStatus = document.getElementById('originLocationStatus');
@@ -2410,7 +2383,7 @@
       type: 'bar',
       data: {
         labels: budgetChartData.categoryLabels,
-        datasets: [{label: {{ ('Items by category'|tr)|tojson }}, data: budgetChartData.categoryCounts, backgroundColor: '#06b6d4', borderRadius: 8}]
+        datasets: [{label: {{ ('Shipments by courier'|tr)|tojson }}, data: budgetChartData.categoryCounts, backgroundColor: '#06b6d4', borderRadius: 8}]
       },
       options: {
         responsive: true,
@@ -2434,7 +2407,7 @@
       type: 'line',
       data: {
         labels: budgetChartData.timelineLabels,
-        datasets: [{label: {{ ('Daily spending timeline'|tr)|tojson }}, data: budgetChartData.timelineAmounts, borderColor: '#ef174c', backgroundColor: 'rgba(239,23,76,.12)', fill: true, tension: .2, pointRadius: 4}]
+        datasets: [{label: {{ ('Daily shipping cost timeline'|tr)|tojson }}, data: budgetChartData.timelineAmounts, borderColor: '#ef174c', backgroundColor: 'rgba(239,23,76,.12)', fill: true, tension: .2, pointRadius: 4}]
       },
       options: lineOptions
     });
@@ -2566,12 +2539,31 @@
     bootstrap.Modal.getOrCreateInstance(awbErrorModal).show();
   };
 
+  const isNcsManualEntry = () => courierSelect?.value === 'ncs';
+
   const enableManualAwbFallback = () => {
     if (allowManualAwbInput) allowManualAwbInput.value = '1';
   };
 
   const disableManualAwbFallback = () => {
-    if (allowManualAwbInput) allowManualAwbInput.value = '0';
+    if (allowManualAwbInput) allowManualAwbInput.value = isNcsManualEntry() ? '1' : '0';
+  };
+
+  const syncNcsManualEntry = () => {
+    const isNcs = courierSelect?.value === 'ncs';
+    ncsManualEntryPanel?.classList.toggle('d-none', !isNcs);
+    if (awbInput) {
+      awbInput.required = !isNcs;
+      awbInput.placeholder = isNcs ? i18n.ncsManualAwbPlaceholder : defaultAwbPlaceholder;
+    }
+    if (!isNcs) {
+      disableManualAwbFallback();
+      if (lookupAwbButton) lookupAwbButton.disabled = false;
+      return;
+    }
+    enableManualAwbFallback();
+    if (lookupAwbButton) lookupAwbButton.disabled = true;
+    if (awbLookupStatus) awbLookupStatus.textContent = i18n.ncsManualActive;
   };
 
   function filterShipmentRows(query) {
@@ -2948,6 +2940,10 @@
   });
 
   const lookupAwbRoute = async () => {
+    if (courierSelect?.value === 'ncs') {
+      if (awbLookupStatus) awbLookupStatus.textContent = i18n.ncsManualActive;
+      return;
+    }
     const courier = courierSelect?.value;
     const awb = awbInput?.value.trim();
     if (!courier || !awb) {
@@ -3009,20 +3005,17 @@
       showAwbErrorModal(courier, awb, error);
       if (awbLookupStatus) awbLookupStatus.textContent = i18n.cannotLookupAwb;
     } finally {
-      lookupAwbButton.disabled = false;
+      lookupAwbButton.disabled = isNcsManualEntry();
       lookupAwbButton.innerHTML = `<i class="bi bi-search me-1"></i>${i18n.lookupButton}`;
     }
   };
 
   lookupAwbButton?.addEventListener('click', lookupAwbRoute);
   courierSelect?.addEventListener('change', () => {
-    disableManualAwbFallback();
-    if (courierSelect.value === 'ncs' && awbLookupStatus) awbLookupStatus.textContent = i18n.ncsTrackingNotice;
+    syncNcsManualEntry();
   });
   awbInput?.addEventListener('input', disableManualAwbFallback);
-  awbInput?.addEventListener('blur', () => {
-    if (awbInput.value.trim()) lookupAwbRoute();
-  });
+  syncNcsManualEntry();
 
   createShipmentModal?.addEventListener('shown.bs.modal', function () {
     if (originDetected || originTouched) return;

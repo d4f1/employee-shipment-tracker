@@ -1,6 +1,6 @@
 # Employee Shipment Tracker — JWT MVP
 
-A FastAPI, SQLite and Bootstrap application for tracking company items and parcels delivered to employees.
+A FastAPI and Bootstrap application for tracking company items and parcels delivered to employees. Local development uses SQLite; production uses PostgreSQL on the production VM.
 
 ## Authentication and roles
 
@@ -39,54 +39,45 @@ Open:
 - Dashboard: http://127.0.0.1:8000/
 - Swagger: http://127.0.0.1:8000/docs
 
-## Free deployment for client demo
+## Local and production databases
 
-Heroku no longer provides a true free dyno/database plan. Use Render's free Web Service instead. Do not use Blueprint for this demo.
+Local development uses the checked-in [`.env.example`](.env.example) and SQLite:
 
-1. Push this folder to a GitHub, GitLab, or Bitbucket repository.
-2. In Render, click **New > Web Service**.
-3. Connect the repository.
-4. Select the **Free** instance type.
-5. Use these settings:
-
-| Field | Value |
-|---|---|
-| Runtime | Python |
-| Build command | `pip install -r requirements.txt` |
-| Start command | `uvicorn app:app --host 0.0.0.0 --port $PORT` |
-| Health check path | `/healthz` |
-
-Add these environment variables:
-
-| Key | Value |
-|---|---|
-| `APP_NAME` | `Employee Shipment Tracker` |
-| `DATABASE_URL` | `sqlite:///./employee_shipments.db` |
-| `JWT_SECRET_KEY` | Generate a long random value |
-| `JWT_ALGORITHM` | `HS256` |
-| `JWT_ACCESS_TOKEN_MINUTES` | `60` |
-| `JWT_COOKIE_SECURE` | `true` |
-| `RAJAONGKIR_MOCK` | `false` |
-| `RAJAONGKIR_API_KEY` | RajaOngkir live API key (set as a production secret) |
-| `RAJAONGKIR_BASE_URL` | `https://rajaongkir.komerce.id/api/v1` |
-| `NOMINATIM_REVERSE_URL` | `https://nominatim.openstreetmap.org/reverse` |
-| `GEOCODER_USER_AGENT` | `employee-shipment-tracker-demo/1.0` |
-
-After deploy finishes, share:
-
-```text
-https://<service-name>.onrender.com/login
+```env
+DATABASE_URL=sqlite:///./employee_shipments.db
 ```
 
-Demo accounts:
+Production uses the root-owned file `/opt/employee-shipment-tracker/state/application.env` on the VM. Its non-secret shape is documented in [`.env.production.example`](.env.production.example):
 
-| Username | Password |
+```env
+DATABASE_URL=postgresql+psycopg:///employee_shipments
+JWT_COOKIE_SECURE=true
+RAJAONGKIR_MOCK=false
+```
+
+PostgreSQL listens only on the VM loopback/socket. The application uses it for all production data, including company branch locations. SQLite is retained only as a migration recovery backup and is not the active production database.
+
+## GitHub Actions deployment
+
+Every push to `master` runs [`.github/workflows/deploy-production.yml`](.github/workflows/deploy-production.yml):
+
+1. Install dependencies and smoke-test the application against temporary SQLite on the GitHub runner.
+2. Wait for the protected GitHub `production` environment.
+3. Verify the VM is configured for its local PostgreSQL database and live RajaOngkir.
+4. Create a PostgreSQL backup, deploy the exact pushed commit, restart the service, and check application health and the company-location table.
+
+The workflow never writes production secrets or `application.env`. It rolls back the application code if the restart or health check fails; PostgreSQL backups are saved to `/opt/employee-shipment-tracker/state/postgresql-backups/` before every deploy.
+
+Create these secrets in **GitHub → Settings → Environments → production**:
+
+| Secret | Purpose |
 |---|---|
-| `admin` | `Admin123!` |
-| `operator` | `Operator123!` |
-| `andriana` | `Employee123!` |
+| `PRODUCTION_SSH_HOST` | VM public IP or hostname |
+| `PRODUCTION_SSH_USER` | Deploy user with passwordless `sudo` for the commands in the workflow |
+| `PRODUCTION_SSH_PRIVATE_KEY` | Private key for that deploy user |
+| `PRODUCTION_SSH_KNOWN_HOSTS` | Pinned SSH host key line for the VM |
 
-The free service is enough for a behavior-flow demo, but it can sleep after inactivity and local SQLite data can reset after redeploy/restart. Use Postgres or a paid persistent disk before treating this as production.
+Use an environment approval rule before enabling automatic production deployment.
 
 ## API login
 
