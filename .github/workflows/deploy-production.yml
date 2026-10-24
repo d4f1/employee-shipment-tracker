@@ -54,10 +54,16 @@ jobs:
     steps:
       - name: Configure production SSH access
         run: |
-          test -n "$PRODUCTION_SSH_HOST"
-          test -n "$PRODUCTION_SSH_USER"
-          test -n "$PRODUCTION_SSH_PRIVATE_KEY"
-          test -n "$PRODUCTION_SSH_KNOWN_HOSTS"
+          missing_secrets=()
+          for secret_name in PRODUCTION_SSH_HOST PRODUCTION_SSH_USER PRODUCTION_SSH_PRIVATE_KEY PRODUCTION_SSH_KNOWN_HOSTS; do
+            if [ -z "${!secret_name}" ]; then
+              missing_secrets+=("$secret_name")
+            fi
+          done
+          if [ "${#missing_secrets[@]}" -gt 0 ]; then
+            echo "::error::Missing GitHub Actions secrets: ${missing_secrets[*]}"
+            exit 1
+          fi
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$PRODUCTION_SSH_PRIVATE_KEY" > "$HOME/.ssh/production_deploy_key"
           chmod 600 "$HOME/.ssh/production_deploy_key"
