@@ -17,7 +17,7 @@ jobs:
     name: Validate local SQLite configuration
     runs-on: ubuntu-24.04
     env:
-      DATABASE_URL: sqlite:///${{ runner.temp }}/employee_shipments-ci.db
+      DATABASE_URL: sqlite:////tmp/employee_shipments-ci.db
       JWT_SECRET_KEY: ci-only-secret
       RAJAONGKIR_MOCK: "true"
     steps:
