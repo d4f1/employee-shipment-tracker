@@ -4,18 +4,16 @@ on:
   push:
     branches:
       - '**'
+  pull_request:
+    branches: [master]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: employee-shipment-tracker-production
-  cancel-in-progress: false
-
 jobs:
   validate:
-    name: Validate local SQLite configuration
+    name: Test application before merge
     runs-on: ubuntu-24.04
     env:
       DATABASE_URL: sqlite:////tmp/employee_shipments-ci.db
@@ -30,27 +28,21 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: python -m pip install --requirement requirements.txt
+        run: python -m pip install --requirement requirements-dev.txt
 
       - name: Compile application
         run: python -m py_compile app.py
 
-      - name: Smoke-test local SQLite mode
-        run: |
-          python - <<'PY'
-          from fastapi.testclient import TestClient
-
-          from app import app
-
-          response = TestClient(app).get("/api/health")
-          assert response.status_code == 200
-          assert response.json()["rajaongkir_mode"] == "mock"
-          PY
+      - name: Run pytest suite
+        run: python -m pytest -q
 
   deploy:
     name: Deploy to production VM
     needs: validate
     if: github.ref == 'refs/heads/master'
+    concurrency:
+      group: employee-shipment-tracker-production
+      cancel-in-progress: false
     runs-on: ubuntu-24.04
     environment: production
     timeout-minutes: 15
